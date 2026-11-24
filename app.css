@@ -1192,6 +1192,11 @@ button.w7r.sel{background:color-mix(in srgb,var(--accent) 16%,transparent);box-s
 .fbchip img{width:26px;height:26px;object-fit:contain}
 .fbchip[aria-pressed=true]{background:var(--text);color:var(--bg);border-color:var(--text)}
 
-.fb-t.logo-only>span{display:none}
-.fb-t.logo-only{justify-content:center}
-.fb-t.logo-only img{width:28px;height:28px}
+
+.fb-row{grid-template-columns:76px minmax(0,1fr) auto minmax(0,1fr)}
+.fb-t{justify-content:center}
+.fb-row>.fb-t:last-child{flex-direction:row}
+.fb-t img{width:40px;height:40px}
+.fb-t b{font-size:15px;font-weight:800;letter-spacing:.03em}
+.fb-t.fb-fav img{filter:drop-shadow(0 0 6px color-mix(in srgb,var(--text) 35%,transparent))}
+.fb-mid{min-width:56px;font-size:20px}

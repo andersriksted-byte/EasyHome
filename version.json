@@ -1,5 +1,5 @@
 {
-  "version": "1.54.3",
+  "version": "1.54.4",
   "files": [
     "index.html",
     "app.js",
@@ -25,11 +25,11 @@
   ],
   "notes": [
     {
-      "version": "1.54.3",
+      "version": "1.54.4",
       "date": "24. november 2026",
-      "title": "Fodbold: logo i stedet for afkortede navne",
+      "title": "Fodbold: store logoer",
       "items": [
-        "Er der ikke plads til hele klubnavnet, vises kun klubbens logo"
+        "Fodbold-kortet viser nu kun klubbernes logoer – større og uden afkortede navne"
       ]
     },
     {
