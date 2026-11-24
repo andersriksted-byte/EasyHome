@@ -504,31 +504,39 @@ function wxTheme(code, isDay) {
   return 'sun';
 }
 // Udviklingen de næste 24 timer i hele sætninger: temperatur, regn, sol og vind
-function wxStory(w) {
-  const H = w.hours.filter((h) => h.time.getTime() > Date.now() - 3600000).slice(0, 24); if (!H.length) return [];
+// Timerne for en valgt dag: i dag = de næste 24 timer fra nu, ellers hele dagen 00–23
+function wxHours(w, day) {
+  if (!day) return w.hours.filter((h) => h.time.getTime() > Date.now() - 3600000).slice(0, 24);
+  const d = addDays(startOfDay(new Date()), day).toDateString();
+  return w.hours.filter((h) => h.time.toDateString() === d);
+}
+function wxStory(w, day = 0) {
+  const H = wxHours(w, day); if (!H.length) return [];
+  const today = !day;
   const hh = (h) => 'kl. ' + pad(h.time.getHours());
   const out = [];
   const mx = H.reduce((a, b) => (b.temp > a.temp ? b : a)); const mn = H.reduce((a, b) => (b.temp < a.temp ? b : a));
-  out.push({ k: 'temp', t: `${fmtTemp(w.now.temp)} nu · højst ${fmtTemp(mx.temp)} ${hh(mx)} · lavest ${fmtTemp(mn.temp)} ${hh(mn)}` });
+  out.push({ k: 'temp', t: `${today ? fmtTemp(w.now.temp) + ' nu · ' : ''}højst ${fmtTemp(mx.temp)} ${hh(mx)} · lavest ${fmtTemp(mn.temp)} ${hh(mn)}` });
   const wet = H.filter((h) => h.rain >= 0.1);
-  if (!wet.length) out.push({ k: 'rain', t: 'Tørt det næste døgn' });
-  else { const tot = wet.reduce((a, h) => a + h.rain, 0); const first = wet[0], last = wet[wet.length - 1]; out.push({ k: 'rain', t: `Regn ${first === H[0] ? 'nu' : 'fra ' + hh(first)} til kl. ${pad((last.time.getHours() + 1) % 24)} · i alt ${num(tot)} mm` }); }
+  if (!wet.length) out.push({ k: 'rain', t: today ? 'Tørt det næste døgn' : 'Tørt hele dagen' });
+  else { const tot = wet.reduce((a, h) => a + h.rain, 0); const first = wet[0], last = wet[wet.length - 1]; out.push({ k: 'rain', t: `Regn ${first === H[0] && today ? 'nu' : 'fra ' + hh(first)} til kl. ${pad((last.time.getHours() + 1) % 24)} · i alt ${num(tot)} mm` }); }
   const d0 = (H.find((h) => h.isDay) || H[0]).time.toDateString(); const sunH = H.filter((h) => h.isDay && h.time.toDateString() === d0); const sunMin = sunH.reduce((a, h) => a + (h.sun || 0), 0);
   if (sunH.length && H[0].sun !== null) {
     if (sunMin < 20) { const cl = Math.round(sunH.reduce((a, h) => a + (h.cloud || 0), 0) / sunH.length); out.push({ k: 'sun', t: cl > 80 ? 'Overskyet – ingen sol i sigte' : 'Næsten ingen sol' }); }
-    else { const best = sunH.filter((h) => (h.sun || 0) >= 30); out.push({ k: 'sun', t: `${d0 === new Date().toDateString() ? 'I dag' : 'I morgen'} sol i ca. ${num(sunMin / 60)} timer${best.length ? `, mest kl. ${pad(best[0].time.getHours())}–${pad((best[best.length - 1].time.getHours() + 1) % 24)}` : ''}` }); }
+    else { const best = sunH.filter((h) => (h.sun || 0) >= 30); out.push({ k: 'sun', t: `${!today ? 'Sol' : d0 === new Date().toDateString() ? 'I dag sol' : 'I morgen sol'} i ca. ${num(sunMin / 60)} timer${best.length ? `, mest kl. ${pad(best[0].time.getHours())}–${pad((best[best.length - 1].time.getHours() + 1) % 24)}` : ''}` }); }
   }
   if (H[0].wind !== null) {
     const wmax = H.reduce((a, b) => (b.wind > a.wind ? b : a)); const g = Math.max(...H.map((h) => h.gust || 0));
-    const now = w.now.wind; const dir = W.windDirText(w.now.windDir);
+    const now = today ? w.now.wind : H[0].wind; const dir = W.windDirText(today ? w.now.windDir : wmax.windDir);
+    if (!today) { out.push({ k: 'wind', t: `Op til ${num(wmax.wind, 0)} m/s fra ${dir} ${hh(wmax)}${g >= 10 ? ` · stød op til ${num(g, 0)} m/s` : ''}` }); return out; }
     const change = wmax.wind - now >= 3 ? `, tager til ${num(wmax.wind, 0)} m/s ${hh(wmax)}` : wmax.wind - now <= -3 ? ', aftager' : '';
     out.push({ k: 'wind', t: `${num(now, 0)} m/s fra ${dir}${change}${g >= 10 ? ` · stød op til ${num(g, 0)} m/s` : ''}` });
   }
   return out;
 }
 const STORY_ICON = { temp: '🌡️', rain: '🌧️', sun: '☀️', wind: '💨' };
-function hourChart(hours) {
-  const H = hours.filter((h) => h.time.getTime() > Date.now() - 3600000).slice(0, 24); if (H.length < 2) return '';
+function hourChart(H, today = true) {
+  if (H.length < 2) return '';
   const n = H.length; const Wd = 960, Ht = 110;
   const ts = H.map((h) => h.temp); const mx = Math.max(...ts), mn = Math.min(...ts); const span = Math.max(4, mx - mn);
   const x = (i) => ((i + 0.5) * Wd) / n; const y = (t) => 26 + (1 - (t - mn) / span) * (Ht - 40);
@@ -541,7 +549,7 @@ function hourChart(hours) {
   const col = (i, span = 3) => `grid-column:${i + 1} / span ${span}`;
   const every3 = (f) => H.map((h, i) => (i % 3 === 0 ? f(h, i) : '')).join('');
   return `<div class="mg" style="--n:${n}">
-    <div class="mg-row mg-time">${every3((h, i) => `<span style="${col(i)}">${i === 0 ? 'Nu' : pad(h.time.getHours())}</span>`)}</div>
+    <div class="mg-row mg-time">${every3((h, i) => `<span style="${col(i)}">${i === 0 && today ? 'Nu' : pad(h.time.getHours())}</span>`)}</div>
     <div class="mg-row mg-ico">${every3((h, i) => `<span style="${col(i)}">${W.weatherIcon(h.code, h.isDay, 28)}</span>`)}</div>
     <div class="mg-tw"><svg class="mg-temp" viewBox="0 0 ${Wd} ${Ht}" preserveAspectRatio="none" aria-label="Temperatur"><defs><linearGradient id="tfill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--accent)" stop-opacity=".25"/><stop offset="1" stop-color="var(--accent)" stop-opacity="0"/></linearGradient></defs>
       <path d="${d} L${pts[n - 1][0]},${Ht} L${pts[0][0]},${Ht} Z" fill="url(#tfill)"/><path d="${d}" fill="none" stroke="var(--accent)" stroke-width="3" stroke-linecap="round" vector-effect="non-scaling-stroke"/></svg>${labels}</div>
@@ -562,6 +570,7 @@ function pageVejr() {
   const seg = settings.places.length > 1 ? `<div class="wseg">${settings.places.map((p, i) => `<button data-act="wPlace" data-id="${esc(p.id)}" aria-pressed="${p.id === place.id}">${i === 0 ? ico('home', 14) : ''}<span>${esc(placeLabel(p))}</span></button>`).join('')}</div>` : '';
   let body = `<div class="empty">${D.wxErr[place.id] ? esc(D.wxErr[place.id]) : 'Henter vejret …'}</div>`;
   if (w) {
+    const dsel = Math.min(ui.wxDay || 0, w.days.length - 1);
     const t0 = w.days[0];
     const maxT = Math.max(...w.days.map((d) => d.max)); const minT = Math.min(...w.days.map((d) => d.min)); const span = Math.max(1, maxT - minT);
     const trend = wxTrend(w);
@@ -578,18 +587,18 @@ function pageVejr() {
           ${stat('Sol', `${hhmm(t0.sunrise)}`, `<small>ned ${hhmm(t0.sunset)}</small>`)}
         </div>
       </section>
-      <section class="card wx24"><div class="wxstory">${wxStory(w).map((x) => `<div class="ws ws-${x.k}"><span aria-hidden="true">${STORY_ICON[x.k]}</span>${esc(x.t)}</div>`).join('')}</div>${hourChart(w.hours)}</section>
-      <section class="card wx7"><div class="lab">7 dage</div><div class="w7">${w.days.map((d, i) => `<div class="w7r ${i === 0 ? 'today' : ''}"><b>${i === 0 ? 'I dag' : cap(DAYS[d.date.getDay()])}</b>${W.weatherIcon(d.code, 1, 28)}
+      <section class="card wx24"><div class="wx24head"><b>${dsel ? cap(DAYS_LONG[addDays(startOfDay(new Date()), dsel).getDay()]) + ' ' + addDays(startOfDay(new Date()), dsel).getDate() + '. ' + MONTHS[addDays(startOfDay(new Date()), dsel).getMonth()] : 'De næste 24 timer'}</b>${dsel ? '<button class="linkbtn" data-act="wxDay" data-i="0">Tilbage til i dag</button>' : ''}</div><div class="wxstory">${wxStory(w, dsel).map((x) => `<div class="ws ws-${x.k}"><span aria-hidden="true">${STORY_ICON[x.k]}</span>${esc(cap(x.t))}</div>`).join('')}</div>${hourChart(wxHours(w, dsel), !dsel)}</section>
+      <section class="card wx7"><div class="lab">7 dage</div><div class="w7">${w.days.map((d, i) => `<button class="w7r ${i === 0 ? 'today' : ''} ${i === dsel ? 'sel' : ''}" data-act="wxDay" data-i="${i}" aria-pressed="${i === dsel}"><b>${i === 0 ? 'I dag' : cap(DAYS[d.date.getDay()])}</b>${W.weatherIcon(d.code, 1, 28)}
         <span class="w7rain">${d.rain > 0.05 ? num(d.rain) + ' mm' : ''}</span><span class="w7sun">${d.sunH != null && d.sunH >= 0.1 ? '☀ ' + num(d.sunH) + ' t' : ''}</span><span class="w7wind">${d.windDir != null ? `<svg width="12" height="12" viewBox="0 0 24 24" style="transform:rotate(${d.windDir + 180}deg)"><path d="M12 3l6 16-6-4-6 4z" fill="currentColor"/></svg>` : ''}${num(d.wind, 0)}</span><span class="w7min">${fmtTemp(d.min)}</span>
-        <div class="rng"><i style="left:${((d.min - minT) / span) * 100}%;right:${100 - ((d.max - minT) / span) * 100}%"></i></div><span class="w7max">${fmtTemp(d.max)}</span></div>`).join('')}</div></section>
+        <div class="rng"><i style="left:${((d.min - minT) / span) * 100}%;right:${100 - ((d.max - minT) / span) * 100}%"></i></div><span class="w7max">${fmtTemp(d.max)}</span></button>`).join('')}</div></section>
     </div>`;
   }
   const cmp = D.compare ? `<section class="card"><div class="lab">Sammenligning af kilder · ${esc(placeLabel(place))} · i dag og i morgen</div>
     <div style="overflow-x:auto"><table class="cmp"><thead><tr><th>Kilde</th><th>Nu</th><th class="n">I dag maks/min</th><th class="n">Nedbør i dag</th><th class="n">I morgen maks/min</th><th class="n">Nedbør i morgen</th></tr></thead><tbody>
     ${D.compare.map((r) => r.err ? `<tr><td>${esc(r.name)}</td><td colspan="5" class="err">${esc(r.err)}</td></tr>` : `<tr class="${r.id === settings.weather.model ? 'sel' : ''}"><td>${esc(r.name)}</td><td>${fmtTemp(r.d.now.temp)} ${esc(W.codeText(r.d.now.code).toLowerCase())}</td><td class="n">${fmtTemp(r.d.days[0].max)} / ${fmtTemp(r.d.days[0].min)}</td><td class="n">${num(r.d.days[0].rain)} mm</td><td class="n">${fmtTemp(r.d.days[1].max)} / ${fmtTemp(r.d.days[1].min)}</td><td class="n">${num(r.d.days[1].rain)} mm</td></tr>`).join('')}
     </tbody></table></div></section>` : '';
-  return `<div class="ptitle"><h1>Vejret</h1>${seg}<div class="tools"><button class="btn line" data-act="compare">${D.compare ? 'Opdater sammenligning' : 'Sammenlign kilder'}</button></div></div>
-    ${body}${cmp}`;
+  return `<div class="ptitle"><h1>Vejret</h1>${seg}<div class="tools"><button class="btn line" data-act="compare" aria-pressed="${!!D.compare}">${D.compare ? 'Luk sammenligning' : 'Sammenlign kilder'}</button></div></div>
+    ${cmp}${body}`;
 }
 
 /* ---------- Screens (Somfy) ---------- */
@@ -1019,7 +1028,7 @@ const act = {
   shape: (b) => { const x = editLayout().find((y) => y.id === b.dataset.id); if (x) { x.w = +b.dataset.w; x.h = +b.dataset.h; delete x.size; ui.sizeFor = null; save(); renderMain(); } },
   calPrev: () => { ui.calWeek--; renderMain(); }, calNext: () => { ui.calWeek++; renderMain(); }, calToday: () => { ui.calWeek = 0; renderMain(); },
   wModel: (b) => { settings.weather.model = b.dataset.model; save(); D.wx = {}; renderMain(); loadWeather(); },
-  compare: () => { D.compare = D.compare || []; renderMain(); loadCompare(); },
+  compare: () => { if (D.compare) { D.compare = null; renderMain(); return; } D.compare = []; renderMain(false); loadCompare(); },
   svcToggle: (b) => {
     const id = b.dataset.id; settings.services = { ...(settings.services || {}), [id]: !svcOn(id) }; save();
     if (!pageOn(ui.page)) ui.page = 'forside';
@@ -1047,6 +1056,7 @@ const act = {
   mdOpen: (b) => { madroSub = b.dataset.sub || ''; act.nav({ dataset: { page: 'madro' } }); },
   sShuffle: () => { const m = S.nowPlaying().modes; S.setPlayModes({ shuffle: !m.shuffle }).catch(() => toast('Sonos kunne ikke skifte')); renderMain(); },
   sRepeat: () => { const m = S.nowPlaying().modes; const nx = m.repeatOne ? { repeat: false, repeatOne: false } : m.repeat ? { repeat: false, repeatOne: true } : { repeat: true, repeatOne: false }; S.setPlayModes(nx).catch(() => toast('Sonos kunne ikke skifte')); renderMain(); },
+  wxDay: (b) => { ui.wxDay = +b.dataset.i; renderMain(); },
   newsView: (b) => { settings.newsView = b.dataset.v; save(); renderMain(false); },
   newsPick: (b) => { ui.newsSel = b.dataset.url; renderMain(); },
   newsFilter: (b) => { ui.newsFilter = b.dataset.id; ui.newsSel = null; renderMain(false); },

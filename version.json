@@ -1,5 +1,5 @@
 {
-  "version": "1.34.1",
+  "version": "1.35.0",
   "files": [
     "index.html",
     "app.js",
@@ -21,6 +21,16 @@
     "somfy.js"
   ],
   "notes": [
+    {
+      "version": "1.35.0",
+      "date": "24. november 2026",
+      "title": "Se hver dag time for time",
+      "items": [
+        "Tryk på en dag under 7 dage på vejrsiden for at se hele dagen time for time – med temperatur, sol og skyer, regn og vind.",
+        "\"Tilbage til i dag\" viser igen de næste 24 timer.",
+        "Sammenlign kilder vises nu øverst og lukkes med samme knap."
+      ]
+    },
     {
       "version": "1.34.1",
       "date": "24. november 2026",
