@@ -1,5 +1,5 @@
 {
-  "version": "1.28.0",
+  "version": "1.29.0",
   "files": [
     "index.html",
     "app.js",
@@ -21,6 +21,15 @@
     "somfy.js"
   ],
   "notes": [
+    {
+      "version": "1.29.0",
+      "date": "24. november 2026",
+      "title": "Vælg hvordan screens betjenes",
+      "items": [
+        "Under Tilpas forside kan I på Screens-kortet vælge: Alle samlet, Hver for sig eller Begge.",
+        "Alle samlet giver store knapper, der styrer alle screens på én gang."
+      ]
+    },
     {
       "version": "1.28.0",
       "date": "24. november 2026",

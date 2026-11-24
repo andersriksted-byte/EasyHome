@@ -390,7 +390,7 @@ function wIndkob(size, h = 1, wd = 1) {
 }
 
 // Somfy: screens udenfor – op, stop, "my" og ned for hver, og for alle på én gang
-function wScreens(size, h = 1, wd = 1) {
+function wScreens(size, h = 1, wd = 1, x = {}) {
   const st = SF.state;
   if (!hasProxy()) return cardHead('Screens') + needProxyMsg('Somfy');
   if (!st.checked) return cardHead('Screens') + '<div class="empty">Henter fra Somfy …</div>';
@@ -409,7 +409,12 @@ function wScreens(size, h = 1, wd = 1) {
       <button data-act="sfCmd" data-urls="${esc(k)}" data-cmd="${a ? 'open' : 'close'}" aria-label="${a ? 'Ud' : 'Ned'}">${svg('down', 20)}</button></span>`;
   };
   const rows = st.devices.map((d) => `<div class="sfrow${d.available ? '' : ' off'}"><span class="sfname"><b title="${esc(d.label)}">${esc(d.label)}</b>${SF.stateText(d) ? `<small>${esc(SF.stateText(d))}</small>` : ''}</span>${btns([d.url], d)}</div>`).join('');
-  const all = st.devices.length > 1 ? `<div class="sfrow sfall"><span class="sfname"><b>Alle</b></span>${btns(st.devices.map((d) => d.url), null, true)}</div>` : '';
+  const mode = x.mode || 3; // 1 = kun alle samlet, 2 = kun hver for sig, 3 = begge
+  if (mode === 1) {
+    const sts = st.devices.map(SF.stateText).filter(Boolean); const same = sts.length && sts.every((t) => t === sts[0]);
+    return cardHead('Screens', `<span class="small muted">${st.devices.length} stk.</span>`) + `<div class="sfone"><span class="sfname"><b>Alle screens</b>${same ? `<small>${esc(sts[0])}</small>` : ''}</span>${btns(st.devices.map((d) => d.url), null, true)}</div>`;
+  }
+  const all = mode === 3 && st.devices.length > 1 ? `<div class="sfrow sfall"><span class="sfname"><b>Alle</b></span>${btns(st.devices.map((d) => d.url), null, true)}</div>` : '';
   return cardHead('Screens') + `<div class="sflist">${all}${rows}</div>`;
 }
 
@@ -455,6 +460,7 @@ function pageForside() {
     return `
     <section class="card w" data-wid="${x.id}" ${FIT.includes(x.id) ? `data-fit data-h="${h}"` : ''} style="--w:${w};--h:${h}">
       ${ui.editing ? `<div class="wbar"><button class="handle" aria-label="Træk for at flytte ${esc(WIDGETS[x.id])}">${GRIP}Flyt</button><span class="nm">${esc(WIDGETS[x.id])}</span>
+        ${x.id === 'screens' ? `<span class="wopt" role="group" aria-label="Betjening">${[[1, 'Alle samlet'], [2, 'Hver for sig'], [3, 'Begge']].map(([v, l]) => `<button data-act="wOpt" data-id="screens" data-k="mode" data-v="${v}" aria-pressed="${(x.mode || 3) === v}">${l}</button>`).join('')}</span>` : ''}
         ${x.id === 'madplan' ? `<span class="wopt" role="group" aria-label="Antal dage">${[[1, '1 dag'], [5, '5 dage']].map(([v, l]) => `<button data-act="wOpt" data-id="madplan" data-k="days" data-v="${v}" aria-pressed="${(x.days || 5) === v}">${l}</button>`).join('')}</span>` : ''}
         <button class="sz" data-act="sizeFor" data-id="${x.id}" aria-expanded="${ui.sizeFor === x.id}" aria-label="Vælg størrelse (nu ${w} gange ${h})">${shapeIcon(w, h)}<span>${w}×${h}</span></button>
         <button class="x" data-act="toggleW" data-id="${x.id}" aria-label="Fjern ${esc(WIDGETS[x.id])}">×</button></div>${picker}` : ''}
