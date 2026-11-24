@@ -324,7 +324,8 @@ function wMadplan(size, h = 1, wd = 1, x = {}) {
   const days = Array.from({ length: n }, (_, i) => addDays(today, i));
   const dayLabel = (d, i) => (i === 0 ? 'I dag' : i === 1 ? 'I morgen' : cap(DAYS[d.getDay()]) + ' ' + d.getDate() + '.');
   const bg = (m) => (m.image ? `style="background-image:url('${esc(m.image)}')"` : m.art ? `style="background-image:linear-gradient(135deg,${m.art[0]},${m.art[1]})"` : '');
-  const badge = (m) => (m.status ? `<i class="mdst ${m.status.cls}">${m.status.cls === 'done' ? '✓ ' : m.status.cls === 'wait' ? '🛒 ' : ''}${esc(m.status.text)}</i>` : '');
+  // Samme ikoner som i Madro: ✓ handlet, et tal = varer der mangler, 🛒 ikke handlet
+  const badge = (m) => (m.status ? `<i class="mdst ${m.status.cls}" title="${esc(m.status.text)}" aria-label="Indkøb: ${esc(m.status.text)}">${m.status.cls === 'done' ? '✓' : m.status.cls === 'wait' ? m.status.n : '🛒'}</i>` : '');
   const meal = (m) => `<span class="mdmeal ${m.image || m.art ? 'has-img' : ''} ${m.note ? 'note' : ''}" ${bg(m)}>${badge(m)}<b>${esc(m.title)}</b></span>`;
   const cells = days.map((d, i) => { const ms = MD.mealsOn(d); return `<button class="mdday ${i === 0 ? 'today' : ''}" data-act="mdOpen" data-sub="madplan"><span class="mdlab">${dayLabel(d, i)}</span>${ms.length ? ms.slice(0, 2).map(meal).join('') : '<span class="mdnone">–</span>'}</button>`; }).join('');
   if (n === 1) {

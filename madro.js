@@ -91,7 +91,7 @@ function shopStatus(e, r) {
   if (!e.shopped) return { cls: 'none', text: 'Ikke handlet' };
   const added = (e.shopped.added || []).map(nrm);
   const open = state.shopping.filter((it) => !it.checked && (it.from || []).includes(r.title) && added.includes(nrm(it.name)));
-  if (open.length) return { cls: 'wait', text: open.length + (open.length === 1 ? ' vare mangler' : ' varer mangler') };
+  if (open.length) return { cls: 'wait', n: open.length, text: open.length + (open.length === 1 ? ' vare mangler' : ' varer mangler') };
   return { cls: 'done', text: added.length ? 'Handlet' : 'Har alt' };
 }
 // Retter uden foto får samme farver som Madros standardbillede

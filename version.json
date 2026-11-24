@@ -1,5 +1,5 @@
 {
-  "version": "1.23.1",
+  "version": "1.23.2",
   "files": [
     "index.html",
     "app.js",
@@ -20,6 +20,14 @@
     "madro.js"
   ],
   "notes": [
+    {
+      "version": "1.23.2",
+      "date": "24. november 2026",
+      "title": "Samme ikoner som i Madro",
+      "items": [
+        "Madplanen viser handlet-status med Madros egne ikoner: ✓ handlet, et tal for varer der mangler, og 🛒 ikke handlet."
+      ]
+    },
     {
       "version": "1.23.1",
       "date": "24. november 2026",
