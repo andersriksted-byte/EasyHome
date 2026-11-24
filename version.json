@@ -1,7 +1,28 @@
 {
-  "version": "1.2.0",
-  "files": ["index.html", "app.js", "app.css", "util.js", "updater.js", "weather.js", "news.js", "calendar.js", "sonos.js", "icon-180.png"],
+  "version": "1.2.1",
+  "files": [
+    "index.html",
+    "app.js",
+    "app.css",
+    "util.js",
+    "updater.js",
+    "weather.js",
+    "news.js",
+    "calendar.js",
+    "sonos.js",
+    "icon-180.png"
+  ],
   "notes": [
+    {
+      "version": "1.2.1",
+      "date": "24. november 2026",
+      "title": "Nemmere at tilføje sommerhuset",
+      "items": [
+        "Vejrkortet på forsiden har nu en knap: + Tilføj sted.",
+        "Knappen fører direkte til søgefeltet, hvor du finder fx sommerhuset og giver det et navn.",
+        "Så snart der er to steder, kommer pilene ‹ › frem i vejrkortet, så du kan skifte mellem dem."
+      ]
+    },
     {
       "version": "1.2.0",
       "date": "24. november 2026",

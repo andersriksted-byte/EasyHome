@@ -157,7 +157,7 @@ function wUge(size) {
 }
 function placeArrows(scope, idx) {
   const n = settings.places.length;
-  if (n < 2) return '';
+  if (n < 2) return scope === 'fp' ? '<button class="pill" data-act="addPlace" style="min-height:40px;font-size:13px;border-style:dashed;flex:none">+ Tilføj sted</button>' : '';
   return `<span class="parrows"><button class="arr" data-act="wStep" data-scope="${scope}" data-dir="-1" aria-label="Forrige sted">‹</button>
     <span class="dots" aria-hidden="true">${settings.places.map((_, i) => `<i class="${i === idx ? 'on' : ''}"></i>`).join('')}</span>
     <button class="arr" data-act="wStep" data-scope="${scope}" data-dir="1" aria-label="Næste sted">›</button></span>`;
@@ -467,6 +467,7 @@ const act = {
   },
   placeHome: (b) => { const i = +b.dataset.i; const [p] = settings.places.splice(i, 1); settings.places.unshift(p); save(); D.compare = null; renderMain(); loadWeather(); toast(placeLabel(p) + ' er nu hjem'); },
   placeRm: (b) => { ui.fpPlace = 0; const [p] = settings.places.splice(+b.dataset.i, 1); delete D.wx[p.id]; if (ui.wPlace === p.id) ui.wPlace = null; save(); renderMain(); loadWeather(); },
+  addPlace: () => { ui.page = 'indstillinger'; history.replaceState(null, '', '#indstillinger'); renderNav(); renderMain(false); setTimeout(() => { const q = $('#geoQ'); if (q) { q.scrollIntoView({ block: 'center' }); q.focus(); } }, 50); },
   wStep: (b) => {
     const n = settings.places.length; const dir = +b.dataset.dir;
     if (b.dataset.scope === 'fp') { ui.fpPlace = (((ui.fpPlace + dir) % n) + n) % n; ui.fpTouched = Date.now(); }
