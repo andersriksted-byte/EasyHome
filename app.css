@@ -1191,3 +1191,7 @@ button.w7r.sel{background:color-mix(in srgb,var(--accent) 16%,transparent);box-s
 .fbchip{display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:4px 12px 4px 6px;border-radius:99px;border:2px solid var(--line);background:transparent;color:var(--text);font:inherit;font-size:14px;font-weight:700;cursor:pointer}
 .fbchip img{width:26px;height:26px;object-fit:contain}
 .fbchip[aria-pressed=true]{background:var(--text);color:var(--bg);border-color:var(--text)}
+
+.fb-t.logo-only>span{display:none}
+.fb-t.logo-only{justify-content:center}
+.fb-t.logo-only img{width:28px;height:28px}

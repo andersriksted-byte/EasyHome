@@ -490,7 +490,7 @@ function wFodbold(size, h = 1, wd = 1) {
   const { live, done, next } = FB.view();
   const today = startOfDay(new Date());
   const dayTxt = (d) => (sameDay(d, today) ? 'I dag' : sameDay(d, addDays(today, 1)) ? 'I morgen' : sameDay(d, addDays(today, -1)) ? 'I går' : `${cap(DAYS[d.getDay()]).slice(0, 3)} ${d.getDate()}/${d.getMonth() + 1}`);
-  const side = (t, fav) => `<span class="fb-t${t.id === fav ? ' fb-fav' : ''}">${t.logo ? `<img src="${esc(t.logo)}" alt="" loading="lazy">` : '<i></i>'}<span>${esc(t.name)}</span></span>`;
+  const side = (t, fav) => `<span class="fb-t${t.id === fav ? ' fb-fav' : ''}${t.logo ? '' : ' nologo'}" title="${esc(t.name)}">${t.logo ? `<img src="${esc(t.logo)}" alt="${esc(t.name)}" loading="lazy">` : ''}<span data-abbr="${esc(t.abbr || '')}">${esc(t.name)}</span></span>`;
   const row = (m) => {
     const mid = m.state === 'pre' ? `<span class="fb-mid time">${hhmm(m.date)}</span>` : `<span class="fb-mid"><b class="${m.home.win ? 'w' : ''}">${esc(m.home.score)}</b>–<b class="${m.away.win ? 'w' : ''}">${esc(m.away.score)}</b></span>`;
     const when = m.state === 'in' ? `<span class="fb-live">● ${esc(m.clock || m.detail || 'Live')}</span>` : esc(dayTxt(m.date));
@@ -1255,6 +1255,13 @@ function trimCards() {
   document.querySelectorAll('#grid .w [data-trim]').forEach((list) => {
     let guard = 60;
     while (guard-- > 0 && list.children.length > 1 && list.scrollHeight > list.clientHeight + 1) list.lastElementChild.remove();
+  });
+  // Fodbold: er der ikke plads til hele klubnavnet, vises kun logoet (eller forkortelsen, hvis der ikke er et logo)
+  document.querySelectorAll('#grid .fb-t > span').forEach((sp) => {
+    if (sp.scrollWidth <= sp.clientWidth + 1) return;
+    const t = sp.parentElement;
+    if (!t.classList.contains('nologo')) t.classList.add('logo-only');
+    else if (sp.dataset.abbr) sp.textContent = sp.dataset.abbr;
   });
   // Lister, der må fylde resten af kortet: fjern de sidste, til hele kortet kan ses
   document.querySelectorAll('#grid .w [data-trimcard]').forEach((list) => {

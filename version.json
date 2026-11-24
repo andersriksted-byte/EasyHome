@@ -1,5 +1,5 @@
 {
-  "version": "1.54.2",
+  "version": "1.54.3",
   "files": [
     "index.html",
     "app.js",
@@ -24,6 +24,14 @@
     "football.js"
   ],
   "notes": [
+    {
+      "version": "1.54.3",
+      "date": "24. november 2026",
+      "title": "Fodbold: logo i stedet for afkortede navne",
+      "items": [
+        "Er der ikke plads til hele klubnavnet, vises kun klubbens logo"
+      ]
+    },
     {
       "version": "1.54.2",
       "date": "24. november 2026",

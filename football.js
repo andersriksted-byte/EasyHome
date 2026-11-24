@@ -33,7 +33,7 @@ function parse(ev, fav) {
   const comp = (ev.competitions || [])[0] || {};
   const st = (comp.status || ev.status || {}).type || {};
   const side = (h) => { const c = (comp.competitors || []).find((x) => x.homeAway === h) || {}; const t = c.team || {};
-    return { id: String(t.id || ''), name: dk(t.shortDisplayName || t.displayName || ''), logo: (t.logos && t.logos[0] && t.logos[0].href) || t.logo || '', score: score(c), win: !!c.winner, pens: c.shootoutScore != null ? String(c.shootoutScore) : '' }; };
+    return { id: String(t.id || ''), name: dk(t.shortDisplayName || t.displayName || ''), abbr: t.abbreviation || '', logo: (t.logos && t.logos[0] && t.logos[0].href) || t.logo || '', score: score(c), win: !!c.winner, pens: c.shootoutScore != null ? String(c.shootoutScore) : '' }; };
   const lgName = (ev.league && ev.league.name) || (ev.season && ev.season.displayName) || '';
   return { id: String(ev.id), date: new Date(ev.date), state: st.state || 'pre', detail: st.shortDetail || '', clock: (comp.status || ev.status || {}).displayClock || '', comp: COMP[lgName] || lgName, home: side('home'), away: side('away'), fav };
 }
