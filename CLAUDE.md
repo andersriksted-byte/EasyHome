@@ -25,4 +25,4 @@ Variabler i Cloudflare: DASH_KEY (secret), APP_ORIGIN, SONOS_CLIENT_ID, SONOS_CL
 Alle filer ligger i roden (Safari kan ikke uploade mapper til GitHub). ES-moduler uden byggetrin.
 - `app.js` layout, sider, forside-widgets, indstillinger · `util.js` indstillinger (localStorage) · `updater.js` opdateringsbesked · `sync.js` deling mellem skærme
 - `weather.js` Open-Meteo (DMI m.fl.) · `news.js` RSS · `calendar.js` iCal (iCloud offentlige links) · `sonos.js` Sonos Control API
-- `cloudflare-worker.js` proxy til RSS/iCal + Sonos-login (deployes manuelt i Cloudflare – bruges ikke af siden)
+- `cloudflare-worker.js` proxy til RSS/iCal, Sonos-login og fælles indstillinger (deployes automatisk af Cloudflare Builds – bruges ikke af selve siden)
