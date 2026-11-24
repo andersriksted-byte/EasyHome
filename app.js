@@ -415,7 +415,10 @@ function pageIndstillinger() {
       <p class="note">Nyheder, kalendere og Sonos går gennem en lille gratis Cloudflare Worker, som I selv ejer. Se README.md for opsætning. Vejret virker uden.</p>
       <div class="form"><label class="f">Worker-adresse<input type="url" data-set="proxy.url" value="${esc(s.proxy.url)}" placeholder="https://easyhome.ditnavn.workers.dev" autocomplete="off"></label>
       <label class="f">Nøgle (DASH_KEY)<input type="password" data-set="proxy.key" value="${esc(s.proxy.key)}" autocomplete="off"></label></div>
-      <div class="row"><button class="btn primary" data-act="testConn">Test forbindelse</button><span class="small" id="connMsg">${esc(ui.connMsg)}</span></div></section>`,
+      <div class="row"><button class="btn primary" data-act="testConn">Test forbindelse</button><span class="small" id="connMsg">${esc(ui.connMsg)}</span></div>
+      ${s.proxy.url ? `<div class="empty" style="display:flex;flex-direction:column;gap:6px"><b>Redirect-adresse til Sonos</b><span class="small">Skal stå præcis sådan under Redirect URI i jeres Sonos-integration:</span>
+        <code id="redir" style="user-select:all;font-size:15px;word-break:break-all">${esc(s.proxy.url.replace(/\/+$/, '') + '/sonos/callback')}</code>
+        <div><button class="btn" data-act="copyRedir">Kopiér adressen</button></div></div>` : ''}</section>`,
     backup: () => `
     <section class="card wide"><b>Sikkerhedskopi</b><p class="note">Kopiér indstillingerne til en anden skærm, eller gem dem. Teksten indeholder jeres nøgle og kalenderlinks – del den ikke.</p>
       <textarea id="cfg" aria-label="Indstillinger som tekst">${esc(JSON.stringify(settings, null, 2))}</textarea>
@@ -536,6 +539,7 @@ const act = {
   calRm: (b) => { settings.calendars.splice(+b.dataset.i, 1); save(); C.clearCalCache(); renderMain(); loadCal(); },
   tvAdd: () => { settings.tv.channels.push({ name: 'Ny knap', url: 'https://www.dr.dk/drtv' }); save(); renderMain(); },
   tvRm: (b) => { settings.tv.channels.splice(+b.dataset.i, 1); save(); renderMain(); },
+  copyRedir: async () => { try { await navigator.clipboard.writeText($('#redir').textContent); toast('Adressen er kopieret'); } catch (e) { toast('Markér adressen og kopiér med ⌘C'); } },
   copyCfg: async () => { try { await navigator.clipboard.writeText($('#cfg').value); toast('Kopieret'); } catch (e) { $('#cfg').select(); toast('Markeret – kopiér manuelt'); } },
   importCfg: () => { try { replaceSettings(JSON.parse($('#cfg').value)); C.clearCalCache(); N.clearNewsCache(); renderAll(); loadAll(); toast('Indstillinger indlæst'); } catch (e) { toast('Teksten kunne ikke læses: ' + e.message); } }
 };
