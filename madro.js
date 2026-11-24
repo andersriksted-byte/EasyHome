@@ -5,7 +5,7 @@
 
 export const BASE = new URL('../Madro/', location.href).href;
 
-export const state = { status: 'idle', error: '', fid: null, plans: {}, shopping: [], recipes: {} };
+export const state = { status: 'idle', error: '', fid: null, plans: {}, shopping: [], recipes: {}, all: [] };
 let onChange = () => {};
 export function onMadroChange(fn) { onChange = fn; }
 
@@ -49,6 +49,7 @@ async function connect(user) {
       const key = weekKey(m);
       unsubs.push(col('plans').doc(key).onSnapshot((d) => { state.plans[key] = d.exists ? (d.data().entries || []) : []; loadRecipes(); onChange(); }, fail));
     });
+    loadAll(); setInterval(loadAll, 30 * 60000);
     onChange();
   } catch (e) { fail(e); }
 }
@@ -135,4 +136,22 @@ export async function addItem(text) {
     else items.push({ id: Math.random().toString(36).slice(2, 8) + Date.now().toString(36).slice(-5), name, unit, amount, from: [], parts: {}, checked: false, createdAt: Date.now() });
     tx.set(ref, { items, updatedAt: Date.now() }, { merge: true });
   });
+}
+
+// Hele kogebogen (til inspirationskortet). Rækkefølgen blandes én gang, så kortet viser noget nyt hver gang.
+async function loadAll() {
+  if (!fs || !state.fid) return;
+  try {
+    const snap = await fs.collection('families/' + state.fid + '/recipes').get();
+    const list = snap.docs.map((d) => { const r = d.data() || {}; return { id: d.id, title: r.title || '', image: imgUrl(r.image), art: artColors(r.title), time: r.time || '', theme: (r.themes || [])[0] || '', intro: intro(r) }; }).filter((r) => r.title);
+    for (let i = list.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [list[i], list[j]] = [list[j], list[i]]; }
+    list.sort((a, b) => (b.image ? 1 : 0) - (a.image ? 1 : 0)); // retter med foto først
+    state.all = list; onChange();
+  } catch (e) { /* prøv igen senere */ }
+}
+function intro(r) {
+  let d = String(r.description || '').replace(/\s+/g, ' ').trim();
+  if (!d) return '';
+  const m = d.match(/^.{20,140}?[.!?](\s|$)/); d = m ? m[0].trim() : d;
+  return d.length > 140 ? d.slice(0, 137).replace(/\s+\S*$/, '') + '…' : d;
 }

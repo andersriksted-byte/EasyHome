@@ -1,5 +1,5 @@
 {
-  "version": "1.25.0",
+  "version": "1.26.0",
   "files": [
     "index.html",
     "app.js",
@@ -20,6 +20,16 @@
     "madro.js"
   ],
   "notes": [
+    {
+      "version": "1.26.0",
+      "date": "24. november 2026",
+      "title": "Opskrift-inspiration",
+      "items": [
+        "Nyt kort: Opskrift-inspiration viser en ret fra jeres kogebog i Madro og skifter til en ny hvert 20. sekund.",
+        "Tryk på retten for at åbne opskriften i Madro. Bladr selv med pilene eller ved at swipe.",
+        "Tilføj kortet under Tilpas forside (blyanten øverst)."
+      ]
+    },
     {
       "version": "1.25.0",
       "date": "24. november 2026",

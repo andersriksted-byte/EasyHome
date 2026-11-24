@@ -72,7 +72,7 @@ const PAGES = [
 // Tjenester ("app store"): hver tjeneste kan slås til og fra under Indstillinger → Tjenester.
 // Slås en tjeneste fra, skjules dens side, kort, faner og felter. Kortene på forsiden huskes til den slås til igen.
 const SERVICES = [
-  { id: 'madro', name: 'Madro', icon: 'madro', desc: 'Madplan, indkøbsliste og opskrifter.', pages: ['madro'], widgets: ['madplan', 'indkob'], tabs: [] },
+  { id: 'madro', name: 'Madro', icon: 'madro', desc: 'Madplan, indkøbsliste og opskrifter.', pages: ['madro'], widgets: ['madplan', 'indkob', 'inspiration'], tabs: [] },
   { id: 'kalender', name: 'Kalender', icon: 'kalender', desc: 'Familiens aftaler fra iCloud m.fl.', pages: ['kalender'], widgets: ['uge'], tabs: [] },
   { id: 'vejr', name: 'Vejret', icon: 'vejr', desc: 'Prognoser fra DMI og andre kilder for jeres steder.', pages: ['vejr'], widgets: ['vejr', 'steder'], tabs: ['vejr'] },
   { id: 'nyheder', name: 'Nyheder', icon: 'nyheder', desc: 'Overskrifter fra DR, TV 2, JP og egne kilder.', pages: ['nyheder'], widgets: ['nyheder'], tabs: ['nyheder'] },
@@ -84,10 +84,10 @@ const svcOn = (id) => !settings.services || settings.services[id] !== false;
 const pageOn = (p) => SERVICES.every((x) => !x.pages.includes(p) || svcOn(x.id));
 const widgetOn = (w) => SERVICES.every((x) => !x.widgets.includes(w) || svcOn(x.id));
 const tabOn = (t) => (t === 'kalender' ? svcOn('kalender') || svcOn('nedtaelling') : SERVICES.every((x) => !x.tabs.includes(t) || svcOn(x.id)));
-const WIDGETS = { madplan: 'Madplan', indkob: 'Indkøbsliste', uge: 'Familiens uge', vejr: 'Vejret', steder: 'Vejret andre steder', nyheder: 'Nyheder', sonos: 'Musik (Sonos)', tv: 'DR TV', nedtaelling: 'Nedtælling' };
+const WIDGETS = { madplan: 'Madplan', indkob: 'Indkøbsliste', inspiration: 'Opskrift-inspiration', uge: 'Familiens uge', vejr: 'Vejret', steder: 'Vejret andre steder', nyheder: 'Nyheder', sonos: 'Musik (Sonos)', tv: 'DR TV', nedtaelling: 'Nedtælling' };
 // Forsiden er et gitter af ens kvadrater. Et kort fylder w kvadrater i bredden og h i højden.
 const SHAPES = [[1, 1], [2, 1], [3, 1], [4, 1], [1, 2], [1, 3], [1, 4], [2, 2]];
-const DEFAULT_SHAPE = { madplan: [4, 1], indkob: [2, 1], uge: [4, 1], vejr: [2, 1], steder: [2, 1], nyheder: [2, 1], sonos: [1, 1], tv: [1, 1], nedtaelling: [1, 1] };
+const DEFAULT_SHAPE = { madplan: [4, 1], indkob: [2, 1], inspiration: [2, 1], uge: [4, 1], vejr: [2, 1], steder: [2, 1], nyheder: [2, 1], sonos: [1, 1], tv: [1, 1], nedtaelling: [1, 1] };
 const LEGACY = { S: [1, 1], M: [2, 1], L: [4, 1] };
 const shapeOf = (x) => (x.w && x.h ? [x.w, x.h] : LEGACY[x.size] || [1, 1]);
 const FIT = ['uge']; // kort der aldrig må skære indhold af – de bliver kompakte og vokser i højden ved behov
@@ -100,7 +100,7 @@ const D = { weather: null, weatherErr: null, wx: {}, wxErr: {}, compare: null, n
 const home = () => settings.places[0];
 const placeLabel = (p) => p.label || p.name;
 const placeById = (id) => settings.places.find((p) => p.id === id) || home();
-const ui = { calEdit: null, famMsg: null, cdIdx: 0, cdAt: Date.now(), cdMsg: null, bgMsg: null, sizeFor: null, newsIdx: 0, newsAt: Date.now(), feedMsg: null, feedDraft: null, page: pageFromHash(), setTab: 'familie', wPlace: null, fpPlace: 0, fpTouched: 0, editing: false, calWeek: 0, geo: null, geoMsg: '', tick: 0, connMsg: '' };
+const ui = { inspIdx: 0, inspAt: Date.now(), calEdit: null, famMsg: null, cdIdx: 0, cdAt: Date.now(), cdMsg: null, bgMsg: null, sizeFor: null, newsIdx: 0, newsAt: Date.now(), feedMsg: null, feedDraft: null, page: pageFromHash(), setTab: 'familie', wPlace: null, fpPlace: 0, fpTouched: 0, editing: false, calWeek: 0, geo: null, geoMsg: '', tick: 0, connMsg: '' };
 function pageFromHash() { const h = location.hash.slice(1); return [...PAGES.map((p) => p.id), 'indstillinger'].includes(h) && (h === 'indstillinger' || pageOn(h)) ? h : 'forside'; }
 
 function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), 2600); }
@@ -370,6 +370,22 @@ function wIndkob(size, h = 1, wd = 1) {
   return head + `<div class="shoplist" style="--cols:${cols}">${items.map((x) => `<div class="shopitem"><i aria-hidden="true"></i><span class="si-name">${esc(x.name)}</span>${amt(x) ? `<span class="si-amt">${esc(amt(x))}</span>` : ''}</div>`).join('')}</div>` + add;
 }
 
+// Inspiration: en ret fra kogebogen ad gangen, skifter hvert 20. sekund
+function wInspiration(size, h = 1, wd = 1) {
+  const wait = madroStatus('Inspiration'); if (wait) return wait;
+  const list = MD.state.all;
+  if (!list.length) return cardHead('Inspiration') + '<div class="empty">Henter opskrifter …</div>';
+  const n = list.length; const idx = ((ui.inspIdx % n) + n) % n; const r = list[idx];
+  const kind = shapeKind(wd, h);
+  const bg = r.image ? `background-image:url('${esc(r.image)}')` : `background-image:linear-gradient(135deg,${r.art[0]},${r.art[1]})`;
+  const kick = [r.theme, r.time].filter(Boolean).join(' · ');
+  return `<div class="insp" style="${bg}"><div class="insp-in">
+    <div class="whead"><span class="lab">Prøv noget nyt</span><span class="parrows"><button class="arr" data-act="wStep" data-scope="insp" data-dir="-1" aria-label="Forrige opskrift">‹</button><button class="arr" data-act="wStep" data-scope="insp" data-dir="1" aria-label="Næste opskrift">›</button></span></div>
+    <div class="nbar insp-bar" aria-hidden="true"><i id="inspBar" style="width:${Math.max(0, 100 - ((Date.now() - ui.inspAt) / 200))}%"></i></div>
+    <button class="insp-go" data-act="mdRecipe" data-id="${esc(r.id)}">${kick ? `<span class="insp-kick">${esc(kick)}</span>` : ''}<b>${esc(r.title)}</b>${r.intro && kind !== 'tiny' ? `<span class="insp-intro">${esc(r.intro)}</span>` : ''}</button>
+  </div></div>`;
+}
+
 function wNed(size, h = 1, wd = 1) {
   const list = countdowns();
   if (!list.length) return '<div class="cdcard"><div class="cdinner">' + cardHead('Nedtælling') + '<div class="empty">Vælg nedtællinger til kortet under Indstillinger → Kalender.</div></div></div>';
@@ -382,7 +398,7 @@ function wNed(size, h = 1, wd = 1) {
     <div class="cdw"><div class="cdn">${c.days < 0 ? '✓' : c.days}</div><div class="cdl">${label}</div><div class="cdd">${cap(DAYS_LONG[d.getDay()])} ${d.getDate()}. ${MONTHS[d.getMonth()]} ${d.getFullYear()}</div></div></div></div>`;
 }
 
-const WRENDER = { madplan: wMadplan, indkob: wIndkob, uge: wUge, vejr: wVejr, steder: wSteder, nyheder: wNyheder, sonos: wSonos, tv: wTv, nedtaelling: wNed };
+const WRENDER = { madplan: wMadplan, indkob: wIndkob, inspiration: wInspiration, uge: wUge, vejr: wVejr, steder: wSteder, nyheder: wNyheder, sonos: wSonos, tv: wTv, nedtaelling: wNed };
 
 function pageForside() {
   const inLayout = (id) => settings.layout.some((x) => x.id === id);
@@ -849,6 +865,15 @@ const act = {
     renderAll(); if (svcOn(id)) loadAll();
   },
   wStepSet: (b) => { settings.weather.step = +b.dataset.v; save(); renderMain(); },
+  mdRecipe: (b) => {
+    const id = b.dataset.id; madroSub = 'opskrifter'; act.nav({ dataset: { page: 'madro' } });
+    // Åbn opskriften inde i Madro, så snart Madro har hentet kogebogen
+    let tries = 0; const t = setInterval(() => {
+      const f = document.getElementById('madroFrame'); tries++;
+      try { const w = f && f.contentWindow; if (w && w.getRecipe && w.getRecipe(id)) { clearInterval(t); w.openRecipe(id); } } catch (e) { /* ignorer */ }
+      if (tries > 60) clearInterval(t);
+    }, 250);
+  },
   mdOpen: (b) => { madroSub = b.dataset.sub || ''; act.nav({ dataset: { page: 'madro' } }); },
   sShuffle: () => { const m = S.nowPlaying().modes; S.setPlayModes({ shuffle: !m.shuffle }).catch(() => toast('Sonos kunne ikke skifte')); renderMain(); },
   sRepeat: () => { const m = S.nowPlaying().modes; const nx = m.repeatOne ? { repeat: false, repeatOne: false } : m.repeat ? { repeat: false, repeatOne: true } : { repeat: true, repeatOne: false }; S.setPlayModes(nx).catch(() => toast('Sonos kunne ikke skifte')); renderMain(); },
@@ -935,6 +960,7 @@ const act = {
   setTab: (b) => { ui.setTab = b.dataset.tab; ui.geo = null; renderMain(false); },
   wStep: (b) => {
     const n = settings.places.length; const dir = +b.dataset.dir;
+    if (b.dataset.scope === 'insp') { const m = Math.max(1, MD.state.all.length); ui.inspIdx = (((ui.inspIdx + dir) % m) + m) % m; ui.inspAt = Date.now(); renderMain(); return; }
     if (b.dataset.scope === 'cd') { const m = Math.max(1, countdowns().length); ui.cdIdx = (((ui.cdIdx + dir) % m) + m) % m; ui.cdAt = Date.now(); renderMain(); return; }
     if (b.dataset.scope === 'cal') { ui.calWeek += dir; renderMain(); return; }
     if (b.dataset.scope === 'news') { const m = Math.max(1, newsSources().length); ui.newsIdx = (((ui.newsIdx + dir) % m) + m) % m; ui.newsAt = Date.now(); renderMain(); return; }
@@ -1026,7 +1052,7 @@ document.addEventListener('change', (e) => {
 window.addEventListener('hashchange', () => { const p = pageFromHash(); if (p !== ui.page) { ui.page = p; renderNav(); renderMain(false); } });
 
 /* ---------- Swipe i kort med flere sider (vejr, nyheder) ---------- */
-const SWIPE_SCOPE = { vejr: 'fp', nyheder: 'news', nedtaelling: 'cd' };
+const SWIPE_SCOPE = { vejr: 'fp', nyheder: 'news', nedtaelling: 'cd', inspiration: 'insp' };
 let swipe = null; let swipedAt = 0;
 document.addEventListener('pointerdown', (e) => {
   if (ui.editing || e.target.closest('.hours, input, .handle')) return; // timeoversigten scroller selv vandret
@@ -1163,6 +1189,14 @@ function boot() {
     const left = newsLeft();
     if (left <= 0) { act.wStep({ dataset: { scope: 'news', dir: '1' } }); return; }
     bar.style.width = (left / newsSecs()) * 100 + '%';
+  }, 1000);
+  // Inspirationskortet: ny ret hvert 20. sekund
+  setInterval(() => {
+    const on = ui.page === 'forside' && !ui.editing && !drag && settings.layout.some((x) => x.id === 'inspiration') && widgetOn('inspiration') && MD.state.all.length > 1;
+    if (!on) { ui.inspAt = Date.now(); return; }
+    const left = 20000 - (Date.now() - ui.inspAt);
+    const bar = document.getElementById('inspBar'); if (bar) bar.style.width = Math.max(0, left / 200) + '%';
+    if (left <= 0) act.wStep({ dataset: { scope: 'insp', dir: '1' } });
   }, 1000);
   // Nedtællingskortet: skift til næste nedtælling hvert 10. sekund, når der er flere
   setInterval(() => {
