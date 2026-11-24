@@ -1,5 +1,5 @@
 {
-  "version": "1.42.0",
+  "version": "1.42.1",
   "files": [
     "index.html",
     "app.js",
@@ -22,6 +22,15 @@
     "timer.js"
   ],
   "notes": [
+    {
+      "version": "1.42.1",
+      "date": "24. november 2026",
+      "title": "Næste aftale – enklere og større",
+      "items": [
+        "Næste aftale viser nu klokkeslættet stort, hvad det er, og \"Kør kl. …\" med stor skrift.",
+        "Under står, hvordan trafikken er (let, lidt eller tæt) og hvor lang tid turen tager."
+      ]
+    },
     {
       "version": "1.42.0",
       "date": "24. november 2026",

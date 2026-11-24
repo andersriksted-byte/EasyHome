@@ -1026,3 +1026,24 @@ button.w7r.sel{background:color-mix(in srgb,var(--accent) 16%,transparent);box-s
 .nx-wide{flex-direction:row}
 .nx-wide .nx-main{flex:1.6}
 .nx-wide .nx-list{flex:1;justify-content:center}
+
+/* Næste aftale – stor og enkel */
+.nx2{flex:1;min-height:0;display:flex;flex-direction:column;justify-content:center;gap:6px;border:0;border-left:6px solid var(--c);border-radius:14px;background:color-mix(in srgb,var(--c) 10%,var(--bg));padding:10px 16px;text-align:left;font:inherit;color:var(--text);overflow:hidden}
+.nx2-time{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.nx2-time b{font-size:clamp(30px,18cqmin,72px);font-weight:800;line-height:1;letter-spacing:-1px;font-variant-numeric:tabular-nums}
+.nx2-time span{font-size:clamp(13px,5cqmin,20px);font-weight:800;color:var(--muted)}
+.nx2-time span.soon{color:#d9473a}
+.nx2-title{font-size:clamp(16px,8cqmin,30px);font-weight:800;line-height:1.15;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.nx2-who{font-size:13px;font-weight:700;color:var(--muted)}
+.nx2-drive{display:flex;flex-direction:column;gap:1px;margin-top:4px}
+.nx2-drive b{font-size:clamp(18px,9cqmin,34px);font-weight:800;line-height:1.1}
+.nx2-drive span{font-size:clamp(12px,4.5cqmin,17px);font-weight:700;color:var(--muted)}
+.nx2-drive.soon b{color:#d99a1b}
+.nx2-drive.go b{color:#d9473a;animation:pendingPulse 1.2s ease-in-out infinite;border-radius:8px}
+.nx2>*{flex:none}
+.nx2{gap:4px;padding:8px 14px}
+@container (max-height:240px){
+  .nx2-time b{font-size:clamp(26px,15cqmin,44px)}
+  .nx2-title{-webkit-line-clamp:1;font-size:clamp(15px,7cqmin,22px)}
+  .nx2-drive b{font-size:clamp(16px,8cqmin,24px)}
+}

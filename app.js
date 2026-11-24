@@ -455,18 +455,15 @@ function wNaeste(size, h = 1, wd = 1) {
     const leave = new Date(rt.departAt ? Date.parse(rt.departAt) - 5 * 60000 : e.start.getTime() - (rt.min + 5) * 60000);
     const lm = Math.round((leave - now) / 60000);
     const cls = lm <= 0 ? 'go' : lm <= 15 ? 'soon' : '';
-    const head = lm <= 0 ? 'Kør nu!' : lm <= 60 ? `Kør om ${lm} min` : `Kør kl. ${hhmm(leave)}`;
-    drive = `<div class="nx-drive ${cls}"><span class="nx-car" aria-hidden="true">🚗</span><span><b>${head}</b><small>${durTxt(rt.min)} · ${String(rt.km).replace('.', ',')} km${rt.traffic ? (rt.delayMin >= 2 ? ` · +${rt.delayMin} min trafik` : ' · fri trafik') : ''}</small></span></div>`;
-  } else if (isPlace(e.location) && !running) drive = `<div class="nx-drive muted"><span class="nx-car" aria-hidden="true">📍</span><span><small>${esc(e.location.split('\n')[0])}</small></span></div>`;
-  const more = kind === 'tiny' ? 1 : kind === 'wide' ? 3 : 5;
-  const rows = evs.slice(1, 1 + more).map((x) => `<div class="nx-row" style="--c:${esc(x.color || 'var(--accent)')}"><span class="nx-t">${sameDay(x.start, new Date()) ? '' : sameDay(x.start, addDays(new Date(), 1)) ? 'I morgen ' : cap(DAYS[x.start.getDay()]) + ' '}${hhmm(x.start)}</span><span class="nx-n">${esc(x.title)}</span></div>`).join('');
-  return cardHead('Næste aftale', `<span class="small muted">${day}</span>`) + `<div class="nx ${kind === 'wide' || kind === 'big' ? 'nx-wide' : ''}">
-    <button class="nx-main" data-act="nav" data-page="kalender" style="--c:${esc(e.color || 'var(--accent)')}">
-      <span class="nx-count">${ring}<span class="nx-num ${!running && mins <= 15 ? 'soon' : ''}"><b>${big}</b><small>${unit}</small></span></span>
-      <span class="nx-info"><b>${esc(e.title)}</b><span class="nx-sub">${hhmm(e.start)}–${hhmm(e.end)}${e.who ? ' · ' + esc(e.who) : ''}</span>${drive}</span>
-    </button>
-    ${rows ? `<div class="nx-list">${rows}</div>` : ''}
-  </div>`;
+    const traf = !rt.traffic ? '' : rt.delayMin <= 2 ? 'Trafikken er let' : rt.delayMin <= 9 ? 'Lidt trafik' : 'Tæt trafik';
+    drive = `<div class="nx2-drive ${cls}"><b>${lm <= 0 ? 'Kør nu!' : 'Kør kl. ' + hhmm(leave)}</b><span>${[traf, durTxt(rt.min) + ' i bil'].filter(Boolean).join(' · ')}</span></div>`;
+  }
+  const until = running ? `I gang – til ${hhmm(e.end)}` : mins < 60 ? `om ${Math.max(1, mins)} min` : sameDay(e.start, new Date()) ? `om ${durTxt(mins)}` : day.toLowerCase();
+  return cardHead('Næste aftale', `<span class="small muted">${day}</span>`) + `<button class="nx2" data-act="nav" data-page="kalender" style="--c:${esc(e.color || 'var(--accent)')}">
+    <span class="nx2-time"><b>${hhmm(e.start)}</b><span class="${!running && mins <= 15 ? 'soon' : ''}">${esc(until)}</span></span>
+    <span class="nx2-title">${esc(e.title)}</span>
+    ${drive || (e.who ? `<span class="nx2-who">${esc(e.who)}</span>` : '')}
+  </button>`;
 }
 // Dagens ret: stort billede, navn, tid og om der er handlet ind. Efter kl. 20 vises morgendagens ret.
 function wDagensRet(size, h = 1, wd = 1) {
