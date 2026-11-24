@@ -360,6 +360,18 @@ export default {
         ctx.waitUntil(caches.default.put(ck, res.clone()));
         const o = new Response(res.body, res); for (const [k, v] of Object.entries(cors(env))) o.headers.set(k, v); return o;
       }
+      if (path.startsWith('/espn/')) {
+        // Fodbold: kampe og resultater fra ESPN's offentlige data (kun læsning, kun fodbold, kort cache)
+        const sub = path.slice(6);
+        if (!/^[a-z0-9._]+\/(scoreboard|teams|teams\/\d+\/schedule)$/.test(sub)) return json(env, { error: 'Ukendt' }, 404);
+        const q = new URL(req.url).searchParams; const qs = new URLSearchParams();
+        for (const k of ['dates', 'fixture', 'limit']) if (q.get(k)) qs.set(k, q.get(k).slice(0, 40));
+        const url = 'https://site.api.espn.com/apis/site/v2/sports/soccer/' + sub + (qs.toString() ? '?' + qs : '');
+        const ttl = sub.endsWith('/teams') ? 86400 : 60;
+        const up = await fetch(url, { cf: { cacheTtl: ttl, cacheEverything: true } });
+        if (!up.ok) return json(env, { error: 'ESPN svarede ' + up.status }, 502);
+        return new Response(up.body, { headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'max-age=' + ttl, ...cors(env) } });
+      }
       if (path === '/img') {
         // Coverbilleder fra Sonos, der kun findes på http (browseren blokerer dem på en https-side)
         let u; try { u = new URL(new URL(req.url).searchParams.get('url')); } catch (e) { return json(env, { error: 'Ugyldig adresse' }, 400); }

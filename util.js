@@ -39,6 +39,7 @@ export const DEFAULTS = {
   weather: { model: 'dmi_seamless', step: 60 }, // step: minutter mellem punkterne i vejrkortet
   news: { sources: ['dr-seneste', 'tv2', 'jp'], custom: [], publicProxyForTest: false, rotateSecs: 20 },
   calendars: [],
+  football: { leagues: [], teams: [] },
   countdown: { name: 'Juleaften', date: '2026-12-24' }, // ældre felt – flyttes til countdowns ved start
   countdowns: undefined,
   sonos: { groupId: null },

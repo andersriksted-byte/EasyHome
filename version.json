@@ -1,5 +1,5 @@
 {
-  "version": "1.53.0",
+  "version": "1.54.0",
   "files": [
     "index.html",
     "app.js",
@@ -20,9 +20,20 @@
     "madro.js",
     "somfy.js",
     "timer.js",
-    "mcats.js"
+    "mcats.js",
+    "football.js"
   ],
   "notes": [
+    {
+      "version": "1.54.0",
+      "date": "24. november 2026",
+      "title": "Fodbold",
+      "items": [
+        "Nyt kort: Fodbold – favoritholdenes kampe, resultater og live-stillinger",
+        "Vælg ligaer og favorithold under Indstillinger → Fodbold",
+        "Landsholdet kan også vælges"
+      ]
+    },
     {
       "version": "1.53.0",
       "date": "24. november 2026",
