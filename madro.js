@@ -82,9 +82,21 @@ export function mealsOn(date) {
     if (e.note != null) return { title: e.note, sub: e.sub || '', image: '', note: true };
     if (e.pendingUrl) return { title: 'Opskrift hentes …', image: '', note: true };
     const r = state.recipes[e.recipeId] || { title: '…' };
-    return { title: r.title || 'Ret', image: imgUrl(r.image), note: false };
+    return { title: r.title || 'Ret', image: imgUrl(r.image), art: artColors(r.title), note: false, status: shopStatus(e, r) };
   });
 }
+// Samme status som i Madro: er der handlet ind til retten?
+const nrm = (x) => String(x || '').trim().toLowerCase();
+function shopStatus(e, r) {
+  if (!e.shopped) return { cls: 'none', text: 'Ikke handlet' };
+  const added = (e.shopped.added || []).map(nrm);
+  const open = state.shopping.filter((it) => !it.checked && (it.from || []).includes(r.title) && added.includes(nrm(it.name)));
+  if (open.length) return { cls: 'wait', text: open.length + (open.length === 1 ? ' vare mangler' : ' varer mangler') };
+  return { cls: 'done', text: added.length ? 'Handlet' : 'Har alt' };
+}
+// Retter uden foto får samme farver som Madros standardbillede
+const ART_COLS = [['#7a3b2a', '#9a4f36'], ['#4a5634', '#5f6d42'], ['#6b2f45', '#86405a'], ['#2f4a5a', '#3d5f72'], ['#83582a', '#a06d36'], ['#3e3a5a', '#544e75'], ['#5a3a2e', '#74503f']];
+function artColors(title) { let h = 7; for (const ch of String(title || '')) h = (h * 31 + ch.charCodeAt(0)) | 0; return ART_COLS[Math.abs(h) % ART_COLS.length]; }
 function imgUrl(src) {
   if (!src || typeof src !== 'string') return '';
   if (/^(https?:|data:image\/)/.test(src)) return src;

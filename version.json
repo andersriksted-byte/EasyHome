@@ -1,5 +1,5 @@
 {
-  "version": "1.22.0",
+  "version": "1.23.0",
   "files": [
     "index.html",
     "app.js",
@@ -20,6 +20,16 @@
     "madro.js"
   ],
   "notes": [
+    {
+      "version": "1.23.0",
+      "date": "24. november 2026",
+      "title": "Mindre kort og handlet-status",
+      "items": [
+        "Under Tilpas forside kan I vælge kortstørrelse: Store, Mellem eller Små – så er der mere på skærmen uden at scrolle. Valget gælder kun den skærm, I står ved.",
+        "Madplanen viser nu billeder af alle retter – retter uden foto får samme farver som i Madro.",
+        "Hver ret viser, om der er handlet ind: ✓ Handlet, 🛒 varer mangler eller Ikke handlet."
+      ]
+    },
     {
       "version": "1.22.0",
       "date": "24. november 2026",

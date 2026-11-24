@@ -323,12 +323,14 @@ function wMadplan(size, h = 1, wd = 1, x = {}) {
   const today = startOfDay(new Date());
   const days = Array.from({ length: n }, (_, i) => addDays(today, i));
   const dayLabel = (d, i) => (i === 0 ? 'I dag' : i === 1 ? 'I morgen' : cap(DAYS[d.getDay()]) + ' ' + d.getDate() + '.');
-  const meal = (m) => `<span class="mdmeal ${m.image ? 'has-img' : ''} ${m.note ? 'note' : ''}" ${m.image ? `style="background-image:url('${esc(m.image)}')"` : ''}><b>${esc(m.title)}</b></span>`;
+  const bg = (m) => (m.image ? `style="background-image:url('${esc(m.image)}')"` : m.art ? `style="background-image:linear-gradient(135deg,${m.art[0]},${m.art[1]})"` : '');
+  const badge = (m) => (m.status ? `<i class="mdst ${m.status.cls}">${m.status.cls === 'done' ? '✓ ' : m.status.cls === 'wait' ? '🛒 ' : ''}${esc(m.status.text)}</i>` : '');
+  const meal = (m) => `<span class="mdmeal ${m.image || m.art ? 'has-img' : ''} ${m.note ? 'note' : ''}" ${bg(m)}>${badge(m)}<b>${esc(m.title)}</b></span>`;
   const cells = days.map((d, i) => { const ms = MD.mealsOn(d); return `<button class="mdday ${i === 0 ? 'today' : ''}" data-act="mdOpen" data-sub="madplan"><span class="mdlab">${dayLabel(d, i)}</span>${ms.length ? ms.slice(0, 2).map(meal).join('') : '<span class="mdnone">–</span>'}</button>`; }).join('');
   if (n === 1) {
     // Én dag: dagens retter fylder hele kortet med store billeder
     const ms = MD.mealsOn(today);
-    const one = ms.length ? ms.map((m) => `<button class="mdbig ${m.image ? 'has-img' : ''}" data-act="mdOpen" data-sub="madplan" ${m.image ? `style="background-image:url('${esc(m.image)}')"` : ''}><b>${esc(m.title)}</b>${m.sub ? `<span>${esc(m.sub)}</span>` : ''}</button>`).join('') : '<button class="mdbig empty-day" data-act="mdOpen" data-sub="madplan"><b>Ingen ret planlagt</b><span>Tryk for at åbne madplanen</span></button>';
+    const one = ms.length ? ms.map((m) => `<button class="mdbig ${m.image || m.art ? 'has-img' : ''}" data-act="mdOpen" data-sub="madplan" ${bg(m)}>${badge(m)}<b>${esc(m.title)}</b>${m.sub ? `<span>${esc(m.sub)}</span>` : ''}</button>`).join('') : '<button class="mdbig empty-day" data-act="mdOpen" data-sub="madplan"><b>Ingen ret planlagt</b><span>Tryk for at åbne madplanen</span></button>';
     return `${cardHead('Madplan · i dag')}<div class="mdone" style="grid-template-${wd >= h ? 'columns' : 'rows'}:repeat(${Math.max(1, Math.min(ms.length, 2))},minmax(0,1fr))">${one}</div>`;
   }
   const cols = kind === 'wide';
@@ -363,6 +365,7 @@ const WRENDER = { madplan: wMadplan, indkob: wIndkob, uge: wUge, vejr: wVejr, st
 function pageForside() {
   const inLayout = (id) => settings.layout.some((x) => x.id === id);
   const edit = ui.editing ? `<section class="card editpanel">
+      <div class="row" style="justify-content:space-between"><span class="lab">Kort på forsiden</span><span class="wopt" role="group" aria-label="Størrelse på kortene">${[[4, 'Store'], [5, 'Mellem'], [6, 'Små']].map(([v, l]) => `<button data-act="gridCols" data-v="${v}" aria-pressed="${(settings.gridCols || 4) === v}">${l}</button>`).join('')}</span></div>
       <div class="choices">${Object.entries(WIDGETS).filter(([id]) => widgetOn(id)).map(([id, name]) => `<button class="pill" data-act="toggleW" data-id="${id}" aria-pressed="${inLayout(id)}">${inLayout(id) ? '✓' : '+'} ${esc(name)}</button>`).join('')}</div>
     </section>` : '';
   const cards = settings.layout.filter((x) => WIDGETS[x.id] && widgetOn(x.id)).map((x) => {
@@ -379,7 +382,7 @@ function pageForside() {
   }).join('');
   const me = meMember();
   return `<div class="ptitle"><h1>${esc((settings.family && settings.family.name) || 'Forside')}</h1>${me ? `<span class="mechip" style="--c:${esc(me.color)}">${esc(me.name)}s visning <button data-act="pickMe" data-id="${esc(me.id)}" aria-label="Vis hele familien">✕</button></span>` : ''}</div>
-    ${edit}<div class="gridwrap"><div class="grid ${ui.editing ? 'editing' : ''}" id="grid">${cards || '<div class="empty">Forsiden er tom. Tryk "Tilpas forside" og vælg kort.</div>'}</div></div>`;
+    ${edit}<div class="gridwrap"><div class="grid ${ui.editing ? 'editing' : ''}" id="grid" style="--gcols:${settings.gridCols || 4}">${cards || '<div class="empty">Forsiden er tom. Tryk "Tilpas forside" og vælg kort.</div>'}</div></div>`;
 }
 function themePicker() {
   return `<div class="themes">${THEME_ORDER.map((id) => {
@@ -799,6 +802,7 @@ const act = {
     save(); renderMain();
   },
   sizeFor: (b) => { ui.sizeFor = ui.sizeFor === b.dataset.id ? null : b.dataset.id; renderMain(); },
+  gridCols: (b) => { settings.gridCols = +b.dataset.v; save(); renderMain(); },
   wOpt: (b) => { const x = settings.layout.find((y) => y.id === b.dataset.id); if (x) { x[b.dataset.k] = +b.dataset.v; save(); renderMain(); } },
   shape: (b) => { const x = settings.layout.find((y) => y.id === b.dataset.id); if (x) { x.w = +b.dataset.w; x.h = +b.dataset.h; delete x.size; ui.sizeFor = null; save(); renderMain(); } },
   calPrev: () => { ui.calWeek--; renderMain(); }, calNext: () => { ui.calWeek++; renderMain(); }, calToday: () => { ui.calWeek = 0; renderMain(); },
