@@ -4,7 +4,8 @@ import { settings, workerFetch } from './util.js';
 export const LEAGUES = [
   { id: 'den.1', name: 'Superligaen' }, { id: 'den.2', name: '1. division' },
   { id: 'eng.1', name: 'Premier League' }, { id: 'esp.1', name: 'La Liga' }, { id: 'ger.1', name: 'Bundesliga' },
-  { id: 'ita.1', name: 'Serie A' }, { id: 'fra.1', name: 'Ligue 1' }, { id: 'uefa.champions', name: 'Champions League' }
+  { id: 'ita.1', name: 'Serie A' }, { id: 'fra.1', name: 'Ligue 1' }, { id: 'uefa.champions', name: 'Champions League' },
+  { id: 'uefa.europa', name: 'Europa League' }, { id: 'uefa.europa.conf', name: 'Conference League' }
 ];
 export const NATIONAL = [
   { id: '479', name: 'Danmark (herrer)', short: 'Danmark', logo: 'https://a.espncdn.com/i/teamlogos/countries/500/den.png', lg: 'nat' }

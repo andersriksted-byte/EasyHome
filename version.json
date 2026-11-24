@@ -1,5 +1,5 @@
 {
-  "version": "1.54.1",
+  "version": "1.54.2",
   "files": [
     "index.html",
     "app.js",
@@ -24,6 +24,14 @@
     "football.js"
   ],
   "notes": [
+    {
+      "version": "1.54.2",
+      "date": "24. november 2026",
+      "title": "Europa League og Conference League",
+      "items": [
+        "Europa League og Conference League kan nu vælges under Indstillinger → Fodbold"
+      ]
+    },
     {
       "version": "1.54.1",
       "date": "24. november 2026",
