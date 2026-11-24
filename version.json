@@ -1,5 +1,5 @@
 {
-  "version": "1.13.0",
+  "version": "1.14.0",
   "files": [
     "index.html",
     "app.js",
@@ -15,9 +15,21 @@
     "sync.js",
     "reader.js",
     "look.js",
-    "media.js"
+    "media.js",
+    "login.js"
   ],
   "notes": [
+    {
+      "version": "1.14.0",
+      "date": "24. november 2026",
+      "title": "Familien Riksted – med login og profiler",
+      "items": [
+        "Forsiden hedder nu Familien Riksted, og nye skærme logger ind med familienavn og familiekode (Indstillinger → Familie).",
+        "Tilføj familiemedlemmer, og tryk på jer selv øverst til højre for kun at se jeres egne og de fælles aftaler.",
+        "Vejrkortet viser nu prognosen for hver halve time – kan ændres til 15 min eller 1 time under Indstillinger → Vejret.",
+        "Sonos viser nu coverbilleder på Musik-siden, i musikkortet og nederst på skærmen."
+      ]
+    },
     {
       "version": "1.13.0",
       "date": "24. november 2026",

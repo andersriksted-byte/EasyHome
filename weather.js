@@ -20,6 +20,7 @@ export async function getForecast(lat, lon, model) {
     latitude: lat, longitude: lon, timezone: 'Europe/Copenhagen', wind_speed_unit: 'ms', forecast_days: '7',
     current: 'temperature_2m,apparent_temperature,weather_code,wind_speed_10m,wind_direction_10m,precipitation,is_day,relative_humidity_2m',
     hourly: 'temperature_2m,precipitation,precipitation_probability,weather_code,is_day',
+    minutely_15: 'temperature_2m,precipitation,weather_code,is_day', forecast_minutely_15: '64',
     daily: 'weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,wind_speed_10m_max,sunrise,sunset'
   });
   if (model && model !== 'best_match') p.set('models', model);
@@ -32,6 +33,17 @@ export async function getForecast(lat, lon, model) {
     prob: j.hourly.precipitation_probability ? j.hourly.precipitation_probability[i] : null,
     code: j.hourly.weather_code[i], isDay: j.hourly.is_day ? j.hourly.is_day[i] : 1
   })).filter((h) => h.time.getTime() > now - 3600000 && h.temp !== null);
+  // Kvarterer (15 min) til vejrkortets korte intervaller – beregnes ud fra timeværdierne, hvor kilden ikke har dem
+  const m = j.minutely_15;
+  const quarters = m && m.time ? m.time.map((t, i) => ({
+    time: new Date(t), temp: m.temperature_2m[i], rain: m.precipitation ? m.precipitation[i] : 0,
+    code: m.weather_code ? m.weather_code[i] : null, isDay: m.is_day ? m.is_day[i] : null
+  })).filter((q) => q.time.getTime() > now - 15 * 60000 && q.temp !== null) : [];
+  quarters.forEach((q) => {
+    const h = hours.find((x) => x.time.getTime() <= q.time.getTime() && q.time.getTime() < x.time.getTime() + 3600000);
+    if (q.code === null || q.code === undefined) q.code = h ? h.code : 0;
+    if (q.isDay === null || q.isDay === undefined) q.isDay = h ? h.isDay : 1;
+  });
   const days = j.daily.time.map((t, i) => ({
     date: new Date(t + 'T12:00'), code: j.daily.weather_code[i], max: j.daily.temperature_2m_max[i], min: j.daily.temperature_2m_min[i],
     rain: j.daily.precipitation_sum[i], prob: j.daily.precipitation_probability_max ? j.daily.precipitation_probability_max[i] : null,
@@ -41,7 +53,7 @@ export async function getForecast(lat, lon, model) {
   const data = {
     model, fetched: new Date(),
     now: { temp: cur.temperature_2m, feels: cur.apparent_temperature, code: cur.weather_code, wind: cur.wind_speed_10m, windDir: cur.wind_direction_10m, rain: cur.precipitation, isDay: cur.is_day, humidity: cur.relative_humidity_2m },
-    hours, days
+    hours, quarters, days
   };
   cache[key] = { t: Date.now(), data };
   return data;

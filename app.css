@@ -390,6 +390,7 @@ textarea{min-height:140px;font-family:ui-monospace,monospace;font-size:13px}
   .drow{grid-template-columns:56px 36px 1fr 90px}
   .drow .rain{display:none}
   .calrow{grid-template-columns:1fr 56px;}
+  .calrow select{grid-column:1/-1}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 
@@ -404,3 +405,29 @@ textarea{min-height:140px;font-family:ui-monospace,monospace;font-size:13px}
 .bgtile[aria-pressed=true]{border-color:var(--accent)}
 .bgprev{display:block;height:64px;border-radius:10px;border:1px solid var(--line);background-size:cover!important}
 .bgplus{display:flex;align-items:center;justify-content:center;font-size:28px;color:var(--muted);background:var(--bg)}
+
+/* Familie: profiler og login */
+.hdr .right{margin-left:auto;display:flex;align-items:center;gap:8px}
+.profiles{display:flex;gap:6px}
+.avatar{width:44px;height:44px;border-radius:50%;border:3px solid transparent;background:var(--c);color:#fff;font-weight:800;font-size:17px;display:inline-grid;place-items:center;flex-shrink:0;opacity:.75}
+.avatar[aria-pressed=true]{border-color:var(--ink);opacity:1;box-shadow:0 0 0 2px var(--card)}
+button.avatar:not([aria-pressed=true]):hover{opacity:1}
+span.avatar{opacity:1}
+.mechip{display:inline-flex;align-items:center;gap:8px;background:var(--c);color:#fff;border-radius:99px;padding:4px 6px 4px 14px;font-weight:800}
+.mechip button{width:32px;height:32px;border-radius:50%;border:0;background:rgba(255,255,255,.25);color:#fff;font-weight:800}
+.memrows{display:flex;flex-direction:column;gap:8px}
+.memrow{display:grid;grid-template-columns:44px 1fr 64px auto;gap:10px;align-items:center}
+.memrow input[type=color]{width:64px;height:48px;border:0;background:none;padding:0}
+.calrow{grid-template-columns:1fr 64px 2fr 140px auto}
+.calrow select{min-height:48px;border-radius:12px;border:1.5px solid var(--line);background:var(--bg);color:var(--ink);font:inherit;padding:0 10px}
+.btn.danger{color:#B3261E}
+.login{position:fixed;inset:0;display:grid;place-items:center;background:var(--bg);padding:24px;overflow:auto}
+.loginbox{width:min(420px,100%);background:var(--card);border-radius:24px;padding:32px;display:flex;flex-direction:column;gap:14px;box-shadow:0 20px 60px rgba(0,0,0,.12)}
+.loginbox h1{margin:0;font-size:28px}
+.loginbox p{margin:0}
+.loginlogo{width:56px;height:56px;border-radius:16px;background:var(--accent);color:var(--onAccent);display:grid;place-items:center;font-size:30px;font-weight:800}
+.loginbox .btn.big{min-height:54px;font-size:17px}
+.loginbox details{display:flex;flex-direction:column;gap:10px}
+.loginbox details[open] .f{margin-top:10px}
+
+.npart{width:44px;height:44px;border-radius:10px;background:var(--bg) center/cover no-repeat;flex-shrink:0}

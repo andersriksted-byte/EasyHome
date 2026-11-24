@@ -9,6 +9,8 @@ import { startSync, syncNow, syncState } from './sync.js';
 import * as R from './reader.js';
 import * as L from './look.js';
 import * as M from './media.js';
+import * as A from './login.js';
+import { onAuthLost } from './util.js';
 
 const $ = (s, r = document) => r.querySelector(s);
 
@@ -79,7 +81,7 @@ const D = { weather: null, weatherErr: null, wx: {}, wxErr: {}, compare: null, n
 const home = () => settings.places[0];
 const placeLabel = (p) => p.label || p.name;
 const placeById = (id) => settings.places.find((p) => p.id === id) || home();
-const ui = { cdIdx: 0, cdMsg: null, bgMsg: null, sizeFor: null, newsIdx: 0, newsAt: Date.now(), feedMsg: null, feedDraft: null, page: pageFromHash(), setTab: 'vejr', wPlace: null, fpPlace: 0, fpTouched: 0, editing: false, calWeek: 0, geo: null, geoMsg: '', tick: 0, connMsg: '' };
+const ui = { famMsg: null, cdIdx: 0, cdMsg: null, bgMsg: null, sizeFor: null, newsIdx: 0, newsAt: Date.now(), feedMsg: null, feedDraft: null, page: pageFromHash(), setTab: 'familie', wPlace: null, fpPlace: 0, fpTouched: 0, editing: false, calWeek: 0, geo: null, geoMsg: '', tick: 0, connMsg: '' };
 function pageFromHash() { const h = location.hash.slice(1); return [...PAGES.map((p) => p.id), 'indstillinger'].includes(h) ? h : 'forside'; }
 
 function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), 2600); }
@@ -91,10 +93,19 @@ function lighten(hex, amt = 0.72) {
   return '#' + ch.map((c) => c.toString(16).padStart(2, '0')).join('');
 }
 const evStyle = (e) => `background:${lighten(e.color)};border-left-color:${esc(e.color || '#888')}`;
+// Valgt profil: vis kun personens egne kalendere + fælles kalendere (uden ejer)
+const members = () => (settings.family && settings.family.members) || [];
+const meMember = () => members().find((m) => m.id === settings.me) || null;
+function mineEvent(ev) {
+  const me = meMember(); if (!me) return true;
+  const cal = settings.calendars.find((c) => c.id === ev.cal);
+  return !cal || !cal.owner || cal.owner === me.id;
+}
+const initials = (n) => String(n || '?').trim().slice(0, 1).toUpperCase();
 function eventsOn(day) {
   if (!D.cal) return [];
   const s = startOfDay(day); const e = addDays(s, 1);
-  return D.cal.events.filter((ev) => ev.start < e && ev.end > s);
+  return D.cal.events.filter((ev) => ev.start < e && ev.end > s && mineEvent(ev));
 }
 const evTime = (ev, day) => (ev.allDay ? 'Hele dagen' : (ev.start < startOfDay(day) ? 'Fortsat' : hhmm(ev.start)));
 function evHtml(ev, day, withWho = true) {
@@ -133,9 +144,7 @@ function renderHeader() {
     <div class="clock"><b id="clk">${hhmm(now)}</b><span>${esc(longDate(now))}</span></div>
     ${w ? `<button class="chip" data-act="nav" data-page="vejr">${W.weatherIcon(w.now.code, w.now.isDay, 24)} ${fmtTemp(w.now.temp)} · ${esc(W.codeText(w.now.code).toLowerCase())}</button>` : ''}
     ${next ? `<span class="chip accent">${next.days === 0 ? `I dag: ${esc(next.name)}` : `${next.days} ${next.days === 1 ? 'dag' : 'dage'} til ${esc(next.name.toLowerCase())}`}</span>` : ''}
-    <div class="right">
-      
-    </div>`;
+    <div class="right">${members().length ? `<div class="profiles" role="group" aria-label="Hvem bruger skærmen?">${members().map((m) => `<button class="avatar" data-act="pickMe" data-id="${esc(m.id)}" aria-pressed="${settings.me === m.id}" aria-label="${esc(m.name)}${settings.me === m.id ? ' (valgt – tryk for alle)' : ''}" style="--c:${esc(m.color)}">${esc(initials(m.name))}</button>`).join('')}</div>` : ''}</div>`;
 }
 
 /* ---------- Footer ---------- */
@@ -146,7 +155,7 @@ function renderFooter() {
   let music;
   if (S.state.connected) {
     music = `<button class="pp" data-act="sPlay" aria-label="${np.playing ? 'Pause' : 'Afspil'}">${fillSvg(np.playing ? 'pause' : 'play', 18)}</button>
-      <button class="np" data-act="nav" data-page="musik" aria-label="Gå til Musik"><b>${esc(np.title || 'Intet spiller')}</b><span>Sonos · ${esc(np.group || '')}</span></button>`;
+      ${np.image ? `<span class="npart" style="background-image:url('${esc(np.image)}')" aria-hidden="true"></span>` : ''}<button class="np" data-act="nav" data-page="musik" aria-label="Gå til Musik"><b>${esc(np.title || 'Intet spiller')}</b><span>Sonos · ${esc(np.group || '')}</span></button>`;
   } else {
     music = `<button class="pp" data-act="nav" data-page="musik" aria-label="Musik">${svg('musik', 20)}</button><button class="np" data-act="nav" data-page="musik" aria-label="Gå til Musik"><b>Sonos</b><span>Ikke forbundet endnu</span></button>`;
   }
@@ -197,11 +206,11 @@ function wVejr(size, h = 1, wd = 1) {
   const t = w.days[0];
   const now = `<div class="wxnow">${W.weatherIcon(w.now.code, w.now.isDay, 64)}<div><div class="t">${fmtTemp(w.now.temp)}</div><div class="wxtxt">${esc(W.codeText(w.now.code))}</div></div></div>
     <div class="wxsum"><span>↑ ${fmtTemp(t.max)}</span><span>↓ ${fmtTemp(t.min)}</span><span>${num(w.now.wind, 0)} m/s</span>${t.rain > 0 ? `<span class="rn">${num(t.rain)} mm</span>` : ''}</div>`;
-  const hourTile = (x) => `<div class="hour"><span>${pad(x.time.getHours())}</span>${W.weatherIcon(x.code, x.isDay, 26)}<b>${fmtTemp(x.temp)}</b><span class="r">${x.rain > 0 ? num(x.rain) + ' mm' : '&nbsp;'}</span></div>`;
+  const hourTile = (x) => `<div class="hour"><span>${(+settings.weather.step || 60) < 60 ? hhmm(x.time) : pad(x.time.getHours())}</span>${W.weatherIcon(x.code, x.isDay, 26)}<b>${fmtTemp(x.temp)}</b><span class="r">${x.rain > 0 ? num(x.rain) + ' mm' : '&nbsp;'}</span></div>`;
   const dayRow = (d, i) => `<div class="wxday"><b>${i === 0 ? 'I dag' : cap(DAYS[d.date.getDay()])}</b>${W.weatherIcon(d.code, 1, 26)}<span class="mm">${d.rain > 0 ? num(d.rain) + ' mm' : ''}</span><span class="hl">${fmtTemp(d.min)} / <b>${fmtTemp(d.max)}</b></span></div>`;
   const hoursN = Math.min(12, { tiny: 3, tall: 4, wide: wd === 2 ? 6 : wd * 3, big: 6 }[kind]);
   const hcols = kind === 'wide' && wd === 2 ? 3 : kind === 'big' ? 3 : hoursN;
-  const hours = `<div class="wxhours" style="--n:${hcols}">${w.hours.slice(0, hoursN).map(hourTile).join('')}</div>`;
+  const hours = `<div class="wxhours" style="--n:${hcols}">${wxSteps(w, hoursN).map(hourTile).join('')}</div>`;
   const days = `<div class="wxdays" data-trim>${w.days.map(dayRow).join('')}</div>`;
   const body = {
     tiny: `<div class="wx wx-tiny">${now}${hours}</div>`,
@@ -264,7 +273,7 @@ function wSonos(size, h = 1, wd = 1) {
   const ctl = `<div class="mwctl"><button class="mwb" data-act="sPrev" aria-label="Forrige">${fillSvg('prev', 16)}</button><button class="mwb main" data-act="sPlay" aria-label="${np.playing ? 'Pause' : 'Afspil'}">${fillSvg(np.playing ? 'pause' : 'play', 20)}</button><button class="mwb" data-act="sNext" aria-label="Næste">${fillSvg('next', 16)}</button></div>`;
   const vol = np.volume !== null ? `<label class="vol mwvol"><span class="small">Lyd</span><input type="range" min="0" max="100" value="${np.volume}" data-vol aria-label="Lydstyrke"></label>` : '';
   const info = `<div class="mwinfo"><span class="mwgrp">${esc(np.group)}</span><b>${esc(np.title || 'Intet spiller')}</b><span>${esc(np.artist || '')}</span></div>`;
-  const favs = S.state.favorites.length ? `<div class="mwfavs" data-trim>${S.state.favorites.map((f) => `<button class="mtile" data-act="sFav" data-id="${esc(f.id)}"><i style="${f.imageUrl ? `background-image:url('${esc(f.imageUrl)}')` : ''}"></i><span>${esc(f.name)}</span></button>`).join('')}</div>` : '';
+  const favs = S.state.favorites.length ? `<div class="mwfavs" data-trim>${S.state.favorites.map((f) => `<button class="mtile" data-act="sFav" data-id="${esc(f.id)}"><i style="${S.art(f) ? `background-image:url('${esc(S.art(f))}')` : ''}"></i><span>${esc(f.name)}</span></button>`).join('')}</div>` : '';
   if (kind === 'tiny') return `<div class="mw mw-tiny" style="${art}"><div class="mwshade">${info}${ctl}</div></div>`;
   if (kind === 'wide') return `<div class="mw mw-wide" style="grid-template-columns:auto minmax(0,1fr)${wd >= 3 ? ` minmax(0,${wd - 2}fr)` : ''}"><div class="mwart" style="${art}"></div><div class="mwside">${info}${ctl}${vol}</div>${wd >= 3 ? `<div class="mwfavcol">${favs}</div>` : ''}</div>`;
   if (kind === 'tall') return `<div class="mw mw-tall"><div class="mwart" style="${art}"></div>${info}${ctl}${vol}${favs}</div>`;
@@ -306,7 +315,8 @@ function pageForside() {
       ${WRENDER[x.id](sizeKey(w), h, w)}
     </section>`;
   }).join('');
-  return `<div class="ptitle"><h1>Forside</h1><div class="tools"><button class="btn ${ui.editing ? 'dark' : 'line'}" data-act="edit">${ui.editing ? 'Færdig' : 'Tilpas forside'}</button></div></div>
+  const me = meMember();
+  return `<div class="ptitle"><h1>${esc((settings.family && settings.family.name) || 'Forside')}</h1>${me ? `<span class="mechip" style="--c:${esc(me.color)}">${esc(me.name)}s visning <button data-act="pickMe" data-id="${esc(me.id)}" aria-label="Vis hele familien">✕</button></span>` : ''}<div class="tools"><button class="btn ${ui.editing ? 'dark' : 'line'}" data-act="edit">${ui.editing ? 'Færdig' : 'Tilpas forside'}</button></div></div>
     ${edit}<div class="gridwrap"><div class="grid ${ui.editing ? 'editing' : ''}" id="grid">${cards || '<div class="empty">Forsiden er tom. Tryk "Tilpas forside" og vælg kort.</div>'}</div></div>`;
 }
 function themePicker() {
@@ -324,7 +334,8 @@ function pageKalender() {
   const we = days[6];
   const title = `Uge ${isoWeek(ws)} · ${ws.getDate()}. ${MONTHS[ws.getMonth()].slice(0, 3)} – ${we.getDate()}. ${MONTHS[we.getMonth()].slice(0, 3)}`;
   const cals = settings.calendars.length ? settings.calendars : [];
-  return `<div class="ptitle"><h1>Kalender</h1><span class="muted" style="font-weight:700">${esc(title)}</span>
+  const meK = meMember();
+  return `<div class="ptitle"><h1>Kalender${meK ? ' · ' + esc(meK.name) : ''}</h1><span class="muted" style="font-weight:700">${esc(title)}</span>
       <div class="tools"><button class="btn" data-act="calPrev" aria-label="Forrige uge">‹</button><button class="btn" data-act="calToday">I dag</button><button class="btn" data-act="calNext" aria-label="Næste uge">›</button></div></div>
     ${D.cal && D.cal.demo ? '<div class="empty">Viser eksempler. Tilføj jeres kalendere under Indstillinger → Kalendere.</div>' : ''}
     ${D.cal && D.cal.errors.length ? `<div class="err">${esc(D.cal.errors.map((e) => e.cal + ': ' + e.msg).join(' · '))}</div>` : ''}
@@ -404,8 +415,8 @@ function pageMusik() {
     <div><button class="btn primary big" data-act="sConnect">Forbind Sonos</button></div>${S.state.error ? `<div class="err">${esc(S.state.error)}</div>` : ''}</section>`;
   const np = S.nowPlaying();
   const tile = (act, id, name, img) => `<button class="mtile" data-act="${act}" data-id="${esc(id)}"><i style="${img ? `background-image:url('${esc(img)}')` : ''}"></i><span>${esc(name)}</span></button>`;
-  const favs = S.state.favorites.map((f) => tile('sFav', f.id, f.name, f.imageUrl)).join('');
-  const pls = S.state.playlists.map((pl) => tile('sPlaylist', pl.id, pl.name, '')).join('');
+  const favs = S.state.favorites.map((f) => tile('sFav', f.id, f.name, S.art(f))).join('');
+  const pls = S.state.playlists.map((pl) => tile('sPlaylist', pl.id, pl.name, S.art(pl))).join('');
   return `<div class="music">
     <section class="player mplayer">
       <div class="art" style="${np.image ? `background-image:url('${esc(np.image)}')` : ''}"></div>
@@ -443,6 +454,18 @@ const ICO2 = {
 };
 const ico = (n, size = 20) => `<svg aria-hidden="true" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="${ICO2[n]}"/></svg>`;
 
+// Vejrkortets intervaller: 15 min, 30 min eller 1 time (indstilles under Vejr)
+function wxSteps(w, n) {
+  const step = +settings.weather.step || 60;
+  if (step >= 60 || !w.quarters || !w.quarters.length) return w.hours.slice(0, n);
+  const q = w.quarters; const per = step / 15; const out = [];
+  const first = q.findIndex((x) => x.time.getMinutes() % step === 0);
+  for (let i = Math.max(0, first); i < q.length && out.length < n; i += per) {
+    const part = q.slice(i, i + per);
+    out.push({ ...q[i], rain: part.reduce((a, x) => a + (x.rain || 0), 0) });
+  }
+  return out;
+}
 function vejrSettings() {
   const s = settings;
   const many = s.places.length > 1;
@@ -477,6 +500,10 @@ function vejrSettings() {
     <section class="card wide">
       <div class="sechead"><div><h2>Vejrkilde</h2><p class="note">Gælder for alle steder. Du kan altid sammenligne kilderne på siden Vejret.</p></div></div>
       <div class="srgrid">${sources}</div>
+    </section>
+    <section class="card wide">
+      <div class="sechead"><div><h2>Interval i vejrkortet</h2><p class="note">Hvor tæt prognosen vises på forsiden. Siden Vejret viser altid time for time.</p></div></div>
+      <div class="row">${[[15, '15 min'], [30, '30 min'], [60, '1 time']].map(([v, l]) => `<button class="pill" data-act="wStepSet" data-v="${v}" aria-pressed="${(+s.weather.step || 60) === v}">${l}</button>`).join('')}</div>
     </section>`;
 }
 
@@ -498,6 +525,7 @@ function lookSettings() {
     </section>`;
 }
 const SET_TABS = [
+  { id: 'familie', label: 'Familie' },
   { id: 'vejr', label: 'Vejret' }, { id: 'nyheder', label: 'Nyheder' }, { id: 'kalender', label: 'Kalender' }, { id: 'musik', label: 'Musik' },
   { id: 'tv', label: 'DR TV' }, { id: 'udseende', label: 'Udseende' }, { id: 'forbindelse', label: 'Forbindelse' }, { id: 'backup', label: 'Sikkerhedskopi' }
 ];
@@ -505,7 +533,7 @@ function pageIndstillinger() {
   const s = settings;
   const groups = {};
   N.allSources().forEach((src) => { (groups[src.group] = groups[src.group] || []).push(src); });
-  const tab = SET_TABS.some((t) => t.id === ui.setTab) ? ui.setTab : 'vejr';
+  const tab = SET_TABS.some((t) => t.id === ui.setTab) ? ui.setTab : 'familie';
   const needsConn = ['nyheder', 'kalender', 'musik'].includes(tab) && !hasProxy();
   const T = {
     vejr: () => vejrSettings(),
@@ -522,7 +550,7 @@ function pageIndstillinger() {
     kalender: () => `
     <section class="card wide"><b>Kalendere</b>
       <p class="note">Indsæt et link for hver kalender (fx én pr. familiemedlem). <b>iPhone/iPad:</b> Kalender → Kalendere → tryk ⓘ ved kalenderen → slå <i>Offentlig kalender</i> til → <i>Del link</i> → Kopiér. <b>Mac:</b> Kalender → højreklik på kalenderen → Del kalender → <i>Offentlig kalender</i> → kopiér adressen. Linket starter med <code>webcal://</code> – det klarer dashboardet. Andre: Google ("Hemmelig adresse i iCal-format") og Outlook (ICS-link) virker også. Behandl linkene som adgangskoder.</p>
-      ${s.calendars.map((c, i) => `<div class="calrow"><input type="text" data-cal="${i}" data-field="name" value="${esc(c.name)}" aria-label="Navn"><input type="color" data-cal="${i}" data-field="color" value="${esc(c.color)}" aria-label="Farve"><input type="url" data-cal="${i}" data-field="url" value="${esc(c.url)}" placeholder="https://… .ics" aria-label="iCal-link"><button class="btn" data-act="calRm" data-i="${i}">Fjern</button></div>`).join('')}
+      ${s.calendars.map((c, i) => `<div class="calrow"><input type="text" data-cal="${i}" data-field="name" value="${esc(c.name)}" aria-label="Navn"><input type="color" data-cal="${i}" data-field="color" value="${esc(c.color)}" aria-label="Farve"><input type="url" data-cal="${i}" data-field="url" value="${esc(c.url)}" placeholder="https://… .ics" aria-label="iCal-link"><select data-cal="${i}" data-field="owner" aria-label="Hvis kalender"><option value="">Fælles</option>${members().map((m) => `<option value="${esc(m.id)}" ${c.owner === m.id ? 'selected' : ''}>${esc(m.name)}</option>`).join('')}</select><button class="btn" data-act="calRm" data-i="${i}">Fjern</button></div>`).join('')}
       <div><button class="btn primary" data-act="calAdd">+ Tilføj kalender</button></div>
       ${D.cal && D.cal.errors.length ? `<div class="err">${esc(D.cal.errors.map((e) => e.cal + ': ' + e.msg).join(' · '))}</div>` : ''}</section>
     <section class="card wide"><b>Nedtællinger</b><p class="note">Opret så mange nedtællinger, I vil – fx juleaften, sommerferie og fødselsdage. Den nærmeste vises øverst på skærmen, og på forsiden kan man bladre mellem dem. Tryk på billedfeltet for at vælge et billede.</p>
@@ -547,6 +575,24 @@ function pageIndstillinger() {
     <section class="card wide"><b>Farvetema</b>${themePicker()}
       ${s.theme === 'auto' ? `<div class="form"><label class="f">Om dagen<select data-set="dayTheme">${Object.keys(THEMES).map((k) => `<option value="${k}" ${s.dayTheme === k ? 'selected' : ''}>${THEMES[k].label}</option>`).join('')}</select></label>
         <label class="f">Efter solnedgang<select data-set="nightTheme">${Object.keys(THEMES).map((k) => `<option value="${k}" ${s.nightTheme === k ? 'selected' : ''}>${THEMES[k].label}</option>`).join('')}</select></label></div>` : ''}</section>`,
+    familie: () => `
+    <section class="card wide"><b>Familien</b>
+      <label class="f">Familienavn (står øverst på forsiden)<input type="text" data-set="family.name" value="${esc(s.family.name)}" placeholder="Fx Familien Riksted"></label>
+      <p class="note">Tilføj familiemedlemmerne. Øverst på skærmen kan man så trykke på sig selv for kun at se sine egne og de fælles aftaler. Under Kalender vælger I, hvis kalender hver kalender er.</p>
+      <div class="memrows">${s.family.members.map((m, i) => `<div class="memrow"><span class="avatar" style="--c:${esc(m.color)}" aria-hidden="true">${esc(initials(m.name))}</span>
+        <input type="text" data-mem="${i}" data-field="name" value="${esc(m.name)}" placeholder="Navn" aria-label="Navn">
+        <input type="color" data-mem="${i}" data-field="color" value="${esc(m.color)}" aria-label="Farve">
+        <button class="btn" data-act="memRm" data-i="${i}" aria-label="Fjern ${esc(m.name)}">Fjern</button></div>`).join('')}</div>
+      <div><button class="btn primary" data-act="memAdd">+ Tilføj familiemedlem</button></div>
+    </section>
+    <section class="card wide"><b>Familie-login</b>
+      <p class="note">Med familiekoden logger man ind på en ny skærm (iPad, Mac, telefon) med familienavnet og koden – uden den lange nøgle. Koden gemmes krypteret i jeres server og skal være mindst 6 tegn.</p>
+      <div class="form"><label class="f">Ny familiekode<input type="password" id="famCode" autocomplete="new-password"></label>
+      <label class="f">Gentag koden<input type="password" id="famCode2" autocomplete="new-password"></label></div>
+      <div class="row"><button class="btn primary" data-act="famCodeSave">Gem familiekode</button>${ui.famMsg ? `<span class="small ${ui.famMsg.err ? 'err' : 'muted'}">${esc(ui.famMsg.text)}</span>` : ''}</div>
+      <div class="row" style="border-top:1.5px solid var(--line);padding-top:12px"><button class="btn line" data-act="logoutHere">Log denne skærm ud</button><button class="btn line danger" data-act="logoutAll">Log alle skærme ud</button></div>
+      <p class="small muted">"Log alle skærme ud" bruges, hvis en skærm er blevet væk eller koden er delt med nogen. Denne skærm forbliver logget ind; de andre skal logge ind igen.</p>
+    </section>`,
     forbindelse: () => `
     <section class="card wide"><b>Forbindelse til jeres server</b>
       <p class="note">Nyheder, kalendere og Sonos går gennem en lille gratis Cloudflare Worker, som I selv ejer. Se README.md for opsætning. Vejret virker uden.</p>
@@ -660,6 +706,24 @@ const act = {
   calPrev: () => { ui.calWeek--; renderMain(); }, calNext: () => { ui.calWeek++; renderMain(); }, calToday: () => { ui.calWeek = 0; renderMain(); },
   wModel: (b) => { settings.weather.model = b.dataset.model; save(); D.wx = {}; renderMain(); loadWeather(); },
   compare: () => { D.compare = D.compare || []; renderMain(); loadCompare(); },
+  wStepSet: (b) => { settings.weather.step = +b.dataset.v; save(); renderMain(); },
+  pickMe: (b) => { settings.me = settings.me === b.dataset.id ? '' : b.dataset.id; save(); renderHeader(); renderMain(); },
+  memAdd: () => { const colors = ['#D0563C', '#4C78D0', '#D9A400', '#2E9D5B', '#7A5AC8', '#C2407E']; const m = settings.family.members; m.push({ id: uid(), name: '', color: colors[m.length % colors.length] }); save(); renderMain(); setTimeout(() => { const el = document.querySelectorAll('[data-mem][data-field=name]'); if (el.length) el[el.length - 1].focus(); }, 50); },
+  memRm: (b) => { const [m] = settings.family.members.splice(+b.dataset.i, 1); if (m) { settings.calendars.forEach((c) => { if (c.owner === m.id) c.owner = ''; }); if (settings.me === m.id) settings.me = ''; } save(); renderHeader(); renderMain(); },
+  famCodeSave: async () => {
+    const a = $('#famCode').value; const b2 = $('#famCode2').value;
+    if (a.length < 6) { ui.famMsg = { err: true, text: 'Koden skal være mindst 6 tegn.' }; renderMain(); return; }
+    if (a !== b2) { ui.famMsg = { err: true, text: 'De to koder er ikke ens.' }; renderMain(); return; }
+    try { await A.authCall('/auth/setup', { family: settings.family.name, code: a }); ui.famMsg = { err: false, text: `Gemt ✓ Log ind på nye skærme med "${settings.family.name}" og koden.` }; }
+    catch (e) { ui.famMsg = { err: true, text: /404|Ukendt/.test(e.message) ? 'Workeren er ikke opdateret endnu – prøv igen om et par minutter.' : e.message }; }
+    renderMain();
+  },
+  logoutHere: () => { A.logout('Skærmen er logget ud.'); },
+  logoutAll: async () => {
+    try { const r = await A.authCall('/auth/logout-all'); settings.proxy.key = r.token; save(); ui.famMsg = { err: false, text: 'Alle andre skærme er logget ud ✓' }; }
+    catch (e) { ui.famMsg = { err: true, text: e.message }; }
+    renderMain();
+  },
   cdAdd: () => { settings.countdowns = (settings.countdowns || []).concat([{ id: uid(), name: '', date: '', imageId: '' }]); save(); renderMain(); setTimeout(() => { const el = document.querySelectorAll('[data-cd][data-field=name]'); if (el.length) el[el.length - 1].focus(); }, 50); },
   cdRm: (b) => { const [c] = settings.countdowns.splice(+b.dataset.i, 1); if (c && c.imageId) M.removeImage(c.imageId); ui.cdIdx = 0; save(); renderHeader(); renderMain(); },
   cdImg: (b) => { const f = $('#cdFile'); if (f) { f.dataset.i = b.dataset.i; f.value = ''; f.click(); } },
@@ -784,6 +848,7 @@ document.addEventListener('change', (e) => {
     M.saveImage(t.files[0]).then((r) => { const c = settings.countdowns[i]; if (c) { if (c.imageId) M.removeImage(c.imageId); c.imageId = r.id; save(); } ui.cdMsg = { err: false, text: r.shared ? 'Billedet er gemt og deles med jeres andre skærme ✓' : 'Billedet er gemt på denne skærm.' }; renderMain(); })
       .catch((e) => { ui.cdMsg = { err: true, text: e.message }; renderMain(); });
   }
+  else if (t.dataset.mem !== undefined) { const m = settings.family.members[+t.dataset.mem]; if (m) { m[t.dataset.field] = t.value.trim(); save(); renderHeader(); renderMain(); } }
   else if (t.dataset.cdshow !== undefined) { const c = settings.countdowns[+t.dataset.cdshow]; if (c) { c[t.dataset.k] = t.checked; ui.cdIdx = 0; save(); renderHeader(); } }
   else if (t.dataset.cd !== undefined) { const c = settings.countdowns[+t.dataset.cd]; if (c) { c[t.dataset.field] = t.value.trim(); save(); renderHeader(); } }
   else if (t.hasAttribute('data-look-blur')) { L.setLook({ blur: t.checked }); }
@@ -849,8 +914,11 @@ document.addEventListener('pointercancel', endDrag);
 
 /* ---------- Start ---------- */
 function boot() {
+  if (A.needsLogin()) { applyTheme(); A.showLogin(); return; }
+  onAuthLost(() => A.logout('Skærmen er logget ud. Log ind igen.'));
   if (!Array.isArray(settings.countdowns)) { const c = settings.countdown || {}; settings.countdowns = c.name || c.date ? [{ id: uid(), name: c.name || '', date: c.date || '', imageId: '' }] : []; save(); }
   M.onMediaLoaded(() => softRender());
+  S.onArtLoaded(() => { renderFooter(); if (['forside', 'musik'].includes(ui.page)) softRender(); });
   if (settings.layout.some((x) => !x.w)) { settings.layout = settings.layout.map((x) => { const [w, h] = shapeOf(x); return { id: x.id, w, h }; }); save(); }
   if (settings.navOpen) { settings.navOpen = false; }
   // Engangsoprydning: 'Vejret andre steder' blev sat på forsiden automatisk i 1.1.0 – fjern det igen

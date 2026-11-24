@@ -7,6 +7,26 @@ const api = async (path, method = 'GET', body) => {
   return t ? JSON.parse(t) : {};
 };
 
+// Coverbilleder: Sonos giver enten en almindelig https-adresse, en http-adresse eller en adresse på selve
+// højttaleren i jeres net. https vises direkte; offentlige http-billeder hentes via workeren (ellers blokerer
+// browseren dem); billeder på højttaleren kan ikke nås udefra, så der vises et nodeikon i stedet.
+const artCache = {};
+let onArt = () => {};
+export function onArtLoaded(fn) { onArt = fn; }
+const rawImg = (o) => (o && (o.imageUrl || (Array.isArray(o.images) && o.images.length && (o.images[0].url || o.images[0].uri)))) || '';
+const isLocal = (h) => /^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|169\.254\.)/.test(h) || h.endsWith('.local');
+export function art(o) {
+  const url = rawImg(o);
+  if (!url) return '';
+  if (url.startsWith('https://')) return url;
+  let u; try { u = new URL(url); } catch (e) { return ''; }
+  if (u.protocol !== 'http:' || isLocal(u.hostname)) return '';
+  if (artCache[url] !== undefined) return artCache[url];
+  artCache[url] = '';
+  workerFetch('/img?url=' + encodeURIComponent(url)).then((r) => r.blob()).then((b) => { artCache[url] = URL.createObjectURL(b); onArt(); }).catch(() => {});
+  return '';
+}
+
 export const state = { connected: false, checked: false, household: null, groups: [], players: [], favorites: [], playlists: [], playerVol: {}, meta: null, playback: null, volume: null, error: null };
 
 export async function status() {
@@ -68,7 +88,7 @@ export function nowPlaying() {
   const container = m.container || {};
   const title = item ? item.name : (container.name || m.streamInfo || '');
   const artist = item && item.artist ? item.artist.name : (m.streamInfo && item ? m.streamInfo : (container.service ? container.service.name : ''));
-  const image = (item && item.imageUrl) || container.imageUrl || '';
+  const image = art(item) || art(container) || art(m.currentItem);
   const playing = state.playback && /PLAYING|BUFFERING/.test(state.playback.playbackState || '');
   const group = state.groups.find((g) => g.id === settings.sonos.groupId);
   return { title, artist, image, playing, group: group ? group.name : '', volume: state.volume ? state.volume.volume : null };

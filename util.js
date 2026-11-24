@@ -29,10 +29,12 @@ export const DEFAULTS = {
   dayTheme: 'sand',
   nightTheme: 'aften',
   navOpen: false,
-  proxy: { url: '', key: '' },
+  proxy: { url: 'https://easyhome.andersriksted.workers.dev', key: '' },
+  family: { name: 'Familien Riksted', members: [] }, // members: [{ id, name, color }]
+  me: '', // valgt profil på denne skærm
   location: { name: 'København', lat: 55.6761, lon: 12.5683 }, // ældre felt – flyttes ind i places ved start
   places: [], // [{ id, label, name, lat, lon }] – første sted er 'hjem'
-  weather: { model: 'dmi_seamless' },
+  weather: { model: 'dmi_seamless', step: 30 }, // step: minutter mellem punkterne i vejrkortet
   news: { sources: ['dr-seneste', 'tv2', 'jp'], custom: [], publicProxyForTest: false, rotateSecs: 20 },
   calendars: [],
   countdown: { name: 'Juleaften', date: '2026-12-24' }, // ældre felt – flyttes til countdowns ved start
@@ -72,7 +74,7 @@ function load() {
 
 export const settings = load();
 // Felter der kun gælder for den enkelte skærm – alt andet deles mellem skærmene via workeren
-export const LOCAL_ONLY = ['proxy', 'navOpen'];
+export const LOCAL_ONLY = ['proxy', 'navOpen', 'me'];
 let savedHook = null;
 export function onSaved(fn) { savedHook = fn; }
 function write() { try { localStorage.setItem(KEY, JSON.stringify(settings)); } catch (e) { /* fx privat tilstand */ } }
@@ -115,9 +117,13 @@ export async function workerFetch(path, opts = {}) {
     ...opts,
     headers: { 'X-Dash-Key': settings.proxy.key, ...(opts.body ? { 'Content-Type': 'application/json' } : {}), ...(opts.headers || {}) }
   });
+  if (res.status === 401 && String(settings.proxy.key).startsWith('t1.') && authHook) authHook();
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res;
 }
+let authHook = null;
+// Kaldes når skærmens login ikke længere gælder (fx efter "Log alle skærme ud")
+export function onAuthLost(fn) { authHook = fn; }
 
 // Henter tekst (RSS, iCal) fra en anden side via workeren, fordi browseren ellers blokerer (CORS).
 export async function fetchText(url, { allowPublic = false } = {}) {
