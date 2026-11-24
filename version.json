@@ -1,5 +1,5 @@
 {
-  "version": "1.60.1",
+  "version": "1.60.2",
   "files": [
     "index.html",
     "app.js",
@@ -24,6 +24,14 @@
     "football.js"
   ],
   "notes": [
+    {
+      "version": "1.60.2",
+      "date": "25. november 2026",
+      "title": "Tydeligere farver i stillingen",
+      "items": [
+        "Mesterskab, Europa, op- og nedrykning har fået kraftigere farver i Fodbold-stilling"
+      ]
+    },
     {
       "version": "1.60.1",
       "date": "25. november 2026",

@@ -119,8 +119,13 @@ const NOTE_DA = [[/championship round/i, 'Mesterskabsspil'], [/relegation round/
   [/champions league qual/i, 'CL-kvalifikation'], [/europa league qual/i, 'EL-kvalifikation'], [/conference league qual/i, 'ECL-kvalifikation'], [/champions league/i, 'Champions League'], [/europa league/i, 'Europa League'],
   [/conference league/i, 'Conference League'], [/relegation/i, 'Nedrykning'], [/promotion/i, 'Oprykning'], [/champion/i, 'Mester'], [/round of 16|knockout/i, 'Slutspil'], [/play-?off/i, 'Playoff']];
 const noteDa = (d) => { for (const [re, t] of NOTE_DA) if (re.test(d)) return t; return d; };
+// Egne kraftige farver i stedet for ESPN's pastelfarver, så placeringerne kan ses på afstand
+const NOTE_COLOR = { Mester: '#16A34A', 'Champions League': '#16A34A', Mesterskabsspil: '#16A34A', Oprykning: '#16A34A', 'CL-kvalifikation': '#65A30D', Oprykningskval: '#65A30D', 'Oprykningskval.': '#65A30D',
+  'Europa League': '#2563EB', 'EL-kvalifikation': '#3B82F6', 'Conference League': '#0891B2', 'ECL-kvalifikation': '#06B6D4', Slutspil: '#9333EA', Playoff: '#9333EA',
+  Nedrykningsspil: '#EA580C', 'Nedrykningskval.': '#F97316', Nedrykning: '#DC2626' };
+const noteColor = (t, fallback) => NOTE_COLOR[t] || fallback;
 // Ligaer uden noter fra ESPN: Superligaen deles efter grundspillet i top 6 og bund 6
-const FALLBACK_NOTES = { 'den.1': (rank, n) => (n === 12 ? (rank <= 6 ? { color: '#81D6AC', text: 'Mesterskabsspil' } : { color: '#FFB86B', text: 'Nedrykningsspil' }) : null) };
+const FALLBACK_NOTES = { 'den.1': (rank, n) => (n === 12 ? (rank <= 6 ? { color: NOTE_COLOR.Mesterskabsspil, text: 'Mesterskabsspil' } : { color: NOTE_COLOR.Nedrykningsspil, text: 'Nedrykningsspil' }) : null) };
 // Stillinger pr. liga (hentes højst hvert 10. minut)
 export const tables = {};
 export async function loadTable(lg) {
@@ -132,7 +137,7 @@ export async function loadTable(lg) {
     const groups = (j.children || [{ standings: j.standings, name: '' }]).filter((c) => c.standings);
     const stat = (e, n) => { const x = (e.stats || []).find((y) => y.name === n); return x ? x.value ?? Number(x.displayValue) : null; };
     const rows = (g) => (g.standings.entries || []).map((e) => { const t = e.team || {}; return { id: String(t.id), name: dk(t.shortDisplayName || t.displayName || ''), abbr: t.abbreviation || '', logo: (t.logos && t.logos[0] && t.logos[0].href) || '',
-      note: e.note && e.note.description ? { color: '#' + String(e.note.color || '#999').replace(/^#+/, ''), text: noteDa(e.note.description) } : null,
+      note: e.note && e.note.description ? (() => { const text = noteDa(e.note.description); return { color: noteColor(text, '#' + String(e.note.color || '#999').replace(/^#+/, '')), text }; })() : null,
       rank: stat(e, 'rank'), gp: stat(e, 'gamesPlayed'), w: stat(e, 'wins'), d: stat(e, 'ties'), l: stat(e, 'losses'), gd: stat(e, 'pointDifferential'), pts: stat(e, 'points') }; })
       .sort((a, b) => (a.rank || 99) - (b.rank || 99) || b.pts - a.pts);
     const gs = groups.map((g) => ({ name: g.name || '', rows: rows(g) }));
