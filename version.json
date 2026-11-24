@@ -1,5 +1,5 @@
 {
-  "version": "1.60.0",
+  "version": "1.60.1",
   "files": [
     "index.html",
     "app.js",
@@ -24,6 +24,14 @@
     "football.js"
   ],
   "notes": [
+    {
+      "version": "1.60.1",
+      "date": "25. november 2026",
+      "title": "Kun dine hold markeres",
+      "items": [
+        "Hold markeres nu kun i den liga, du har valgt at følge dem i"
+      ]
+    },
     {
       "version": "1.60.0",
       "date": "25. november 2026",

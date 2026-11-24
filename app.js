@@ -510,9 +510,11 @@ function wFodbold(size, h = 1, wd = 1) {
   const head = cardHead(`${dayTxt} · ${day.getDate()}. ${MONTHS[day.getMonth()].slice(0, 3)}`, arrows);
   // Kun klublogo (forkortelse hvis der ikke er et logo) – navnet står i logoets beskrivelse
   const side = (t, fav) => `<span class="fb-t${t.id === fav ? ' fb-fav' : ''}" title="${esc(t.name)}">${t.logo ? `<img src="${esc(t.logo)}" alt="${esc(t.name)}" loading="lazy">` : `<b>${esc(t.abbr || t.name.slice(0, 3).toUpperCase())}</b>`}</span>`;
-  const favIds = (fb.teams || []).map((t) => t.id);
+  // Et hold fremhæves kun i den turnering, det følges i (landsholdet i alle)
+  const lgOf = (id) => (FB.LEAGUES.find((L) => L.id === id) || {}).name;
+  const favIn = (id, comp) => (fb.teams || []).some((t) => t.id === id && (t.lg === 'nat' || lgOf(t.lg) === comp));
   const row = (m) => {
-    const pend = FB.pending(m); const fav = favIds.includes(m.home.id) ? m.home.id : favIds.includes(m.away.id) ? m.away.id : '';
+    const pend = FB.pending(m); const fav = favIn(m.home.id, m.comp) ? m.home.id : favIn(m.away.id, m.comp) ? m.away.id : '';
     const mid = pend ? '<span class="fb-mid">–</span>' : m.state === 'pre' ? `<span class="fb-mid time">${hhmm(m.date)}</span>` : `<span class="fb-mid"><b class="${m.home.win ? 'w' : ''}">${esc(m.home.score)}</b>–<b class="${m.away.win ? 'w' : ''}">${esc(m.away.score)}</b></span>`;
     const when = m.state === 'in' ? `<span class="fb-live">● ${esc(m.clock || m.detail || 'Live')}</span>` : pend ? 'Afventer' : m.state === 'post' ? 'Slut' : '';
     return `<div class="fb-row ${m.state}"><span class="fb-when">${when}</span>${side(m.home, fav)}${mid}${side(m.away, fav)}</div>`;
@@ -543,7 +545,7 @@ function wStilling(size, h = 1, wd = 1) {
   const T = FB.tables[L.id];
   if (!T || !T.at) { if (!T && hasProxy()) FB.loadTable(L.id).then(() => setTimeout(softRender, 0)); return head + '<div class="empty">Henter stillingen …</div>'; }
   if (!T.groups.length) return head + '<div class="empty">Ingen stilling lige nu.</div>';
-  const favIds = ((settings.football || {}).teams || []).map((t) => t.id);
+  const favIds = ((settings.football || {}).teams || []).filter((t) => t.lg === L.id).map((t) => t.id); // kun hold, der følges i netop denne liga
   const wide = wd >= 2; const num = (v) => (v === null || v === undefined ? '' : v);
   const hdr = `<div class="st-row st-h${wide ? ' wide' : ''}"><span>#</span><span></span>${wide ? '<span>K</span><span>V</span><span>U</span><span>T</span>' : '<span>K</span>'}<span>+/-</span><span>P</span></div>`;
   const row = (t) => `<div class="st-row${wide ? ' wide' : ''}${favIds.includes(t.id) ? ' st-fav' : ''}${t.note ? ' noted' : ''}"${t.note ? ` style="--nc:${esc(t.note.color)}" title="${esc(t.note.text)}"` : ''}><span class="st-rk">${num(t.rank)}</span><span class="st-tm">${t.logo ? `<img src="${esc(t.logo)}" alt="" loading="lazy">` : ''}<b data-abbr="${esc(t.abbr)}">${esc(wide ? t.name : t.abbr || t.name)}</b></span>${wide ? `<span>${num(t.gp)}</span><span>${num(t.w)}</span><span>${num(t.d)}</span><span>${num(t.l)}</span>` : `<span>${num(t.gp)}</span>`}<span>${t.gd > 0 ? '+' : ''}${num(t.gd)}</span><span class="st-p">${num(t.pts)}</span></div>`;
