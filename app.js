@@ -11,6 +11,7 @@ import * as L from './look.js';
 import * as M from './media.js';
 import * as A from './login.js';
 import * as MD from './madro.js';
+import * as SF from './somfy.js';
 import { onAuthLost } from './util.js';
 
 const $ = (s, r = document) => r.querySelector(s);
@@ -47,6 +48,8 @@ const themeLabel = (id) => (id === 'auto' ? 'Automatisk' : THEMES[id].label);
 
 /* ---------- Ikoner ---------- */
 const ICON = {
+  blinds: 'M4 4h16M5 4v9M19 4v9M5 13h14M7 7h10M7 10h10M12 13v4M10 19a2 2 0 1 0 4 0 2 2 0 0 0-4 0',
+  up: 'M6 15l6-6 6 6', down: 'M6 9l6 6 6-6', stop: 'M8 8h8v8H8z',
   shuffle: 'M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5', repeat: 'M17 1l4 4-4 4M3 11V9a4 4 0 0 1 4-4h14M7 23l-4-4 4-4M21 13v2a4 4 0 0 1-4 4H3',
   madro: 'M4 11h16v5a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4zM2 11h20M9 7c0-1.2 1-1.8 1-3M14 7c0-1.2 1-1.8 1-3',
   cd: 'M12 8v5l3 2M9 2h6M12 22a8 8 0 1 0 0-16 8 8 0 0 0 0 16z', store: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z',
@@ -73,6 +76,7 @@ const PAGES = [
 // Slås en tjeneste fra, skjules dens side, kort, faner og felter. Kortene på forsiden huskes til den slås til igen.
 const SERVICES = [
   { id: 'madro', name: 'Madro', icon: 'madro', desc: 'Madplan, indkøbsliste og opskrifter.', pages: ['madro'], widgets: ['madplan', 'indkob', 'inspiration'], tabs: [] },
+  { id: 'somfy', name: 'Somfy', icon: 'blinds', desc: 'Styr screens, markiser og gardiner.', pages: [], widgets: ['screens'], tabs: [] },
   { id: 'kalender', name: 'Kalender', icon: 'kalender', desc: 'Familiens aftaler fra iCloud m.fl.', pages: ['kalender'], widgets: ['uge'], tabs: [] },
   { id: 'vejr', name: 'Vejret', icon: 'vejr', desc: 'Prognoser fra DMI og andre kilder for jeres steder.', pages: ['vejr'], widgets: ['vejr', 'steder'], tabs: ['vejr'] },
   { id: 'nyheder', name: 'Nyheder', icon: 'nyheder', desc: 'Overskrifter fra DR, TV 2, JP og egne kilder.', pages: ['nyheder'], widgets: ['nyheder'], tabs: ['nyheder'] },
@@ -84,10 +88,10 @@ const svcOn = (id) => !settings.services || settings.services[id] !== false;
 const pageOn = (p) => SERVICES.every((x) => !x.pages.includes(p) || svcOn(x.id));
 const widgetOn = (w) => SERVICES.every((x) => !x.widgets.includes(w) || svcOn(x.id));
 const tabOn = (t) => (t === 'kalender' ? svcOn('kalender') || svcOn('nedtaelling') : SERVICES.every((x) => !x.tabs.includes(t) || svcOn(x.id)));
-const WIDGETS = { madplan: 'Madplan', indkob: 'Indkøbsliste', inspiration: 'Opskrift-inspiration', uge: 'Familiens uge', vejr: 'Vejret', steder: 'Vejret andre steder', nyheder: 'Nyheder', sonos: 'Musik (Sonos)', tv: 'DR TV', nedtaelling: 'Nedtælling' };
+const WIDGETS = { screens: 'Screens (Somfy)', madplan: 'Madplan', indkob: 'Indkøbsliste', inspiration: 'Opskrift-inspiration', uge: 'Familiens uge', vejr: 'Vejret', steder: 'Vejret andre steder', nyheder: 'Nyheder', sonos: 'Musik (Sonos)', tv: 'DR TV', nedtaelling: 'Nedtælling' };
 // Forsiden er et gitter af ens kvadrater. Et kort fylder w kvadrater i bredden og h i højden.
 const SHAPES = [[1, 1], [2, 1], [3, 1], [4, 1], [1, 2], [1, 3], [1, 4], [2, 2]];
-const DEFAULT_SHAPE = { madplan: [4, 1], indkob: [2, 1], inspiration: [2, 1], uge: [4, 1], vejr: [2, 1], steder: [2, 1], nyheder: [2, 1], sonos: [1, 1], tv: [1, 1], nedtaelling: [1, 1] };
+const DEFAULT_SHAPE = { screens: [2, 1], madplan: [4, 1], indkob: [2, 1], inspiration: [2, 1], uge: [4, 1], vejr: [2, 1], steder: [2, 1], nyheder: [2, 1], sonos: [1, 1], tv: [1, 1], nedtaelling: [1, 1] };
 const LEGACY = { S: [1, 1], M: [2, 1], L: [4, 1] };
 const shapeOf = (x) => (x.w && x.h ? [x.w, x.h] : LEGACY[x.size] || [1, 1]);
 const FIT = ['uge']; // kort der aldrig må skære indhold af – de bliver kompakte og vokser i højden ved behov
@@ -100,7 +104,7 @@ const D = { weather: null, weatherErr: null, wx: {}, wxErr: {}, compare: null, n
 const home = () => settings.places[0];
 const placeLabel = (p) => p.label || p.name;
 const placeById = (id) => settings.places.find((p) => p.id === id) || home();
-const ui = { inspIdx: 0, inspAt: Date.now(), calEdit: null, famMsg: null, cdIdx: 0, cdAt: Date.now(), cdMsg: null, bgMsg: null, sizeFor: null, newsIdx: 0, newsAt: Date.now(), feedMsg: null, feedDraft: null, page: pageFromHash(), setTab: 'familie', wPlace: null, fpPlace: 0, fpTouched: 0, editing: false, calWeek: 0, geo: null, geoMsg: '', tick: 0, connMsg: '' };
+const ui = { sfMsg: '', inspIdx: 0, inspAt: Date.now(), calEdit: null, famMsg: null, cdIdx: 0, cdAt: Date.now(), cdMsg: null, bgMsg: null, sizeFor: null, newsIdx: 0, newsAt: Date.now(), feedMsg: null, feedDraft: null, page: pageFromHash(), setTab: 'familie', wPlace: null, fpPlace: 0, fpTouched: 0, editing: false, calWeek: 0, geo: null, geoMsg: '', tick: 0, connMsg: '' };
 function pageFromHash() { const h = location.hash.slice(1); return [...PAGES.map((p) => p.id), 'indstillinger'].includes(h) && (h === 'indstillinger' || pageOn(h)) ? h : 'forside'; }
 
 function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), 2600); }
@@ -112,6 +116,15 @@ function lighten(hex, amt = 0.72) {
   return '#' + ch.map((c) => c.toString(16).padStart(2, '0')).join('');
 }
 const evStyle = (e) => `background:${lighten(e.color)};border-left-color:${esc(e.color || '#888')}`;
+// Forsiden pr. person: har den valgte person sin egen forside, vises den – ellers familiens
+const curLayout = () => { const own = settings.me && settings.layouts && settings.layouts[settings.me]; return own || settings.layout; };
+// Tilpasses forsiden, mens en person er valgt, får personen sin egen forside (kopi af familiens første gang)
+function editLayout() {
+  if (!settings.me || !members().some((m) => m.id === settings.me)) return settings.layout;
+  settings.layouts = settings.layouts || {};
+  if (!settings.layouts[settings.me]) settings.layouts[settings.me] = JSON.parse(JSON.stringify(settings.layout));
+  return settings.layouts[settings.me];
+}
 // Valgt profil: vis kun personens egne kalendere + fælles kalendere (uden ejer)
 const members = () => (settings.family && settings.family.members) || [];
 const meMember = () => members().find((m) => m.id === settings.me) || null;
@@ -370,6 +383,30 @@ function wIndkob(size, h = 1, wd = 1) {
   return head + `<div class="shoplist" style="--cols:${cols}">${items.map((x) => `<div class="shopitem"><i aria-hidden="true"></i><span class="si-name">${esc(x.name)}</span>${amt(x) ? `<span class="si-amt">${esc(amt(x))}</span>` : ''}</div>`).join('')}</div>` + add;
 }
 
+// Somfy: screens udenfor – op, stop, "my" og ned for hver, og for alle på én gang
+function wScreens(size, h = 1, wd = 1) {
+  const st = SF.state;
+  if (!hasProxy()) return cardHead('Screens') + needProxyMsg('Somfy');
+  if (!st.checked) return cardHead('Screens') + '<div class="empty">Henter fra Somfy …</div>';
+  if (st.configured === false) return cardHead('Screens') + '<div class="empty">Somfy er ikke sat op endnu (Indstillinger → Forbindelse).</div>';
+  if (st.error && !st.devices.length) return cardHead('Screens') + `<div class="empty">${esc(st.error)}</div>`;
+  if (!st.devices.length) return cardHead('Screens') + '<div class="empty">Ingen screens fundet i Somfy.</div>';
+  const awn = (d) => d.ui === 'Awning' || d.ui === 'Pergola';
+  const btns = (urls, d, all = false) => {
+    const k = urls.join('|'); const busy = urls.some((u) => st.busy[u]);
+    const hasMy = all ? st.devices.some((x) => x.commands.includes('my')) : d.commands.includes('my');
+    const a = all ? false : awn(d);
+    return `<span class="sfb${busy ? ' busy' : ''}">
+      <button data-act="sfCmd" data-urls="${esc(k)}" data-cmd="${a ? 'close' : 'open'}" aria-label="${a ? 'Ind' : 'Op'}">${svg('up', 20)}</button>
+      <button data-act="sfCmd" data-urls="${esc(k)}" data-cmd="stop" aria-label="Stop">${fillSvg('stop', 14)}</button>
+      ${hasMy ? `<button data-act="sfCmd" data-urls="${esc(k)}" data-cmd="my" aria-label="Foretrukken stilling (my)" class="my">my</button>` : ''}
+      <button data-act="sfCmd" data-urls="${esc(k)}" data-cmd="${a ? 'open' : 'close'}" aria-label="${a ? 'Ud' : 'Ned'}">${svg('down', 20)}</button></span>`;
+  };
+  const rows = st.devices.map((d) => `<div class="sfrow${d.available ? '' : ' off'}"><span class="sfname"><b title="${esc(d.label)}">${esc(d.label)}</b>${SF.stateText(d) ? `<small>${esc(SF.stateText(d))}</small>` : ''}</span>${btns([d.url], d)}</div>`).join('');
+  const all = st.devices.length > 1 ? `<div class="sfrow sfall"><span class="sfname"><b>Alle</b></span>${btns(st.devices.map((d) => d.url), null, true)}</div>` : '';
+  return cardHead('Screens') + `<div class="sflist">${all}${rows}</div>`;
+}
+
 // Inspiration: en ret fra kogebogen ad gangen, skifter hvert 20. sekund
 function wInspiration(size, h = 1, wd = 1) {
   const wait = madroStatus('Inspiration'); if (wait) return wait;
@@ -398,15 +435,15 @@ function wNed(size, h = 1, wd = 1) {
     <div class="cdw"><div class="cdn">${c.days < 0 ? '✓' : c.days}</div><div class="cdl">${label}</div><div class="cdd">${cap(DAYS_LONG[d.getDay()])} ${d.getDate()}. ${MONTHS[d.getMonth()]} ${d.getFullYear()}</div></div></div></div>`;
 }
 
-const WRENDER = { madplan: wMadplan, indkob: wIndkob, inspiration: wInspiration, uge: wUge, vejr: wVejr, steder: wSteder, nyheder: wNyheder, sonos: wSonos, tv: wTv, nedtaelling: wNed };
+const WRENDER = { screens: wScreens, madplan: wMadplan, indkob: wIndkob, inspiration: wInspiration, uge: wUge, vejr: wVejr, steder: wSteder, nyheder: wNyheder, sonos: wSonos, tv: wTv, nedtaelling: wNed };
 
 function pageForside() {
-  const inLayout = (id) => settings.layout.some((x) => x.id === id);
+  const inLayout = (id) => curLayout().some((x) => x.id === id);
   const edit = ui.editing ? `<section class="card editpanel">
-      <div class="row" style="justify-content:space-between"><span class="lab">Kort på forsiden</span><span class="wopt" role="group" aria-label="Størrelse på kortene">${[[4, 'Store'], [5, 'Mellem'], [6, 'Små']].map(([v, l]) => `<button data-act="gridCols" data-v="${v}" aria-pressed="${(settings.gridCols || 4) === v}">${l}</button>`).join('')}</span></div>
+      <div class="row" style="justify-content:space-between"><span class="lab">${meMember() ? `${esc(meMember().name)}s forside${settings.layouts && settings.layouts[settings.me] ? ` · <button class="linkbtn" data-act="resetMyLayout">brug familiens forside</button>` : ''}` : 'Familiens forside'}</span><span class="wopt" role="group" aria-label="Størrelse på kortene">${[[4, 'Store'], [5, 'Mellem'], [6, 'Små']].map(([v, l]) => `<button data-act="gridCols" data-v="${v}" aria-pressed="${(settings.gridCols || 4) === v}">${l}</button>`).join('')}</span></div>
       <div class="choices">${Object.entries(WIDGETS).filter(([id]) => widgetOn(id)).map(([id, name]) => `<button class="pill" data-act="toggleW" data-id="${id}" aria-pressed="${inLayout(id)}">${inLayout(id) ? '✓' : '+'} ${esc(name)}</button>`).join('')}</div>
     </section>` : '';
-  const cards = settings.layout.filter((x) => WIDGETS[x.id] && widgetOn(x.id)).map((x) => {
+  const cards = curLayout().filter((x) => WIDGETS[x.id] && widgetOn(x.id)).map((x) => {
     const [w, h] = shapeOf(x);
     const picker = ui.editing && ui.sizeFor === x.id ? `<div class="shapes" role="group" aria-label="Størrelse på ${esc(WIDGETS[x.id])}">${SHAPES.map(([sw, sh]) => `<button class="shape" data-act="shape" data-id="${x.id}" data-w="${sw}" data-h="${sh}" aria-pressed="${sw === w && sh === h}" aria-label="${sw} gange ${sh} kvadrater">${shapeIcon(sw, sh)}<span>${sw}×${sh}</span></button>`).join('')}</div>` : '';
     return `
@@ -727,7 +764,11 @@ function pageIndstillinger() {
       <div class="row"><button class="btn primary" data-act="testConn">Test forbindelse</button><span class="small" id="connMsg">${esc(ui.connMsg)}</span></div>
       ${hasProxy() ? `<div class="small ${syncState.ok === false ? 'err' : 'muted'}"><b>Deling mellem skærme:</b> ${syncState.ok === false ? esc(syncState.msg) : syncState.last ? 'aktiv ✓ – senest ' + hhmm(syncState.last) : 'starter …'}</div>` : ''}
 </section>
-      ${svcOn('musik') ? sonosConnSection() : ''}`
+      ${svcOn('musik') ? sonosConnSection() : ''}
+      ${svcOn('somfy') ? `<section class="card"><b>Somfy</b>
+        <div class="muted">${SF.state.configured === false ? 'Ikke sat op.' : SF.state.error ? esc(SF.state.error) : SF.state.checked ? `Forbundet · ${SF.state.devices.length} enheder` : 'Ikke tjekket endnu.'}</div>
+        <div class="row"><button class="btn primary" data-act="sfTest">Test Somfy</button>${ui.sfMsg ? `<span class="small muted">${esc(ui.sfMsg)}</span>` : ''}</div>
+        <details class="howto"><summary>Sådan sætter du Somfy op</summary><p class="note">Cloudflare → <b>Workers &amp; Pages</b> → <b>easyhome</b> → <b>Settings</b> → <b>Variables and Secrets</b> → <b>Add</b>. Tilføj to af typen <b>Secret</b>: <code>SOMFY_USER</code> (mailen I logger ind i TaHoma-appen med) og <code>SOMFY_PASSWORD</code> (adgangskoden). Tryk <b>Deploy</b>, og tryk derefter <b>Test Somfy</b> her.</p></details></section>` : ''}`
   };
   return `<div class="ptitle"><h1>Indstillinger</h1></div>
   <div class="tabs" role="tablist" aria-label="Indstillinger">${tabs.map((t) => `<button role="tab" class="tab" data-act="setTab" data-tab="${t.id}" aria-selected="${t.id === tab}">${esc(t.label)}</button>`).join('')}</div>
@@ -836,9 +877,9 @@ async function loadSonos(full = false) {
   if (full || !S.state.checked) await S.status();
   if (S.state.connected) { if (full) S.state.household = null; await S.refresh(); }
   renderFooter();
-  if (ui.page === 'musik' || (ui.page === 'forside' && settings.layout.some((x) => x.id === 'sonos'))) softRender();
+  if (ui.page === 'musik' || (ui.page === 'forside' && curLayout().some((x) => x.id === 'sonos'))) softRender();
 }
-function loadAll() { loadWeather(); loadNews(); loadCal(); loadSonos(true); if (svcOn('madro')) MD.start(); }
+function loadAll() { loadWeather(); loadNews(); loadCal(); loadSonos(true); if (svcOn('madro')) MD.start(); if (svcOn('somfy')) SF.refresh(); }
 
 /* ---------- Handlinger ---------- */
 const act = {
@@ -848,14 +889,15 @@ const act = {
   setTheme: (b) => { settings.theme = b.dataset.theme; save(); applyTheme(); renderHeader(); renderMain(); },
   edit: () => { ui.editing = !ui.editing; renderHeader(); renderMain(); },
   toggleW: (b) => {
-    const id = b.dataset.id; const i = settings.layout.findIndex((x) => x.id === id);
-    if (i >= 0) settings.layout.splice(i, 1); else { const [w, h] = DEFAULT_SHAPE[id] || [1, 1]; settings.layout.push({ id, w, h }); }
+    const id = b.dataset.id; const i = editLayout().findIndex((x) => x.id === id);
+    if (i >= 0) editLayout().splice(i, 1); else { const [w, h] = DEFAULT_SHAPE[id] || [1, 1]; editLayout().push({ id, w, h }); }
     save(); renderMain();
   },
   sizeFor: (b) => { ui.sizeFor = ui.sizeFor === b.dataset.id ? null : b.dataset.id; renderMain(); },
+  resetMyLayout: () => { if (settings.layouts) delete settings.layouts[settings.me]; save(); renderMain(); },
   gridCols: (b) => { settings.gridCols = +b.dataset.v; save(); renderMain(); },
-  wOpt: (b) => { const x = settings.layout.find((y) => y.id === b.dataset.id); if (x) { x[b.dataset.k] = +b.dataset.v; save(); renderMain(); } },
-  shape: (b) => { const x = settings.layout.find((y) => y.id === b.dataset.id); if (x) { x.w = +b.dataset.w; x.h = +b.dataset.h; delete x.size; ui.sizeFor = null; save(); renderMain(); } },
+  wOpt: (b) => { const x = editLayout().find((y) => y.id === b.dataset.id); if (x) { x[b.dataset.k] = +b.dataset.v; save(); renderMain(); } },
+  shape: (b) => { const x = editLayout().find((y) => y.id === b.dataset.id); if (x) { x.w = +b.dataset.w; x.h = +b.dataset.h; delete x.size; ui.sizeFor = null; save(); renderMain(); } },
   calPrev: () => { ui.calWeek--; renderMain(); }, calNext: () => { ui.calWeek++; renderMain(); }, calToday: () => { ui.calWeek = 0; renderMain(); },
   wModel: (b) => { settings.weather.model = b.dataset.model; save(); D.wx = {}; renderMain(); loadWeather(); },
   compare: () => { D.compare = D.compare || []; renderMain(); loadCompare(); },
@@ -865,6 +907,8 @@ const act = {
     renderAll(); if (svcOn(id)) loadAll();
   },
   wStepSet: (b) => { settings.weather.step = +b.dataset.v; save(); renderMain(); },
+  sfCmd: (b) => { SF.command(b.dataset.urls.split('|'), b.dataset.cmd).catch((e) => toast('Somfy: ' + e.message)); },
+  sfTest: () => { ui.sfMsg = 'Tjekker …'; renderMain(); SF.refresh().then(() => { ui.sfMsg = SF.state.configured === false ? 'Somfy-login mangler i workeren.' : SF.state.error ? SF.state.error : `Forbundet ✓ ${SF.state.devices.length} enheder fundet.`; renderMain(); }); },
   mdRecipe: (b) => {
     const id = b.dataset.id; madroSub = 'opskrifter'; act.nav({ dataset: { page: 'madro' } });
     // Åbn opskriften inde i Madro, så snart Madro har hentet kogebogen
@@ -1145,7 +1189,7 @@ const endDrag = () => {
   if (!d.active) return;
   swipedAt = Date.now(); // et træk må ikke blive til et tryk
   const order = [...$('#grid').children].map((c) => c.dataset.wid);
-  settings.layout.sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
+  editLayout().sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
   const r = d.card.getBoundingClientRect(); const g = d.ghost;
   g.classList.remove('lifted'); g.classList.add('landing');
   g.style.transform = `translate(${(r.left - d.rect.left) / d.k}px,${(r.top - d.rect.top) / d.k}px)`;
@@ -1164,6 +1208,8 @@ function boot() {
   if (!settings.weather.stepRev) { settings.weather.step = 60; settings.weather.stepRev = 1; save(); } // vejrkortet viser timer som standard
   M.onMediaLoaded(() => softRender());
   MD.onMadroChange(() => { if (ui.page === 'forside') softRender(); });
+  SF.onSomfyChange(() => { if (ui.page === 'forside' && curLayout().some((x) => x.id === 'screens')) softRender(); });
+  setInterval(() => { if (svcOn('somfy') && !document.hidden && curLayout().some((x) => x.id === 'screens')) SF.refresh(); }, 60000);
   // Madplan og indkøbsliste på forsiden – brugeren bad selv om dem (én gang)
   if ((settings.layoutRev || 1) < 3) { const have = new Set(settings.layout.map((x) => x.id)); settings.layout = [{ id: 'madplan', w: 4, h: 1 }, { id: 'indkob', w: 2, h: 1 }].filter((x) => !have.has(x.id)).concat(settings.layout); settings.layoutRev = 3; save(); }
   S.onArtLoaded(() => { renderFooter(); if (['forside', 'musik'].includes(ui.page)) softRender(); });
@@ -1192,7 +1238,7 @@ function boot() {
   }, 1000);
   // Inspirationskortet: ny ret hvert 20. sekund
   setInterval(() => {
-    const on = ui.page === 'forside' && !ui.editing && !drag && settings.layout.some((x) => x.id === 'inspiration') && widgetOn('inspiration') && MD.state.all.length > 1;
+    const on = ui.page === 'forside' && !ui.editing && !drag && curLayout().some((x) => x.id === 'inspiration') && widgetOn('inspiration') && MD.state.all.length > 1;
     if (!on) { ui.inspAt = Date.now(); return; }
     const left = 20000 - (Date.now() - ui.inspAt);
     const bar = document.getElementById('inspBar'); if (bar) bar.style.width = Math.max(0, left / 200) + '%';
@@ -1200,7 +1246,7 @@ function boot() {
   }, 1000);
   // Nedtællingskortet: skift til næste nedtælling hvert 10. sekund, når der er flere
   setInterval(() => {
-    if (ui.page !== 'forside' || ui.editing || drag || R.isOpen() || !svcOn('nedtaelling') || !widgetOn('nedtaelling') || !settings.layout.some((x) => x.id === 'nedtaelling') || countdowns().length < 2) { ui.cdAt = Date.now(); return; }
+    if (ui.page !== 'forside' || ui.editing || drag || R.isOpen() || !svcOn('nedtaelling') || !widgetOn('nedtaelling') || !curLayout().some((x) => x.id === 'nedtaelling') || countdowns().length < 2) { ui.cdAt = Date.now(); return; }
     if (Date.now() - ui.cdAt >= 10000) act.wStep({ dataset: { scope: 'cd', dir: '1' } });
   }, 1000);
   setInterval(() => { if (ui.fpPlace !== 0 && Date.now() - ui.fpTouched > 3 * 60000) { ui.fpPlace = 0; softRender(); } }, 30000);

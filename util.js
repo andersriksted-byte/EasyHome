@@ -33,6 +33,7 @@ export const DEFAULTS = {
   family: { name: 'Familien Riksted', members: [] }, // members: [{ id, name, color }]
   me: '', // valgt profil på denne skærm
   services: {}, // tjenester slået fra: { nyheder: false, … }
+  layouts: {}, // egne forsider pr. familiemedlem: { <id>: [ … ] }
   location: { name: 'København', lat: 55.6761, lon: 12.5683 }, // ældre felt – flyttes ind i places ved start
   places: [], // [{ id, label, name, lat, lon }] – første sted er 'hjem'
   weather: { model: 'dmi_seamless', step: 60 }, // step: minutter mellem punkterne i vejrkortet

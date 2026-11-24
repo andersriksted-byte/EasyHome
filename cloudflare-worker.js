@@ -7,6 +7,7 @@
 //   APP_ORIGIN           – fx https://andersriksted-byte.github.io  (hvor dashboardet ligger)
 //   SONOS_CLIENT_ID      – "Key" fra Sonos developer-portalen
 //   SONOS_CLIENT_SECRET  (secret) – "Secret" fra Sonos developer-portalen
+//   SOMFY_USER, SOMFY_PASSWORD (secrets) – login til Somfy-appen (TaHoma), bruges til at styre screens m.m.
 //   EXTRA_HOSTS          – valgfrit: ekstra domæner til egne RSS-feeds, adskilt af komma
 // KV-binding: DASH_KV (Storage & Databases → KV → opret "easyhome" → bind som DASH_KV)
 
@@ -145,6 +146,64 @@ async function proxy(req, env, ctx) {
   return out;
 }
 
+/* ---------- Somfy (Connexoon/TaHoma via Somfys sky, samme login som TaHoma-appen) ---------- */
+const SOMFY_AUTH = 'https://accounts.somfy.com/oauth/oauth/v2/token/jwt';
+const SOMFY_CID = '0d8e920c-1478-11e7-a377-02dd59bd3041_1ewvaqmclfogo4kcsoo0c8k4kso884owg08sg8c40sk4go4ksg';
+const SOMFY_CSEC = '12k73w1n540g8o4cokg0cw84cog840k84cwggscwg884004kgk'; // offentlig app-nøgle (samme som Somfys egen app)
+const OVERKIZ = 'https://ha101-1.overkiz.com/enduser-mobile-web/enduserAPI/';
+const COVER_CLASSES = ['ExteriorScreen', 'Screen', 'Awning', 'RollerShutter', 'Pergola', 'Curtain', 'VenetianBlind', 'ExteriorVenetianBlind', 'Window', 'GarageDoor', 'Gate', 'Shutter', 'SwingingShutter'];
+const somfyReady = (env) => !!(env.SOMFY_USER && env.SOMFY_PASSWORD && env.DASH_KV);
+async function somfyToken(env, force = false) {
+  const saved = JSON.parse((await env.DASH_KV.get('somfy_token')) || 'null');
+  if (!force && saved && saved.exp > Date.now() + 60000) return saved.access;
+  const grant = async (form) => {
+    const r = await fetch(SOMFY_AUTH, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ client_id: SOMFY_CID, client_secret: SOMFY_CSEC, ...form }) });
+    const j = await r.json().catch(() => ({}));
+    if (!j.access_token) throw new Error(j.message === 'error.invalid.grant' ? 'Forkert Somfy-login' : 'Somfy svarede ikke (' + r.status + ')');
+    const t = { access: j.access_token, refresh: j.refresh_token || '', exp: Date.now() + (j.expires_in || 3600) * 1000 };
+    await env.DASH_KV.put('somfy_token', JSON.stringify(t));
+    return t.access;
+  };
+  if (!force && saved && saved.refresh) { try { return await grant({ grant_type: 'refresh_token', refresh_token: saved.refresh }); } catch (e) { /* log ind igen */ } }
+  return grant({ grant_type: 'password', username: env.SOMFY_USER, password: env.SOMFY_PASSWORD });
+}
+async function overkiz(env, path, opts = {}) {
+  let tok = await somfyToken(env);
+  const call = (t) => fetch(OVERKIZ + path, { ...opts, headers: { Authorization: 'Bearer ' + t, 'Content-Type': 'application/json', ...(opts.headers || {}) } });
+  let r = await call(tok);
+  if (r.status === 401) { tok = await somfyToken(env, true); r = await call(tok); }
+  const text = await r.text();
+  if (!r.ok) throw new Error('Somfy-fejl ' + r.status + (text ? ': ' + text.slice(0, 120) : ''));
+  return text ? JSON.parse(text) : {};
+}
+async function somfy(req, env, path) {
+  if (!somfyReady(env)) return json(env, { configured: false, error: 'Somfy er ikke sat op i workeren (SOMFY_USER og SOMFY_PASSWORD)' }, path === '/somfy/status' ? 200 : 501);
+  try {
+    if (path === '/somfy/status') { await somfyToken(env); return json(env, { configured: true, ok: true }); }
+    if (path === '/somfy/devices') {
+      const list = await overkiz(env, 'setup/devices');
+      const st = (d, n) => { const x = (d.states || []).find((s) => s.name === n); return x ? x.value : null; };
+      const devices = list.filter((d) => COVER_CLASSES.includes(d.uiClass) || /Screen|Awning|Shutter|Blind/i.test(d.controllableName || '')).map((d) => ({
+        url: d.deviceURL, label: d.label, ui: d.uiClass, rts: /^rts:/.test(d.deviceURL),
+        commands: ((d.definition && d.definition.commands) || []).map((c) => c.commandName),
+        closure: st(d, 'core:ClosureState') ?? st(d, 'core:DeploymentState'), moving: st(d, 'core:MovingState') === true,
+        available: st(d, 'core:StatusState') !== 'unavailable'
+      }));
+      return json(env, { devices });
+    }
+    if (path === '/somfy/exec' && req.method === 'POST') {
+      const b = await req.json().catch(() => ({}));
+      const cmds = { open: 'open', close: 'close', stop: 'stop', my: 'my', up: 'up', down: 'down', setClosure: 'setClosure', setDeployment: 'setDeployment' };
+      const urls = (Array.isArray(b.urls) ? b.urls : [b.url]).filter((u) => typeof u === 'string' && /^(io|rts|ogp|zigbee|hue|enocean|internal):\/\//.test(u)).slice(0, 30);
+      if (!urls.length || !cmds[b.command]) return json(env, { error: 'Ugyldig kommando' }, 400);
+      const params = b.value === undefined ? [] : [Math.max(0, Math.min(100, Math.round(+b.value)))];
+      const r = await overkiz(env, 'exec/apply', { method: 'POST', body: JSON.stringify({ label: 'easyHome', actions: urls.map((u) => ({ deviceURL: u, commands: [{ name: cmds[b.command], parameters: params }] })) }) });
+      return json(env, { ok: true, execId: r.execId || null });
+    }
+    return json(env, { error: 'Ukendt' }, 404);
+  } catch (e) { return json(env, { error: e.message }, 502); }
+}
+
 /* ---------- Sonos ---------- */
 const sonosReady = (env) => !!(env.SONOS_CLIENT_ID && env.SONOS_CLIENT_SECRET && env.DASH_KV);
 const basic = (env) => 'Basic ' + btoa(env.SONOS_CLIENT_ID + ':' + env.SONOS_CLIENT_SECRET);
@@ -230,6 +289,7 @@ export default {
       if (path.startsWith('/sonos/')) return await sonos(req, env, path);
       if (path.startsWith('/auth/')) return await auth(req, env, path);
       if (!(await authOk(req, env))) return json(env, { error: 'Forkert nøgle' }, 401);
+      if (path.startsWith('/somfy/')) return await somfy(req, env, path);
       if (path === '/health') return json(env, { ok: true, sonosConfigured: sonosReady(env), version: 3 });
       if (path === '/proxy') return await proxy(req, env, ctx);
       if (path === '/art') {

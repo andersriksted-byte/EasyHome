@@ -1,5 +1,5 @@
 {
-  "version": "1.26.0",
+  "version": "1.27.0",
   "files": [
     "index.html",
     "app.js",
@@ -17,9 +17,20 @@
     "look.js",
     "media.js",
     "login.js",
-    "madro.js"
+    "madro.js",
+    "somfy.js"
   ],
   "notes": [
+    {
+      "version": "1.27.0",
+      "date": "24. november 2026",
+      "title": "Somfy-screens og egne forsider",
+      "items": [
+        "Nyt kort: Screens (Somfy) med op, stop, my og ned for hver screen – og for alle på én gang.",
+        "Somfy sættes op under Indstillinger → Forbindelse.",
+        "Hver i familien kan nu have sin egen forside: vælg dig selv øverst til højre, og tilpas forsiden – så ser du din, når du er valgt."
+      ]
+    },
     {
       "version": "1.26.0",
       "date": "24. november 2026",
