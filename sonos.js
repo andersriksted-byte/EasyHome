@@ -27,6 +27,18 @@ export function art(o) {
   return '';
 }
 
+// Reserve: når Sonos kun har et billede på selve højttaleren (typisk Apple Music og Spotify), slås coveret op
+// ud fra kunstner og titel via workeren (Apples offentlige musikkatalog).
+const lookCache = {};
+export function lookupArt(artist, title) {
+  if (!title) return '';
+  const q = ((artist || '') + ' ' + title).trim().toLowerCase();
+  if (lookCache[q] !== undefined) return lookCache[q];
+  lookCache[q] = '';
+  workerFetch('/art?q=' + encodeURIComponent(q)).then((r) => r.json()).then((j) => { if (j && j.url) { lookCache[q] = j.url; onArt(); } }).catch(() => {});
+  return '';
+}
+
 export const state = { connected: false, checked: false, household: null, groups: [], players: [], favorites: [], playlists: [], playerVol: {}, meta: null, playback: null, volume: null, error: null };
 
 export async function status() {
@@ -88,7 +100,7 @@ export function nowPlaying() {
   const container = m.container || {};
   const title = item ? item.name : (container.name || m.streamInfo || '');
   const artist = item && item.artist ? item.artist.name : (m.streamInfo && item ? m.streamInfo : (container.service ? container.service.name : ''));
-  const image = art(item) || art(container) || art(m.currentItem);
+  const image = art(item) || art(container) || art(m.currentItem) || (item ? lookupArt(item.artist && item.artist.name, item.name) : '');
   const playing = state.playback && /PLAYING|BUFFERING/.test(state.playback.playbackState || '');
   const group = state.groups.find((g) => g.id === settings.sonos.groupId);
   return { title, artist, image, playing, group: group ? group.name : '', volume: state.volume ? state.volume.volume : null };

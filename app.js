@@ -64,7 +64,7 @@ const GRIP = '<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24"
 
 const PAGES = [
   { id: 'forside', label: 'Forside' }, { id: 'kalender', label: 'Kalender' }, { id: 'vejr', label: 'Vejret' },
-  { id: 'nyheder', label: 'Nyheder' }, { id: 'tv', label: 'DR TV' }
+  { id: 'nyheder', label: 'Nyheder' }, { id: 'musik', label: 'Musik' }, { id: 'tv', label: 'DR TV' }
 ];
 // Tjenester ("app store"): hver tjeneste kan slås til og fra under Indstillinger → Tjenester.
 // Slås en tjeneste fra, skjules dens side, kort, faner og felter. Kortene på forsiden huskes til den slås til igen.

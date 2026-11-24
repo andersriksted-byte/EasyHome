@@ -232,6 +232,24 @@ export default {
       if (!(await authOk(req, env))) return json(env, { error: 'Forkert nøgle' }, 401);
       if (path === '/health') return json(env, { ok: true, sonosConfigured: sonosReady(env), version: 3 });
       if (path === '/proxy') return await proxy(req, env, ctx);
+      if (path === '/art') {
+        // Find et coverbillede ud fra kunstner + titel i Apples offentlige katalog (bruges når Sonos ikke selv har et)
+        const q = (new URL(req.url).searchParams.get('q') || '').slice(0, 200);
+        if (!q) return json(env, { url: '' });
+        const ck = new Request('https://cache.easyhome/art/' + encodeURIComponent(q));
+        const hit = await caches.default.match(ck);
+        if (hit) { const o = new Response(hit.body, hit); for (const [k, v] of Object.entries(cors(env))) o.headers.set(k, v); return o; }
+        let url = '';
+        try {
+          const r = await fetch('https://itunes.apple.com/search?' + new URLSearchParams({ term: q, entity: 'song', limit: '1', country: 'dk' }));
+          const j = await r.json();
+          const a = j.results && j.results[0] && j.results[0].artworkUrl100;
+          if (a) url = a.replace(/100x100bb/, '600x600bb');
+        } catch (e) { url = ''; }
+        const res = new Response(JSON.stringify({ url }), { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'max-age=' + (url ? 604800 : 3600) } });
+        ctx.waitUntil(caches.default.put(ck, res.clone()));
+        const o = new Response(res.body, res); for (const [k, v] of Object.entries(cors(env))) o.headers.set(k, v); return o;
+      }
       if (path === '/img') {
         // Coverbilleder fra Sonos, der kun findes på http (browseren blokerer dem på en https-side)
         let u; try { u = new URL(new URL(req.url).searchParams.get('url')); } catch (e) { return json(env, { error: 'Ugyldig adresse' }, 400); }

@@ -1,5 +1,5 @@
 {
-  "version": "1.16.3",
+  "version": "1.16.4",
   "files": [
     "index.html",
     "app.js",
@@ -19,6 +19,15 @@
     "login.js"
   ],
   "notes": [
+    {
+      "version": "1.16.4",
+      "date": "24. november 2026",
+      "title": "Coverbilleder og Musik-siden",
+      "items": [
+        "Sonos viser nu coverbilleder, også fra Apple Music og Spotify – findes ud fra kunstner og titel.",
+        "Musik-siden er tilbage i menuen til venstre (den forsvandt ved en fejl i sidste opdatering)."
+      ]
+    },
     {
       "version": "1.16.3",
       "date": "24. november 2026",
