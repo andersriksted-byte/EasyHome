@@ -1,5 +1,5 @@
 {
-  "version": "1.43.0",
+  "version": "1.44.0",
   "files": [
     "index.html",
     "app.js",
@@ -22,6 +22,15 @@
     "timer.js"
   ],
   "notes": [
+    {
+      "version": "1.44.0",
+      "date": "24. november 2026",
+      "title": "Sorter Sonos-favoritter",
+      "items": [
+        "Under Indstillinger → Musik kan I nu bestemme rækkefølgen på jeres Sonos-favoritter med pilene op og ned.",
+        "Fjern fluebenet ved Vis for at skjule en favorit i easyHome. Rækkefølgen gælder på Musik-siden og i musikkortet."
+      ]
+    },
     {
       "version": "1.43.0",
       "date": "24. november 2026",

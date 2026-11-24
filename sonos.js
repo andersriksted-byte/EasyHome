@@ -171,3 +171,10 @@ export function playingFavId() {
   if (lastFav && playing && lastFav.group === settings.sonos.groupId && Date.now() - lastFav.at < 6 * 3600000) return lastFav.id;
   return null;
 }
+
+// Favoritterne i jeres egen rækkefølge (vælges under Indstillinger → Musik). Skjulte favoritter udelades.
+export function favorites(all = false) {
+  const order = settings.sonos.favOrder || []; const hidden = settings.sonos.favHidden || [];
+  const pos = (f) => { const i = order.indexOf(f.id); return i < 0 ? 1000 + state.favorites.indexOf(f) : i; };
+  return state.favorites.slice().sort((a, b) => pos(a) - pos(b)).filter((f) => all || !hidden.includes(f.id));
+}

@@ -1068,3 +1068,13 @@ button.w7r.sel{background:color-mix(in srgb,var(--accent) 16%,transparent);box-s
 .tp-foot .btn{height:52px;font-size:17px}
 .tp-foot .btn[disabled]{opacity:.4}
 .tm-any span{white-space:nowrap}
+
+/* Indstillinger → Musik: rækkefølge på favoritter */
+.favorder{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:8px}
+.forow{display:grid;grid-template-columns:40px minmax(0,1fr) 40px 40px auto;align-items:center;gap:8px;padding:6px 8px;border-radius:14px;background:var(--bg)}
+.forow.off{opacity:.5}
+.foart{width:40px;height:40px;border-radius:8px;background:var(--card) center/cover no-repeat}
+.forow b{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fobtn{width:40px;height:40px;border:0;border-radius:10px;background:var(--card);color:var(--text);display:grid;place-items:center}
+.fobtn[disabled]{opacity:.3}
+.favorder{grid-template-columns:minmax(0,640px)}
