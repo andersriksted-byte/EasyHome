@@ -49,6 +49,7 @@ const themeLabel = (id) => (id === 'auto' ? 'Automatisk' : THEMES[id].label);
 /* ---------- Ikoner ---------- */
 const ICON = {
   blinds: 'M4 4h16M5 4v9M19 4v9M5 13h14M7 7h10M7 10h10M12 13v4M10 19a2 2 0 1 0 4 0 2 2 0 0 0-4 0',
+  somfy: 'M4 4h16M5 4v9M19 4v9M5 13h14M7 7h10M7 10h10M12 13v4M10 19a2 2 0 1 0 4 0 2 2 0 0 0-4 0',
   up: 'M6 15l6-6 6 6', down: 'M6 9l6 6 6-6', stop: 'M8 8h8v8H8z',
   shuffle: 'M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5', repeat: 'M17 1l4 4-4 4M3 11V9a4 4 0 0 1 4-4h14M7 23l-4-4 4-4M21 13v2a4 4 0 0 1-4 4H3',
   madro: 'M4 11h16v5a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4zM2 11h20M9 7c0-1.2 1-1.8 1-3M14 7c0-1.2 1-1.8 1-3',
@@ -70,13 +71,13 @@ const GRIP = '<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24"
 
 const PAGES = [
   { id: 'forside', label: 'Forside' }, { id: 'kalender', label: 'Kalender' }, { id: 'madro', label: 'Madro' }, { id: 'vejr', label: 'Vejret' },
-  { id: 'nyheder', label: 'Nyheder' }, { id: 'musik', label: 'Musik' }, { id: 'tv', label: 'DR TV' }
+  { id: 'nyheder', label: 'Nyheder' }, { id: 'musik', label: 'Musik' }, { id: 'somfy', label: 'Screens' }, { id: 'tv', label: 'DR TV' }
 ];
 // Tjenester ("app store"): hver tjeneste kan slås til og fra under Indstillinger → Tjenester.
 // Slås en tjeneste fra, skjules dens side, kort, faner og felter. Kortene på forsiden huskes til den slås til igen.
 const SERVICES = [
   { id: 'madro', name: 'Madro', icon: 'madro', desc: 'Madplan, indkøbsliste og opskrifter.', pages: ['madro'], widgets: ['madplan', 'indkob', 'inspiration'], tabs: [] },
-  { id: 'somfy', name: 'Somfy', icon: 'blinds', desc: 'Styr screens, markiser og gardiner.', pages: [], widgets: ['screens'], tabs: [] },
+  { id: 'somfy', name: 'Somfy', icon: 'blinds', desc: 'Styr screens, markiser og gardiner.', pages: ['somfy'], widgets: ['screens'], tabs: [] },
   { id: 'kalender', name: 'Kalender', icon: 'kalender', desc: 'Familiens aftaler fra iCloud m.fl.', pages: ['kalender'], widgets: ['uge'], tabs: [] },
   { id: 'vejr', name: 'Vejret', icon: 'vejr', desc: 'Prognoser fra DMI og andre kilder for jeres steder.', pages: ['vejr'], widgets: ['vejr', 'steder'], tabs: ['vejr'] },
   { id: 'nyheder', name: 'Nyheder', icon: 'nyheder', desc: 'Overskrifter fra DR, TV 2, JP og egne kilder.', pages: ['nyheder'], widgets: ['nyheder'], tabs: ['nyheder'] },
@@ -560,6 +561,32 @@ function pageVejr() {
     ${body}${cmp}`;
 }
 
+/* ---------- Screens (Somfy) ---------- */
+function pageSomfy() {
+  const st = SF.state;
+  const head = '<div class="ptitle"><h1>Screens</h1></div>';
+  if (!st.checked) return head + '<div class="empty">Henter fra Somfy …</div>';
+  if (st.configured === false) return head + '<div class="empty">Somfy er ikke sat op endnu (Indstillinger → Forbindelse).</div>';
+  if (!st.devices.length) return head + `<div class="empty">${esc(st.error || 'Ingen screens fundet i Somfy.')}</div>`;
+  const presets = settings.somfyPresets && settings.somfyPresets.length ? settings.somfyPresets : SF.DEFAULT_PRESETS;
+  const pbtns = (devs) => { const k = devs.map((d) => d.url).join('|'); return `${presets.map((p) => `<button data-act="sfPreset" data-urls="${esc(k)}" data-v="${esc(String(p.v))}" aria-pressed="${devs.every((x) => SF.atPreset(x, p.v))}">${esc(p.name)}</button>`).join('')}<button class="sfstop" data-act="sfCmd" data-urls="${esc(k)}" data-cmd="stop" aria-label="Stop">${fillSvg('stop', 12)}</button>`; };
+  const awn = (d) => d.ui === 'Awning' || d.ui === 'Pergola';
+  const card = (d) => {
+    const v = d.closure === null || d.closure === undefined ? null : Math.round(+d.closure);
+    const busy = !!st.busy[d.url];
+    return `<section class="card sfcard${d.available ? '' : ' off'}${busy ? ' busy' : ''}">
+      <div class="sfc-head"><b title="${esc(d.label)}">${esc(d.label)}</b><span>${esc(SF.stateText(d) || (d.rts ? 'RTS' : ''))}</span></div>
+      <div class="sfc-body">
+        <div class="sfwin ${awn(d) ? 'awning' : ''}" aria-hidden="true"><i style="height:${v === null ? 50 : Math.max(4, v)}%;${v === null ? 'opacity:.35' : ''}"></i></div>
+        ${v !== null && !d.rts && d.commands.some((c) => c === 'setClosure' || c === 'setDeployment') ? `<input class="sfslider" type="range" min="0" max="100" step="5" value="${v}" data-sfpos="${esc(d.url)}" aria-label="${awn(d) ? 'Hvor langt ude' : 'Hvor langt nede'} – ${esc(d.label)}" orient="vertical">` : ''}
+      </div>
+      <div class="sfc-btns sfp">${pbtns([d])}</div>
+    </section>`;
+  };
+  const all = st.devices.length > 1 ? `<section class="card sfallcard"><b>Alle screens</b><div class="sfp">${pbtns(st.devices)}</div></section>` : '';
+  return head + all + `<div class="sfgrid">${st.devices.map(card).join('')}</div>`;
+}
+
 /* ---------- Nyheder ---------- */
 function pageNyheder() {
   const srcs = newsSources();
@@ -828,7 +855,7 @@ function pageIndstillinger() {
   <div class="form" role="tabpanel">${T[tab]()}</div>`;
 }
 
-const PAGE_RENDER = { madro: () => '', forside: pageForside, kalender: pageKalender, vejr: pageVejr, nyheder: pageNyheder, musik: pageMusik, tv: pageTv, indstillinger: pageIndstillinger };
+const PAGE_RENDER = { somfy: pageSomfy, madro: () => '', forside: pageForside, kalender: pageKalender, vejr: pageVejr, nyheder: pageNyheder, musik: pageMusik, tv: pageTv, indstillinger: pageIndstillinger };
 
 // Madro vises som hele appen i en ramme, der bliver liggende (så den ikke genindlæses ved hver opdatering)
 let madroSub = '';
@@ -1142,6 +1169,10 @@ document.addEventListener('change', (e) => {
     M.saveImage(t.files[0]).then((r) => { const c = settings.countdowns[i]; if (c) { if (c.imageId) M.removeImage(c.imageId); c.imageId = r.id; save(); } ui.cdMsg = { err: false, text: r.shared ? 'Billedet er gemt og deles med jeres andre skærme ✓' : 'Billedet er gemt på denne skærm.' }; renderMain(); })
       .catch((e) => { ui.cdMsg = { err: true, text: e.message }; renderMain(); });
   }
+  else if (t.dataset.sfpos !== undefined) {
+    const d = SF.state.devices.find((x) => x.url === t.dataset.sfpos);
+    if (d) { const v = +t.value; d.closure = v; SF.preset([d], v).catch((e) => toast('Somfy: ' + e.message)); }
+  }
   else if (t.dataset.sp !== undefined) {
     const l = (settings.somfyPresets && settings.somfyPresets.length ? settings.somfyPresets : SF.DEFAULT_PRESETS.map((p) => ({ ...p })));
     const p = l[+t.dataset.sp]; if (p) { p[t.dataset.field] = t.dataset.field === 'v' ? (t.value === 'my' ? 'my' : +t.value) : t.value.trim(); settings.somfyPresets = l; save(); }
@@ -1271,8 +1302,8 @@ function boot() {
   if (!settings.weather.stepRev) { settings.weather.step = 60; settings.weather.stepRev = 1; save(); } // vejrkortet viser timer som standard
   M.onMediaLoaded(() => softRender());
   MD.onMadroChange(() => { if (ui.page === 'forside' || ui.page === 'kalender') softRender(); });
-  SF.onSomfyChange(() => { if (ui.page === 'forside' && curLayout().some((x) => x.id === 'screens')) softRender(); });
-  setInterval(() => { if (svcOn('somfy') && !document.hidden && curLayout().some((x) => x.id === 'screens')) SF.refresh(); }, 60000);
+  SF.onSomfyChange(() => { if (ui.page === 'somfy' || (ui.page === 'forside' && curLayout().some((x) => x.id === 'screens'))) softRender(); });
+  setInterval(() => { if (svcOn('somfy') && !document.hidden && (ui.page === 'somfy' || curLayout().some((x) => x.id === 'screens'))) SF.refresh(); }, ui.page === 'somfy' ? 20000 : 60000);
   // Madplan og indkøbsliste på forsiden – brugeren bad selv om dem (én gang)
   if ((settings.layoutRev || 1) < 3) { const have = new Set(settings.layout.map((x) => x.id)); settings.layout = [{ id: 'madplan', w: 4, h: 1 }, { id: 'indkob', w: 2, h: 1 }].filter((x) => !have.has(x.id)).concat(settings.layout); settings.layoutRev = 3; save(); }
   S.onArtLoaded(() => { renderFooter(); if (['forside', 'musik'].includes(ui.page)) softRender(); });

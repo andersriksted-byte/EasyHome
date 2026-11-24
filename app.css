@@ -746,3 +746,26 @@ span.avatar{opacity:1}
 .sfone .sfp .sfstop{flex:0 0 auto;width:52px;border-radius:16px}
 .sprows{display:flex;flex-direction:column;gap:8px}
 .sprow{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr) auto;gap:8px;align-items:center}
+
+/* Siden Screens */
+.sfallcard{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.sfallcard>b{font-size:17px;margin-right:auto}
+.sfallcard .sfp,.sfc-btns{display:flex;gap:6px;flex-wrap:wrap}
+.sfp button{min-height:44px;border:0;background:var(--bg);color:var(--text);font-weight:800}
+.sfgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px}
+.sfcard{display:flex;flex-direction:column;gap:14px}
+.sfcard.off{opacity:.5}
+.sfc-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;min-width:0}
+.sfc-head b{font-size:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sfc-head span{font-size:13px;font-weight:700;color:var(--muted);white-space:nowrap}
+.sfc-body{display:flex;gap:16px;align-items:stretch;height:170px}
+.sfwin{flex:1;border-radius:14px;background:linear-gradient(180deg,#bfe3ff,#e9f5ff);border:3px solid var(--line);position:relative;overflow:hidden}
+.sfwin i{position:absolute;left:0;right:0;top:0;background:repeating-linear-gradient(180deg,#6b7787 0 6px,#5c6878 6px 8px);transition:height .6s cubic-bezier(.2,.8,.2,1);border-bottom:4px solid #3b4450}
+.sfwin.awning i{background:repeating-linear-gradient(90deg,#d9534f 0 16px,#f4efe8 16px 32px);border-bottom:4px solid #a33}
+.sfslider{writing-mode:vertical-lr;direction:ltr;width:44px;height:100%;accent-color:var(--accent);margin:0}
+.sfc-btns button{flex:1}
+.sfallcard .sfp,.sfc-btns{flex-wrap:nowrap}
+.sfallcard .sfp button{min-width:72px;padding:0 16px;border-radius:12px}
+.sfc-btns button{min-width:0;padding:0 6px;border-radius:12px}
+.sfc-btns .sfstop,.sfallcard .sfstop{flex:0 0 44px;width:44px;min-width:44px;border-radius:50%}
+.sfallcard{flex-wrap:nowrap}.sfallcard>b{white-space:nowrap}
