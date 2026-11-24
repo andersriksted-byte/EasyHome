@@ -797,3 +797,18 @@ span.avatar{opacity:1}
 .sfb button:active{transform:scale(.96)}
 .sfone{gap:10px}
 .sfone .sfb button,.sfone .sfb .sfstop{height:clamp(52px,30cqh,88px)}
+/* Alle screens på én række på siden Screens */
+.sfgrid{grid-template-columns:repeat(var(--n),minmax(0,1fr));overflow-x:auto}
+.sfgrid .sfcard{min-width:0}
+.sfgrid .sfc-btns button{font-size:13px}
+@media (max-width:900px){.sfgrid{grid-template-columns:repeat(var(--n),minmax(220px,1fr))}}
+/* Screens på én række: knapperne står under hinanden i hvert kort, så de altid er store nok */
+.sfgrid .sfc-head{flex-direction:column;align-items:flex-start;gap:2px}
+.sfgrid .sfc-head b{max-width:100%}
+.sfgrid .sfc-btns{flex-direction:column;gap:6px}
+.sfgrid .sfc-btns button,.sfgrid .sfc-btns .sfstop{flex:none;width:100%;min-width:0;height:46px;border-radius:12px;font-size:15px}
+.sfgrid .sfc-body{height:150px;gap:10px}
+.sfgrid .sfslider{width:32px}
+/* Vejr, 7 dage: diskret spor bag temperaturstregen i stedet for sort */
+.w7r .rng{background:color-mix(in srgb,var(--text) 9%,transparent);height:6px}
+.sfgrid .sfc-body{height:110px}.sfgrid .sfc-btns button,.sfgrid .sfc-btns .sfstop{height:42px}

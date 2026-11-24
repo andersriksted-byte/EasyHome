@@ -584,7 +584,7 @@ function pageSomfy() {
     </section>`;
   };
   const all = st.devices.length > 1 ? `<section class="card sfallcard"><b>Alle screens</b><div class="sfp">${pbtns(st.devices)}</div></section>` : '';
-  return head + all + `<div class="sfgrid">${st.devices.map(card).join('')}</div>`;
+  return head + all + `<div class="sfgrid" style="--n:${st.devices.length}">${st.devices.map(card).join('')}</div>`;
 }
 
 /* ---------- Nyheder ---------- */

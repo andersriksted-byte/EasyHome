@@ -1,5 +1,5 @@
 {
-  "version": "1.33.1",
+  "version": "1.33.2",
   "files": [
     "index.html",
     "app.js",
@@ -21,6 +21,15 @@
     "somfy.js"
   ],
   "notes": [
+    {
+      "version": "1.33.2",
+      "date": "24. november 2026",
+      "title": "Screens på én række",
+      "items": [
+        "På siden Screens står alle screens nu ved siden af hinanden på én række, med knapperne under hinanden.",
+        "Temperaturstregerne under 7 dage på vejrsiden har fået et lysere, diskret spor i stedet for sort."
+      ]
+    },
     {
       "version": "1.33.1",
       "date": "24. november 2026",
