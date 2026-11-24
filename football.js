@@ -40,9 +40,13 @@ function parse(ev, fav, lgDefault = '') {
 
 async function schedule(t, fixture) {
   const get = async (lg) => { const r = await workerFetch(`/espn/${lg}/teams/${t.id}/schedule${fixture ? '?fixture=true' : ''}`); return (await r.json()).events || []; };
-  let evs = await get('all').catch(() => []);
-  if (!evs.length && t.lg && t.lg !== 'nat') evs = await get(t.lg).catch(() => []);
-  return evs.map((e) => parse(e, t.id));
+  // Landsholdet følges i alle turneringer. En klub følges kun i den turnering, den er valgt under
+  // (FCK valgt under Conference League ≠ FCK i Superligaen), så dens kampe hentes fra netop den turnering.
+  if (!t.lg || t.lg === 'nat') return (await get('all').catch(() => [])).map((e) => parse(e, t.id));
+  const lgName = (LEAGUES.find((L) => L.id === t.lg) || {}).name;
+  const ms = (await get(t.lg).catch(() => [])).map((e) => parse(e, t.id));
+  const own = ms.filter((m) => m.comp === lgName);
+  return own.length ? own : ms;
 }
 
 const follows = () => (settings.football && settings.football.follow) || [];

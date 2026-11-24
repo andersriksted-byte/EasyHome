@@ -1,5 +1,5 @@
 {
-  "version": "1.59.0",
+  "version": "1.59.1",
   "files": [
     "index.html",
     "app.js",
@@ -24,6 +24,15 @@
     "football.js"
   ],
   "notes": [
+    {
+      "version": "1.59.1",
+      "date": "25. november 2026",
+      "title": "Fodbold: hold pr. turnering",
+      "items": [
+        "Et favorithold følges nu kun i den turnering, du har valgt det under",
+        "Vil du følge samme klub i flere turneringer, så vælg den under hver af dem"
+      ]
+    },
     {
       "version": "1.59.0",
       "date": "25. november 2026",

@@ -551,8 +551,8 @@ function wStilling(size, h = 1, wd = 1) {
 }
 function fodboldSettings() {
   const fb = settings.football || { leagues: [], teams: [] };
-  const lgs = fb.leagues || []; const favIds = (fb.teams || []).map((t) => t.id);
-  const chip = (t) => `<button class="fbchip" data-act="fbTeam" data-lg="${esc(t.lg)}" data-id="${esc(t.id)}" aria-pressed="${favIds.includes(t.id)}">${t.logo ? `<img src="${esc(t.logo)}" alt="" loading="lazy">` : ''}<span>${esc(t.short || t.name)}</span></button>`;
+  const lgs = fb.leagues || []; const favKeys = (fb.teams || []).map((t) => t.id + '|' + t.lg);
+  const chip = (t) => `<button class="fbchip" data-act="fbTeam" data-lg="${esc(t.lg)}" data-id="${esc(t.id)}" aria-pressed="${favKeys.includes(t.id + '|' + t.lg)}">${t.logo ? `<img src="${esc(t.logo)}" alt="" loading="lazy">` : ''}<span>${esc(t.short || t.name)}</span></button>`;
   const leagueSec = (L) => { const on = lgs.includes(L.id); const teams = ui.fbTeams && ui.fbTeams[L.id];
     if (on && !teams && hasProxy()) FB.teamsOf(L.id).then((ts) => { ui.fbTeams = { ...(ui.fbTeams || {}), [L.id]: ts }; if (ui.page === 'indstillinger') renderMain(); }).catch(() => { ui.fbTeams = { ...(ui.fbTeams || {}), [L.id]: [] }; if (ui.page === 'indstillinger') renderMain(); });
     const fol = (fb.follow || []).includes(L.id);
@@ -1551,7 +1551,7 @@ const act = {
   fbLeague: (b) => { const fb = settings.football = settings.football || { leagues: [], teams: [] }; fb.leagues = fb.leagues || []; const id = b.dataset.id; fb.leagues = fb.leagues.includes(id) ? fb.leagues.filter((x) => x !== id) : fb.leagues.concat(id); if (!fb.leagues.includes(id)) { fb.teams = (fb.teams || []).filter((t) => t.lg !== id); fb.follow = (fb.follow || []).filter((x) => x !== id); } save(); renderMain(); loadFootball(true); },
   fbFollow: (b) => { const fb = settings.football = settings.football || { leagues: [], teams: [] }; const f = fb.follow || []; const id = b.dataset.id; fb.follow = f.includes(id) ? f.filter((x) => x !== id) : f.concat(id); save(); renderMain(); loadFootball(true); },
   fbTeam: (b) => { const fb = settings.football = settings.football || { leagues: [], teams: [] }; fb.teams = fb.teams || []; const id = b.dataset.id; const lg = b.dataset.lg;
-    if (fb.teams.some((t) => t.id === id)) fb.teams = fb.teams.filter((t) => t.id !== id);
+    if (fb.teams.some((t) => t.id === id && t.lg === lg)) fb.teams = fb.teams.filter((t) => !(t.id === id && t.lg === lg)); // samme klub kan følges i én turnering uden de andre
     else { const t = (lg === 'nat' ? FB.NATIONAL : (ui.fbTeams || {})[lg] || []).find((x) => x.id === id); if (t) fb.teams.push({ id: t.id, name: t.name, short: t.short, logo: t.logo, lg }); }
     save(); renderMain(); loadFootball(true); },
   calShow: (b) => { const ids = b.dataset.id.split(','); const h = settings.calHidden || []; const show = b.getAttribute('aria-pressed') !== 'true'; settings.calHidden = h.filter((x) => !ids.includes(x)).concat(show ? [] : ids); save(); renderMain(); },
