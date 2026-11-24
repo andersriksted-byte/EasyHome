@@ -1,5 +1,5 @@
 {
-  "version": "1.32.0",
+  "version": "1.33.0",
   "files": [
     "index.html",
     "app.js",
@@ -21,6 +21,15 @@
     "somfy.js"
   ],
   "notes": [
+    {
+      "version": "1.33.0",
+      "date": "24. november 2026",
+      "title": "Flere visninger af nyheder",
+      "items": [
+        "Siden Nyheder har tre visninger: Læs (liste og artikel side om side), Overblik (kort med billeder) og Liste (kun overskrifter).",
+        "Vælg Blandet for at skiftes mellem alle jeres medier, eller tryk på ét medie for kun at se det."
+      ]
+    },
     {
       "version": "1.32.0",
       "date": "24. november 2026",

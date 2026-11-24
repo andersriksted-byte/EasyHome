@@ -591,18 +591,26 @@ function pageSomfy() {
 function pageNyheder() {
   const srcs = newsSources();
   const all = D.news ? D.news.items : [];
-  const items = (ui.newsFilter ? all.filter((i) => i.sourceId === ui.newsFilter) : all).slice(0, 60);
+  // Blandet: kilderne skiftes, så ét medie ikke fylder det hele. Én kilde: kun den.
+  const mixed = () => { const by = {}; all.forEach((i) => { (by[i.sourceId] = by[i.sourceId] || []).push(i); }); const ls = Object.values(by); const out = []; for (let r = 0; out.length < all.length; r++) { let any = false; ls.forEach((l) => { if (l[r]) { out.push(l[r]); any = true; } }); if (!any) break; } return out; };
+  const items = (ui.newsFilter ? all.filter((i) => i.sourceId === ui.newsFilter) : mixed()).slice(0, 60);
+  const view = settings.newsView || 'read';
   if (!items.find((i) => i.link === ui.newsSel)) ui.newsSel = items[0] ? items[0].link : null;
   const sel = items.find((i) => i.link === ui.newsSel);
-  const chips = `<div class="nfilter">${[{ id: '', name: 'Alle' }].concat(srcs).map((x) => `<button class="chipbtn" data-act="newsFilter" data-id="${esc(x.id)}" aria-pressed="${(ui.newsFilter || '') === x.id}"><span class="cbt">${esc(x.name)}</span></button>`).join('')}</div>`;
+  const views = `<div class="wseg">${[['read', 'Læs'], ['grid', 'Overblik'], ['list', 'Liste']].map(([v, l]) => `<button data-act="newsView" data-v="${v}" aria-pressed="${view === v}"><span>${l}</span></button>`).join('')}</div>`;
+  const chips = `<div class="nfilter">${[{ id: '', name: 'Blandet' }].concat(srcs).map((x) => `<button class="chipbtn" data-act="newsFilter" data-id="${esc(x.id)}" aria-pressed="${(ui.newsFilter || '') === x.id}"><span class="cbt">${esc(x.name)}</span></button>`).join('')}</div>`;
   const list = items.map((i) => `<button class="nrow ${i.link === ui.newsSel ? 'on' : ''}" data-act="newsPick" data-url="${esc(i.link)}">${i.image ? `<span class="nthumb" style="background-image:url('${esc(i.image)}')"></span>` : ''}<span class="ntx"><span class="meta">${esc(i.source)}${i.date ? ' · ' + esc(relTime(i.date)) : ''}</span><b>${esc(i.title)}</b></span></button>`).join('');
+  const top = `<div class="ptitle"><h1>Nyheder</h1>${views}${chips}<div class="tools"><button class="btn line" data-act="newsRefresh" aria-label="Opdater nyhederne">${svg('refresh', 18)}</button></div></div>`;
+  const none = `<div class="empty">${D.news ? 'Ingen nyheder lige nu.' : 'Henter nyheder …'}</div>`;
+  if (view === 'grid') return top + (items.length ? `<div class="ngrid">${items.map((i) => `<a class="ncard" href="${esc(i.link)}" data-read="${esc(i.source)}" target="_blank" rel="noopener">${i.image ? `<span class="ncimg" style="background-image:url('${esc(i.image)}')"></span>` : ''}<span class="nctx"><span class="meta">${esc(i.source)}${i.date ? ' · ' + esc(relTime(i.date)) : ''}</span><b>${esc(i.title)}</b></span></a>`).join('')}</div>` : none);
+  if (view === 'list') return top + (items.length ? `<section class="card nlist2">${items.map((i) => `<a class="nl" href="${esc(i.link)}" data-read="${esc(i.source)}" target="_blank" rel="noopener"><span class="nlsrc">${esc(i.source)}</span><b>${esc(i.title)}</b><span class="nltime">${i.date ? esc(relTime(i.date)) : ''}</span></a>`).join('')}</section>` : none);
   let pane = '<div class="empty">Vælg en nyhed.</div>';
   if (sel) {
     const a = R.cachedArticle(sel.link);
     pane = a ? R.articleFrame(a) : ui.newsErr === sel.link ? `<div class="npfail">${sel.image ? `<img src="${esc(sel.image)}" alt="">` : ''}<h2>${esc(sel.title)}</h2><a class="btn line" href="${esc(sel.link)}" target="_blank" rel="noopener">Læs på mediets egen side</a></div>` : '<div class="empty">Henter artiklen …</div>';
     if (!a && ui.newsErr !== sel.link) R.loadArticle(sel.link, sel.source, sel.image).then(() => { if (ui.page === 'nyheder') renderMain(); }).catch(() => { ui.newsErr = sel.link; if (ui.page === 'nyheder') renderMain(); });
   }
-  return `<div class="ptitle"><h1>Nyheder</h1>${chips}<div class="tools"><button class="btn line" data-act="newsRefresh" aria-label="Opdater nyhederne">${svg('refresh', 18)}</button></div></div>
+  return `${top}
     <div class="newspage"><section class="card nside">${list || `<div class="empty">${D.news ? 'Ingen nyheder lige nu.' : 'Henter nyheder …'}</div>`}</section><section class="card npane">${pane}</section></div>`;
 }
 
@@ -1007,6 +1015,7 @@ const act = {
   mdOpen: (b) => { madroSub = b.dataset.sub || ''; act.nav({ dataset: { page: 'madro' } }); },
   sShuffle: () => { const m = S.nowPlaying().modes; S.setPlayModes({ shuffle: !m.shuffle }).catch(() => toast('Sonos kunne ikke skifte')); renderMain(); },
   sRepeat: () => { const m = S.nowPlaying().modes; const nx = m.repeatOne ? { repeat: false, repeatOne: false } : m.repeat ? { repeat: false, repeatOne: true } : { repeat: true, repeatOne: false }; S.setPlayModes(nx).catch(() => toast('Sonos kunne ikke skifte')); renderMain(); },
+  newsView: (b) => { settings.newsView = b.dataset.v; save(); renderMain(false); },
   newsPick: (b) => { ui.newsSel = b.dataset.url; renderMain(); },
   newsFilter: (b) => { ui.newsFilter = b.dataset.id; ui.newsSel = null; renderMain(false); },
   sVol: (b) => {
