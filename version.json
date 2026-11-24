@@ -1,5 +1,5 @@
 {
-  "version": "1.46.0",
+  "version": "1.47.0",
   "files": [
     "index.html",
     "app.js",
@@ -22,6 +22,14 @@
     "timer.js"
   ],
   "notes": [
+    {
+      "version": "1.47.0",
+      "date": "24. november 2026",
+      "title": "Se detaljer om en aftale",
+      "items": [
+        "Tryk på en aftale i kalenderen for at se tid, sted, kalender og noter"
+      ]
+    },
     {
       "version": "1.46.0",
       "date": "24. november 2026",

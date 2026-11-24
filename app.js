@@ -643,13 +643,16 @@ function pageKalender() {
 }
 // Ugen som timegitter: heldagsaftaler øverst, aftaler placeret efter klokkeslæt, dagens menu nederst
 const CAL_HH = 52; // højde pr. time i px
+let calRefs = [];
+const evRef = (e) => { calRefs.push(e); return `data-act="calEv" data-i="${calRefs.length - 1}" role="button" tabindex="0"`; };
 function calTimeGrid(days, today) {
+  calRefs = [];
   const evs = days.map((d) => eventsOn(d, true));
   const allDay = evs.map((l, i) => l.filter((e) => e.allDay || (e.start <= startOfDay(days[i]) && e.end >= addDays(startOfDay(days[i]), 1))));
   const timed = evs.map((l, i) => l.filter((e) => !allDay[i].includes(e)));
   const cols = 'grid-template-columns:52px repeat(7,minmax(0,1fr))';
   const head = `<div class="tg-row tg-head" style="${cols}"><span></span>${days.map((d) => `<div class="${sameDay(d, today) ? 'today' : ''}">${cap(DAYS[d.getDay()]).slice(0, 3)} <b>${d.getDate()}.</b></div>`).join('')}</div>`;
-  const ad = allDay.some((l) => l.length) ? `<div class="tg-row tg-all" style="${cols}"><span class="tg-lab">Hele<br>dagen</span>${allDay.map((l) => `<div>${l.map((e) => `<div class="ev" style="${evStyle(e)}">${esc(e.title)}</div>`).join('')}</div>`).join('')}</div>` : '';
+  const ad = allDay.some((l) => l.length) ? `<div class="tg-row tg-all" style="${cols}"><span class="tg-lab">Hele<br>dagen</span>${allDay.map((l) => `<div>${l.map((e) => `<div class="ev" ${evRef(e)} style="${evStyle(e)}">${esc(e.title)}</div>`).join('')}</div>`).join('')}</div>` : '';
   const hours = Array.from({ length: 24 }, (_, h) => `<span class="tg-h" style="top:${h * CAL_HH}px">${h ? pad(h) + ':00' : ''}</span>`).join('');
   const now = new Date();
   const body = days.map((d, i) => {
@@ -660,7 +663,7 @@ function calTimeGrid(days, today) {
     items.forEach((it) => { if (it.a >= end && group.length) { groups.push(group); group = []; } group.push(it); end = Math.max(end, it.b); });
     if (group.length) groups.push(group);
     groups.forEach((g) => { const lanes = []; g.forEach((it) => { let k = lanes.findIndex((x) => x <= it.a); if (k < 0) { k = lanes.length; lanes.push(0); } lanes[k] = it.b; it.k = k; }); g.forEach((it) => { it.n = lanes.length; }); });
-    const html = items.map(({ e, a, b, k, n }) => { const h = Math.max(0.5, b - a) * CAL_HH - 2; return `<div class="ev tg-ev${h < 40 ? ' short' : ''}" style="${evStyle(e)};top:${a * CAL_HH}px;height:${h}px;left:calc(${(k / n) * 100}% + 2px);width:calc(${100 / n}% - 4px)" title="${esc(e.title)}"><time>${esc(evTime(e, d))}</time><span>${esc(e.title)}</span></div>`; }).join('');
+    const html = items.map(({ e, a, b, k, n }) => { const h = Math.max(0.5, b - a) * CAL_HH - 2; return `<div class="ev tg-ev${h < 40 ? ' short' : ''}" ${evRef(e)} style="${evStyle(e)};top:${a * CAL_HH}px;height:${h}px;left:calc(${(k / n) * 100}% + 2px);width:calc(${100 / n}% - 4px)" title="${esc(e.title)}"><time>${esc(evTime(e, d))}</time><span>${esc(e.title)}</span></div>`; }).join('');
     const nowLine = sameDay(d, today) ? `<i class="tg-now" style="top:${((now - s0) / 3600000) * CAL_HH}px"></i>` : '';
     return `<div class="tg-day${sameDay(d, today) ? ' today' : ''}">${html}${nowLine}</div>`;
   }).join('');
@@ -668,6 +671,27 @@ function calTimeGrid(days, today) {
   const menu = menus.some(Boolean) ? `<div class="tg-row tg-menu" style="${cols}"><span></span>${menus.map((m) => `<div>${m}</div>`).join('')}</div>` : '';
   requestAnimationFrame(calScroll);
   return `<div class="tgrid" data-swipe="cal">${head}${ad}<div class="tg-body" id="tgBody"><div class="tg-inner" style="${cols};height:${24 * CAL_HH}px"><div class="tg-hours">${hours}</div>${body}</div></div>${menu}</div>`;
+}
+// Info om en aftale
+function showEvent(e) {
+  const sd = startOfDay(e.start), ed = startOfDay(new Date(e.end - 1));
+  const dt = (d) => `${cap(DAYS_LONG[d.getDay()])} ${d.getDate()}. ${MONTHS[d.getMonth()]}`;
+  const when = e.allDay ? (sameDay(sd, ed) ? dt(sd) + ' · hele dagen' : `${dt(sd)} – ${dt(ed)}`) : sameDay(sd, ed) ? `${dt(sd)} · ${hhmm(e.start)}–${hhmm(e.end)}` : `${dt(sd)} ${hhmm(e.start)} – ${dt(ed)} ${hhmm(e.end)}`;
+  const mins = Math.round((e.end - e.start) / 60000);
+  const dur = e.allDay ? '' : mins < 60 ? `${mins} min` : `${num(mins / 60, mins % 60 ? 1 : 0)} t`;
+  const cal = settings.calendars.find((c) => c.id === e.cal);
+  const notes = String(e.notes || '').trim();
+  const m = document.createElement('div'); m.className = 'upd-modal';
+  m.setAttribute('role', 'dialog'); m.setAttribute('aria-modal', 'true');
+  m.innerHTML = `<div class="upd-box evinfo" style="--c:${esc(e.color || '#888')}"><h2>${esc(e.title)}</h2>
+    <div class="evi-row"><span>🕒</span><span>${esc(when)}${dur ? ` <span class="muted">· ${dur}</span>` : ''}</span></div>
+    ${e.location ? `<div class="evi-row"><span>📍</span><span>${esc(e.location)}</span></div>` : ''}
+    <div class="evi-row"><span><i class="evi-dot"></i></span><span>${esc((cal && cal.name) || e.who || 'Kalender')}</span></div>
+    ${notes ? `<div class="evi-notes">${esc(notes)}</div>` : ''}
+    <button class="btn primary big" data-close>Luk</button></div>`;
+  document.body.appendChild(m);
+  const close = () => m.remove();
+  m.addEventListener('click', (ev) => { if (ev.target === m || ev.target.closest('[data-close]')) close(); });
 }
 // Start ved kl. 7 (eller lige før nu i dag), og behold placeringen ved opdateringer
 function calScroll() {
@@ -1400,6 +1424,7 @@ const act = {
   customRm: (b) => { settings.news.custom = settings.news.custom.filter((c) => c.id !== b.dataset.id); settings.news.sources = settings.news.sources.filter((x) => x !== b.dataset.id); save(); N.clearNewsCache(); renderMain(); loadNews(); },
   calAdd: () => { const colors = ['#D0563C', '#4C78D0', '#D9A400', '#2E9D5B', '#7A5AC8']; const c = { id: uid(), name: 'Ny kalender', color: colors[settings.calendars.length % colors.length], url: '' }; settings.calendars.push(c); ui.calEdit = c.id; save(); renderMain(); setTimeout(() => { const el = document.querySelectorAll('.calname'); if (el.length) { el[el.length - 1].focus(); el[el.length - 1].select(); } }, 50); },
   calEdit: (b) => { ui.calEdit = ui.calEdit === b.dataset.id ? null : b.dataset.id; renderMain(); },
+  calEv: (b) => { const e = calRefs[+b.dataset.i]; if (e) showEvent(e); },
   calShow: (b) => { const ids = b.dataset.id.split(','); const h = settings.calHidden || []; const show = b.getAttribute('aria-pressed') !== 'true'; settings.calHidden = h.filter((x) => !ids.includes(x)).concat(show ? [] : ids); save(); renderMain(); },
   calRm: (b) => { settings.calendars.splice(+b.dataset.i, 1); save(); C.clearCalCache(); renderMain(); loadCal(); },
   tvAdd: () => { settings.tv.channels.push({ name: 'Ny knap', url: 'https://www.dr.dk/drtv' }); save(); renderMain(); },

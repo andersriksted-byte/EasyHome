@@ -1109,3 +1109,11 @@ button.w7r.sel{background:color-mix(in srgb,var(--accent) 16%,transparent);box-s
 .tg-now::before{content:'';position:absolute;left:-5px;top:-4px;width:10px;height:10px;border-radius:50%;background:#E5484D}
 .tg-menu{border-bottom:0;border-top:2px solid var(--line)}
 .tg-menu>div{padding:6px}
+
+.tg-row .ev,.tg-ev{cursor:pointer}
+.evinfo{border-top:8px solid var(--c);gap:12px}
+.evinfo h2{font-size:24px;line-height:1.2;overflow-wrap:anywhere}
+.evi-row{display:flex;gap:12px;align-items:flex-start;font-size:17px;font-weight:600}
+.evi-row>span:first-child{width:22px;flex:none;text-align:center}
+.evi-dot{display:inline-block;width:14px;height:14px;border-radius:50%;background:var(--c);vertical-align:middle}
+.evi-notes{white-space:pre-wrap;font-size:15px;line-height:1.45;background:var(--dayBg);border-radius:14px;padding:12px 14px;max-height:40vh;overflow-y:auto;overflow-wrap:anywhere}

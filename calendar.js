@@ -15,11 +15,11 @@ export function expandIcs(text, from, to, meta = {}) {
   for (const ex of exceptions) { const m = masters.get(ex.uid); if (m) m.relateException(ex); else masters.set(ex.uid + ex.recurrenceId, ex); }
 
   const out = [];
-  const push = (summary, s, e, allDay, location) => {
+  const push = (summary, s, e, allDay, location, notes) => {
     const start = s.toJSDate();
     let end = e ? e.toJSDate() : new Date(start.getTime() + (allDay ? 86400000 : 3600000));
     if (end <= from || start >= to) return;
-    out.push({ title: summary || '(uden titel)', start, end, allDay, location: location || '', cal: meta.id, color: meta.color, who: meta.name });
+    out.push({ title: summary || '(uden titel)', start, end, allDay, location: location || '', notes: notes || '', cal: meta.id, color: meta.color, who: meta.name });
   };
   for (const ev of masters.values()) {
     const allDay = ev.startDate.isDate;
@@ -30,10 +30,10 @@ export function expandIcs(text, from, to, meta = {}) {
         const occStart = next.toJSDate();
         if (occStart >= to) break;
         const d = ev.getOccurrenceDetails(next);
-        push(d.item.summary, d.startDate, d.endDate, allDay, d.item.location);
+        push(d.item.summary, d.startDate, d.endDate, allDay, d.item.location, d.item.description);
       }
     } else {
-      push(ev.summary, ev.startDate, ev.endDate, allDay, ev.location);
+      push(ev.summary, ev.startDate, ev.endDate, allDay, ev.location, ev.description);
     }
   }
   return out.sort((a, b) => a.start - b.start);
