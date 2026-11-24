@@ -515,10 +515,8 @@ span.avatar{opacity:1}
 .mdmeal b{font-size:14px;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;position:relative}
 .mdmeal.has-img::before{content:'';position:absolute;inset:0;background:linear-gradient(180deg,transparent 30%,rgba(0,0,0,.65))}
 .mdmeal.has-img b{color:#fff}
-.mdmeal.note{background:transparent;padding:0 2px}
-.md-tiny .mdmeal,.md-tall .mdmeal{background-image:none!important;padding:0}
-.md-tiny .mdmeal::before,.md-tall .mdmeal::before{display:none}
-.md-tiny .mdmeal b,.md-tall .mdmeal b{color:var(--text);-webkit-line-clamp:1}
+.mdmeal.note:not(.has-img){background:transparent;padding:0 2px}
+.md-tiny .mdmeal b,.md-tall .mdmeal b{-webkit-line-clamp:1}
 .shoplist{flex:1;min-height:0;overflow:hidden;display:grid;grid-template-columns:repeat(var(--cols),minmax(0,1fr));grid-auto-rows:44px;align-content:start;gap:4px 12px}
 .shopitem{display:flex;align-items:center;gap:10px;min-width:0;padding:0 4px;color:var(--text)}
 .shopitem i{flex:none;width:8px;height:8px;border-radius:50%;background:var(--accent)}
@@ -886,3 +884,17 @@ button.w7r{width:100%;border:0;border-bottom:1px solid var(--line);background:no
 button.w7r.sel{background:color-mix(in srgb,var(--accent) 16%,transparent);box-shadow:inset 3px 0 0 var(--accent)}
 .wx24head{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
 .wx24head b{font-size:15px}
+
+/* Madplan-kortet: datoen står på højkant i venstre side, så retterne (med billeder) får hele pladsen */
+.mdday{flex-direction:row!important;align-items:stretch!important;gap:8px!important;padding:8px!important}
+.mdlab{flex:none!important;writing-mode:vertical-rl;transform:rotate(180deg);text-align:center;font-size:11px;letter-spacing:.06em;text-transform:uppercase;line-height:1;padding:2px 0;align-self:stretch}
+.mdday>.mdmeal,.mdday>.mdnone{flex:1}
+.mdday>.mdnone{display:grid;place-items:center;border-radius:10px;background:var(--card)}
+.mdday:has(.mdmeal+.mdmeal){display:grid!important;grid-template-columns:auto 1fr;grid-auto-rows:1fr}
+.mdday:has(.mdmeal+.mdmeal) .mdlab{grid-row:span 2}
+.md-tiny .mdmeal.has-img::before,.md-tall .mdmeal.has-img::before,.md-list .mdmeal.has-img::before{display:block}
+.md-tiny .mdmeal.has-img b,.md-tall .mdmeal.has-img b,.md-list .mdmeal.has-img b{color:#fff}
+.md-tiny .mdmeal,.md-tall .mdmeal,.md-list .mdmeal{padding:6px 8px;align-items:flex-end}
+.mdmeal.note.has-img{padding:8px}
+.mdday .mdmeal.note{background-color:transparent}
+.mdmeal.note.has-img{background-color:initial}

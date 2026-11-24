@@ -1,5 +1,5 @@
 {
-  "version": "1.35.0",
+  "version": "1.35.1",
   "files": [
     "index.html",
     "app.js",
@@ -21,6 +21,15 @@
     "somfy.js"
   ],
   "notes": [
+    {
+      "version": "1.35.1",
+      "date": "24. november 2026",
+      "title": "Madplanen med billeder",
+      "items": [
+        "Datoerne i madplan-kortet står nu på højkant i venstre side, så retterne har mere plads.",
+        "Alle retter – også i smalle og høje kort og noter som \"Rester\" – vises med billede eller Madros farvebillede."
+      ]
+    },
     {
       "version": "1.35.0",
       "date": "24. november 2026",

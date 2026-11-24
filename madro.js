@@ -80,7 +80,7 @@ export function mealsOn(date) {
   const list = state.plans[weekKey(mondayOf(date))] || [];
   const day = (date.getDay() + 6) % 7;
   return list.filter((e) => e.day === day).map((e) => {
-    if (e.note != null) return { title: e.note, sub: e.sub || '', image: '', note: true };
+    if (e.note != null) return { title: e.note, sub: e.sub || '', image: imgUrl(e.image) || (/ude|restaurant/i.test(e.note) ? BASE + 'img/spiser-ude.jpg' : ''), art: artColors(e.note), note: true };
     if (e.pendingUrl) return { title: 'Opskrift hentes …', image: '', note: true };
     const r = state.recipes[e.recipeId] || { title: '…' };
     return { title: r.title || 'Ret', image: imgUrl(r.image), art: artColors(r.title), note: false, status: shopStatus(e, r) };
@@ -101,6 +101,7 @@ function artColors(title) { let h = 7; for (const ch of String(title || '')) h =
 function imgUrl(src) {
   if (!src || typeof src !== 'string') return '';
   if (/^(https?:|data:image\/)/.test(src)) return src;
+  if (/^\/_blob\//.test(src)) return ''; // billeder fra Claude-appen findes ikke på nettet – brug Madros farvebillede
   try { return new URL(src.replace(/^\//, ''), BASE).href; } catch (e) { return ''; }
 }
 
