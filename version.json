@@ -1,5 +1,5 @@
 {
-  "version": "1.57.0",
+  "version": "1.57.1",
   "files": [
     "index.html",
     "app.js",
@@ -24,6 +24,14 @@
     "football.js"
   ],
   "notes": [
+    {
+      "version": "1.57.1",
+      "date": "25. november 2026",
+      "title": "Fodbold: i dag som standard",
+      "items": [
+        "Fodbold-kortet går nu hurtigt tilbage til i dag, når du har bladret – og altid, når du skifter side"
+      ]
+    },
     {
       "version": "1.57.0",
       "date": "25. november 2026",

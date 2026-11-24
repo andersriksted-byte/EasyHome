@@ -1339,7 +1339,7 @@ function loadAll() { loadFootball(); loadWeather(); loadNews(); loadCal(); loadS
 
 /* ---------- Handlinger ---------- */
 const act = {
-  nav: (b) => { if (settings.navOpen) { settings.navOpen = false; save(); } ui.page = b.dataset.page; ui.editing = false; history.replaceState(null, '', '#' + ui.page); renderNav(); renderMain(false); $('#main').focus({ preventScroll: true }); if (ui.page === 'musik') loadSonos(); },
+  nav: (b) => { if (settings.navOpen) { settings.navOpen = false; save(); } ui.page = b.dataset.page; ui.editing = false; ui.fbDay = null; history.replaceState(null, '', '#' + ui.page); renderNav(); renderMain(false); $('#main').focus({ preventScroll: true }); if (ui.page === 'musik') loadSonos(); },
   toggleNav: () => { settings.navOpen = !settings.navOpen; save(); renderNav(); },
   nextTheme: () => { const i = THEME_ORDER.indexOf(settings.theme); settings.theme = THEME_ORDER[(i + 1) % THEME_ORDER.length]; save(); applyTheme(); renderHeader(); if (ui.editing || ui.page === 'indstillinger') renderMain(); },
   setTheme: (b) => { settings.theme = b.dataset.theme; save(); applyTheme(); renderHeader(); renderMain(); },
@@ -1781,7 +1781,7 @@ function boot() {
     if (Date.now() - ui.cdAt >= 10000) act.wStep({ dataset: { scope: 'cd', dir: '1' } });
   }, 1000);
   setInterval(() => { if (ui.fpPlace !== 0 && Date.now() - ui.fpTouched > 3 * 60000) { ui.fpPlace = 0; softRender(); } }, 30000);
-  setInterval(() => { if (ui.fbDay && Date.now() - (ui.fbTouched || 0) > 3 * 60000) { ui.fbDay = null; softRender(); } }, 30000); // tilbage til i dag
+  setInterval(() => { if (ui.fbDay && Date.now() - (ui.fbTouched || 0) > 45000) { ui.fbDay = null; softRender(); } }, 15000); // i dag er altid standard: tilbage efter under et minut
   setInterval(loadNews, 5 * 60000);
   setInterval(() => { if (!document.hidden) loadFootball(); }, 60000); // FB.load bestemmer selv: hvert minut under kampe, ellers hvert 10. minut
   setInterval(loadCal, 10 * 60000);
