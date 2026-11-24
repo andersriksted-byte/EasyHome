@@ -336,7 +336,7 @@ function wIndkob(size, h = 1, wd = 1) {
   if (!items.length) return head + '<div class="empty">Listen er tom.</div>' + add;
   const cols = Math.min(3, wd, shapeKind(wd, h) === 'big' ? 2 : 3);
   const amt = (x) => [x.amount != null && x.amount !== '' ? String(x.amount).replace('.', ',') : '', x.unit || ''].join(' ').trim();
-  return head + `<div class="shoplist" data-trim style="--cols:${cols}">${items.map((x) => `<div class="shopitem"><i aria-hidden="true"></i><span class="si-name">${esc(x.name)}</span>${amt(x) ? `<span class="si-amt">${esc(amt(x))}</span>` : ''}</div>`).join('')}</div>` + add;
+  return head + `<div class="shoplist" style="--cols:${cols}">${items.map((x) => `<div class="shopitem"><i aria-hidden="true"></i><span class="si-name">${esc(x.name)}</span>${amt(x) ? `<span class="si-amt">${esc(amt(x))}</span>` : ''}</div>`).join('')}</div>` + add;
 }
 
 function wNed(size, h = 1, wd = 1) {

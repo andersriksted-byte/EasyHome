@@ -1,5 +1,5 @@
 {
-  "version": "1.21.0",
+  "version": "1.21.1",
   "files": [
     "index.html",
     "app.js",
@@ -20,6 +20,14 @@
     "madro.js"
   ],
   "notes": [
+    {
+      "version": "1.21.1",
+      "date": "24. november 2026",
+      "title": "Hele indkøbslisten",
+      "items": [
+        "Varerne på indkøbslisten står tættere, og man kan scrolle i kortet for at se dem alle."
+      ]
+    },
     {
       "version": "1.21.0",
       "date": "24. november 2026",
