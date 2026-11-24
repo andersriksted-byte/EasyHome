@@ -251,25 +251,25 @@ function renderFooter() {
 /* ---------- Forside-widgets ---------- */
 // Fælles overskrift for alle kort: altid én linje i samme højde. For lang tekst forkortes med …
 const cardHead = (title, right = '') => `<div class="whead"><span class="lab" title="${esc(title)}">${esc(title)}</span>${right}</div>`;
-function wUge(size, h = 1, w = 1) {
+// Kalenderkortet: et antal dage frem fra i dag. Antallet vælges under Tilpas forside (ellers efter kortets størrelse).
+function wUge(size, h = 1, w = 1, x = null) {
   const today = startOfDay(new Date());
   const demo = D.cal && D.cal.demo ? '<span class="small muted">Eksempel</span>' : '';
-  if (!D.cal) return cardHead('Familiens uge') + '<div class="empty">Henter kalender …</div>';
-  if (size === 'S' && h >= 2) {
-    const n = h * 2;
-    return `${cardHead('Familien · ' + n + ' dage')}<div style="display:flex;flex-direction:column;gap:8px">${Array.from({ length: n }, (_, i) => addDays(today, i)).map((d) => `<div><div class="small" style="font-weight:800">${i0(d, today)}</div><div style="display:flex;flex-direction:column;gap:4px;margin-top:4px">${eventsOn(d).map((e) => evHtml(e, d, false)).join('') || '<span class="small muted">–</span>'}</div></div>`).join('')}</div>${demo}`;
+  if (!D.cal) return cardHead('Kalender') + '<div class="empty">Henter kalender …</div>';
+  const auto = w === 1 ? (h >= 2 ? h * 2 : 2) : Math.min(7, w * 2 - (w >= 3 ? 1 : 0));
+  const n = Math.max(1, Math.min(7, +(x && x.days) || auto));
+  const days = Array.from({ length: n }, (_, i) => addDays(today, i));
+  const title = n === 1 ? 'I dag' : n === 2 ? 'I dag og i morgen' : 'Næste ' + n + ' dage';
+  const tag = (d) => (sameDay(d, today) ? 'I dag' : sameDay(d, addDays(today, 1)) ? 'I morgen' : cap(DAYS[d.getDay()]));
+  const evRow = (e, d) => e.allDay ? `<div class="cw-ad" ${evRef(e)} style="--c:${esc(e.color || '#888')};--l:${lighten(e.color)}">${esc(e.title)}</div>`
+    : `<div class="cw-ev" ${evRef(e)} style="--c:${esc(e.color || '#888')};--l:${lighten(e.color)}"><time>${esc(evTime(e, d))}</time><span>${esc(e.title)}</span></div>`;
+  const sorted = (d) => { const l = eventsOn(d); return l.filter((e) => e.allDay).concat(l.filter((e) => !e.allDay)); };
+  const list = (d) => { const l = sorted(d); return l.length ? l.map((e) => evRow(e, d)).join('') : '<span class="cw-none">Ingen aftaler</span>'; };
+  const cols = w >= 2 && n > 1 ? Math.min(n, w * 2) : 1;
+  if (cols === 1) {
+    return `${cardHead(title, demo)}<div class="cw-list">${days.map((d) => `<div class="cw-row${sameDay(d, today) ? ' today' : ''}"><div class="cw-date"><b>${d.getDate()}</b><span>${esc(tag(d))}</span></div><div class="cw-evs">${list(d)}${dayMenu(d)}</div></div>`).join('')}</div>`;
   }
-  if (size === 'S') {
-    const t = eventsOn(today); const m = eventsOn(addDays(today, 1));
-    return `${cardHead('I dag')}<div class="evlist" style="display:flex;flex-direction:column;gap:6px">${t.length ? t.map((e) => evHtml(e, today)).join('') : '<div class="small muted">Ingen aftaler</div>'}</div>
-      <div style="margin-top:auto;border-top:2px dashed var(--line);padding-top:8px;display:flex;flex-direction:column;gap:6px"><div class="lab">I morgen</div>${m.map((e) => evHtml(e, addDays(today, 1), false)).join('') || '<div class="small muted">Ingen aftaler</div>'}</div>${demo}`;
-  }
-  const nd = size === 'L' ? 7 : w >= 3 ? 5 : 3;
-  const days = nd === 7 ? [0, 1, 2, 3, 4, 5, 6].map((i) => addDays(weekStart(0), i)) : Array.from({ length: nd }, (_, i) => addDays(today, i));
-  return `${cardHead(nd === 7 ? 'Familiens uge' : 'Næste ' + nd + ' dage', demo)}
-    <div class="days" style="grid-template-columns:repeat(${days.length},minmax(0,1fr))">${days.map((d) => `
-      <div class="day ${sameDay(d, today) ? 'today' : ''}"><h3>${cap(DAYS[d.getDay()])} <span>${d.getDate()}.</span></h3>
-      ${eventsOn(d).map((e) => evHtml(e, d, false)).join('')}${dayMenu(d)}</div>`).join('')}</div>`;
+  return `${cardHead(title, demo)}<div class="cw-cols days" style="grid-template-columns:repeat(${cols},minmax(0,1fr))">${days.map((d) => `<div class="cw-day${sameDay(d, today) ? ' today' : ''}"><div class="cw-dh"><span>${esc(tag(d))}</span><b>${d.getDate()}.</b></div><div class="cw-evs">${list(d)}</div>${dayMenu(d)}</div>`).join('')}</div>`;
 }
 const i0 = (d, today) => (sameDay(d, today) ? 'I dag' : sameDay(d, addDays(today, 1)) ? 'I morgen' : cap(DAYS_LONG[d.getDay()]) + ' ' + d.getDate() + '.');
 function pageArrows(scope, idx, n, what) {
@@ -618,6 +618,7 @@ function pageForside() {
     <section class="card w" data-wid="${x.id}" ${FIT.includes(x.id) ? `data-fit data-h="${h}"` : ''} style="--w:${w};--h:${h}">
       ${ui.editing ? `<div class="wbar"><button class="handle" aria-label="Træk for at flytte ${esc(WIDGETS[x.id])}">${GRIP}Flyt</button><span class="nm">${esc(WIDGETS[x.id])}</span>
         ${x.id === 'screens' ? `<span class="wopt" role="group" aria-label="Betjening">${[[1, 'Alle samlet'], [2, 'Hver for sig'], [3, 'Begge']].map(([v, l]) => `<button data-act="wOpt" data-id="screens" data-k="mode" data-v="${v}" aria-pressed="${(x.mode || 3) === v}">${l}</button>`).join('')}</span>` : ''}
+        ${x.id === 'uge' ? `<select class="wsel" data-wsel="uge" data-k="days" aria-label="Antal dage">${[['', 'Automatisk'], ...[1, 2, 3, 4, 5, 6, 7].map((v) => [String(v), v === 1 ? '1 dag' : v + ' dage'])].map(([v, l]) => `<option value="${v}"${String(x.days || '') === v ? ' selected' : ''}>${l}</option>`).join('')}</select>` : ''}
         ${x.id === 'inspiration' ? `<select class="wsel" data-wsel="inspiration" data-k="meal" aria-label="Måltid">${['', ...MD.MEALS].map((m) => `<option value="${m}"${(x.meal || '') === m ? ' selected' : ''}>${m || 'Alle måltider'}</option>`).join('')}</select>` : ''}
         ${x.id === 'madplan' ? `<span class="wopt" role="group" aria-label="Antal dage">${[[1, '1 dag'], [5, '5 dage']].map(([v, l]) => `<button data-act="wOpt" data-id="madplan" data-k="days" data-v="${v}" aria-pressed="${(x.days || 5) === v}">${l}</button>`).join('')}</span>` : ''}
         <button class="sz" data-act="sizeFor" data-id="${x.id}" aria-expanded="${ui.sizeFor === x.id}" aria-label="Vælg størrelse (nu ${w} gange ${h})">${shapeIcon(w, h)}<span>${w}×${h}</span></button>
@@ -655,9 +656,8 @@ function pageKalender() {
 // Ugen som timegitter: heldagsaftaler øverst, aftaler placeret efter klokkeslæt, dagens menu nederst
 const CAL_HH = 52; // højde pr. time i px
 let calRefs = [];
-const evRef = (e) => { calRefs.push(e); return `data-act="calEv" data-i="${calRefs.length - 1}" role="button" tabindex="0"`; };
+const evRef = (e) => { if (calRefs.length > 2000) calRefs = []; calRefs.push(e); return `data-act="calEv" data-i="${calRefs.length - 1}" role="button" tabindex="0"`; };
 function calTimeGrid(days, today) {
-  calRefs = [];
   const evs = days.map((d) => eventsOn(d, true));
   const allDay = evs.map((l, i) => l.filter((e) => e.allDay || (e.start <= startOfDay(days[i]) && e.end >= addDays(startOfDay(days[i]), 1))));
   const timed = evs.map((l, i) => l.filter((e) => !allDay[i].includes(e)));

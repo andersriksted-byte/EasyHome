@@ -1,5 +1,5 @@
 {
-  "version": "1.49.1",
+  "version": "1.50.0",
   "files": [
     "index.html",
     "app.js",
@@ -23,6 +23,16 @@
     "mcats.js"
   ],
   "notes": [
+    {
+      "version": "1.50.0",
+      "date": "24. november 2026",
+      "title": "Nyt kalenderkort",
+      "items": [
+        "Kalenderkortet på forsiden har fået et nyt og mere overskueligt udseende",
+        "Vælg selv antal dage (1–7) under Tilpas forside",
+        "Tryk på en aftale for at se detaljer"
+      ]
+    },
     {
       "version": "1.49.1",
       "date": "24. november 2026",
