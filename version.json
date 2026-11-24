@@ -1,5 +1,5 @@
 {
-  "version": "1.16.1",
+  "version": "1.16.2",
   "files": [
     "index.html",
     "app.js",
@@ -19,6 +19,14 @@
     "login.js"
   ],
   "notes": [
+    {
+      "version": "1.16.2",
+      "date": "24. november 2026",
+      "title": "Sikkerhedskopi fjernet",
+      "items": [
+        "Fanen Sikkerhedskopi er fjernet – jeres indstillinger gemmes og deles allerede automatisk mellem skærmene."
+      ]
+    },
     {
       "version": "1.16.1",
       "date": "24. november 2026",

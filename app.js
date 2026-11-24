@@ -582,7 +582,7 @@ const SET_TABS = [
   { id: 'familie', label: 'Familie' },
   { id: 'tjenester', label: 'Tjenester' },
   { id: 'vejr', label: 'Vejret' }, { id: 'nyheder', label: 'Nyheder' }, { id: 'kalender', label: 'Kalender' }, 
-  { id: 'tv', label: 'DR TV' }, { id: 'udseende', label: 'Udseende' }, { id: 'forbindelse', label: 'Forbindelse' }, { id: 'backup', label: 'Sikkerhedskopi' }
+  { id: 'tv', label: 'DR TV' }, { id: 'udseende', label: 'Udseende' }, { id: 'forbindelse', label: 'Forbindelse' }
 ];
 function pageIndstillinger() {
   const s = settings;
@@ -633,11 +633,7 @@ function pageIndstillinger() {
       <div class="row"><button class="btn primary" data-act="testConn">Test forbindelse</button><span class="small" id="connMsg">${esc(ui.connMsg)}</span></div>
       ${hasProxy() ? `<div class="small ${syncState.ok === false ? 'err' : 'muted'}"><b>Deling mellem skærme:</b> ${syncState.ok === false ? esc(syncState.msg) : syncState.last ? 'aktiv ✓ – senest ' + hhmm(syncState.last) : 'starter …'}</div>` : ''}
 </section>
-      ${svcOn('musik') ? sonosConnSection() : ''}`,
-    backup: () => `
-    <section class="card wide"><b>Sikkerhedskopi</b><p class="note">Teksten indeholder jeres nøgle og kalenderlinks – del den ikke.</p>
-      <textarea id="cfg" aria-label="Indstillinger som tekst">${esc(JSON.stringify(settings, null, 2))}</textarea>
-      <div class="row"><button class="btn" data-act="copyCfg">Kopiér</button><button class="btn primary" data-act="importCfg">Indlæs fra feltet</button></div></section>`
+      ${svcOn('musik') ? sonosConnSection() : ''}`
   };
   return `<div class="ptitle"><h1>Indstillinger</h1></div>
   <div class="tabs" role="tablist" aria-label="Indstillinger">${tabs.map((t) => `<button role="tab" class="tab" data-act="setTab" data-tab="${t.id}" aria-selected="${t.id === tab}">${esc(t.label)}</button>`).join('')}</div>
@@ -846,8 +842,6 @@ const act = {
   tvAdd: () => { settings.tv.channels.push({ name: 'Ny knap', url: 'https://www.dr.dk/drtv' }); save(); renderMain(); },
   tvRm: (b) => { settings.tv.channels.splice(+b.dataset.i, 1); save(); renderMain(); },
   copyRedir: async () => { try { await navigator.clipboard.writeText($('#redir').textContent); toast('Adressen er kopieret'); } catch (e) { toast('Markér adressen og kopiér med ⌘C'); } },
-  copyCfg: async () => { try { await navigator.clipboard.writeText($('#cfg').value); toast('Kopieret'); } catch (e) { $('#cfg').select(); toast('Markeret – kopiér manuelt'); } },
-  importCfg: () => { try { replaceSettings(JSON.parse($('#cfg').value)); C.clearCalCache(); N.clearNewsCache(); renderAll(); loadAll(); toast('Indstillinger indlæst'); } catch (e) { toast('Teksten kunne ikke læses: ' + e.message); } }
 };
 function toggleNews(id) {
   const s = settings.news.sources; const i = s.indexOf(id);
