@@ -308,6 +308,9 @@ a{color:var(--accent)}
 .tab[aria-selected=true]{color:var(--text);border-bottom-color:var(--accent);background:var(--card)}
 .form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
 .form .card.wide{grid-column:1/-1}
+.form[role=tabpanel]{align-items:start}
+.form[role=tabpanel]>.card{gap:12px}
+@media (max-width:900px){.form[role=tabpanel]{grid-template-columns:1fr}}
 label.f{display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:700;color:var(--muted)}
 input[type=text],input[type=url],input[type=password],input[type=date],select,textarea{min-height:48px;border-radius:12px;border:1.5px solid var(--line);background:var(--bg);padding:10px 12px;font-size:16px;color:var(--text);width:100%}
 textarea{min-height:140px;font-family:ui-monospace,monospace;font-size:13px}
@@ -432,3 +435,15 @@ span.avatar{opacity:1}
 
 .npart{width:44px;height:44px;border-radius:10px;background:var(--bg) center/cover no-repeat;flex-shrink:0}
 .howto summary{cursor:pointer;font-weight:700;color:var(--muted);font-size:14px;min-height:32px}
+
+/* Tjenester ("app store") */
+.store{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+.svc{display:grid;grid-template-columns:56px minmax(0,1fr) auto;gap:14px;align-items:center;text-align:left;padding:16px;border-radius:18px;border:1.5px solid var(--line);background:var(--bg);color:var(--text);min-height:88px}
+.appico{width:56px;height:56px;border-radius:16px;display:grid;place-items:center;background:var(--card);color:var(--muted)}
+.svc.on .appico{background:var(--accent);color:var(--onAccent)}
+.appmain{display:flex;flex-direction:column;gap:2px;min-width:0}
+.appmain b{font-size:17px}.appmain span{font-size:13px;color:var(--muted)}
+.tgl{width:52px;height:32px;border-radius:99px;background:var(--line);position:relative;transition:background .2s}
+.tgl i{position:absolute;top:3px;left:3px;width:26px;height:26px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:left .2s}
+.svc.on .tgl{background:var(--accent)}.svc.on .tgl i{left:23px}
+.ftr[hidden]{display:none}

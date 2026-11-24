@@ -1,5 +1,5 @@
 {
-  "version": "1.14.1",
+  "version": "1.15.0",
   "files": [
     "index.html",
     "app.js",
@@ -19,6 +19,17 @@
     "login.js"
   ],
   "notes": [
+    {
+      "version": "1.15.0",
+      "date": "24. november 2026",
+      "title": "Vælg jeres tjenester",
+      "items": [
+        "Ny fane Indstillinger → Tjenester: slå kalender, vejr, nyheder, musik, DR TV og nedtællinger til og fra.",
+        "En tjeneste, der er slået fra, forsvinder fra menuen, forsiden og indstillingerne – og kommer tilbage, når den slås til igen.",
+        "Sonos sættes nu op under Indstillinger → Forbindelse.",
+        "Indstillingerne fylder mindre: kortene står side om side i stedet for i hele skærmens bredde."
+      ]
+    },
     {
       "version": "1.14.1",
       "date": "24. november 2026",
