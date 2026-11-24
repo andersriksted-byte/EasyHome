@@ -1,5 +1,5 @@
 {
-  "version": "1.54.4",
+  "version": "1.55.0",
   "files": [
     "index.html",
     "app.js",
@@ -24,6 +24,15 @@
     "football.js"
   ],
   "notes": [
+    {
+      "version": "1.55.0",
+      "date": "24. november 2026",
+      "title": "Følg en hel liga",
+      "items": [
+        "Du kan nu følge en hel liga uden at vælge hold – tryk \"Følg hele ligaen\" under Indstillinger → Fodbold",
+        "Fodbold-kortet viser så rundens kampe med resultater og tidspunkter"
+      ]
+    },
     {
       "version": "1.54.4",
       "date": "24. november 2026",

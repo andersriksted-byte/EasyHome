@@ -485,7 +485,8 @@ function later(evs, e, x) {
 // Fodbold: kampe i gang, næste kampe og seneste resultater for favoritholdene
 function wFodbold(size, h = 1, wd = 1) {
   const head = cardHead('Fodbold');
-  if (!((settings.football || {}).teams || []).length) return head + '<div class="empty">Vælg favorithold under Indstillinger → Fodbold.</div>';
+  const hasFav = ((settings.football || {}).teams || []).length; const lv = FB.leagueView();
+  if (!hasFav && !lv.length) return head + '<div class="empty">Vælg hold eller ligaer under Indstillinger → Fodbold.</div>';
   if (!FB.state.at) return head + '<div class="empty">Henter kampe …</div>';
   const { live, done, next } = FB.view();
   const today = startOfDay(new Date());
@@ -495,14 +496,23 @@ function wFodbold(size, h = 1, wd = 1) {
   const row = (m) => {
     const mid = m.state === 'pre' ? `<span class="fb-mid time">${hhmm(m.date)}</span>` : `<span class="fb-mid"><b class="${m.home.win ? 'w' : ''}">${esc(m.home.score)}</b>–<b class="${m.away.win ? 'w' : ''}">${esc(m.away.score)}</b></span>`;
     const when = m.state === 'in' ? `<span class="fb-live">● ${esc(m.clock || m.detail || 'Live')}</span>` : esc(dayTxt(m.date));
-    return `<div class="fb-row ${m.state}"><span class="fb-when">${when}<small>${esc(m.comp)}</small></span>${side(m.home, m.fav)}${mid}${side(m.away, m.fav)}</div>`;
+    return `<div class="fb-row ${m.state}"><span class="fb-when">${when}<small>${esc(m.lgRow ? (m.state === 'post' ? 'Slut' : '') : m.comp)}</small></span>${side(m.home, m.fav)}${mid}${side(m.away, m.fav)}</div>`;
   };
-  const list = (arr, lab) => (arr.length ? `<div class="fb-col"><div class="fb-lab">${lab}</div><div class="fb-list" data-trim>${arr.map(row).join('')}</div></div>` : '');
+  const list = (arr, lab) => (arr.length ? `<div class="fb-col"><div class="fb-lab">${lab}</div><div class="fb-list" data-trim>${arr.join('')}</div></div>` : '');
   const recent = done;
-  if (wd >= 3) return head + `<div class="fb-cols">${list(live.concat(next), live.length ? 'Kampe' : 'Næste kamp')}${list(recent, 'Seneste resultat')}</div>`;
-  // Smalle kort: kampe i gang, så seneste resultat og næste kamp
-  const mix = live.concat(recent.slice(0, 1), next.slice(0, 1), recent.slice(1), next.slice(1));
-  return head + (mix.length ? `<div class="fb-list" data-trim>${mix.map(row).join('')}</div>` : '<div class="empty">Ingen kampe lige nu.</div>');
+  // Fulgte ligaer: en lille overskrift og så rundens kampe
+  const lgRows = (L, sub = true) => (L.round.length ? (sub ? [`<div class="fb-sub">${esc(L.name)}</div>`] : []).concat(L.round.map((m) => row({ ...m, lgRow: true }))) : []);
+  const favNow = live.filter((m) => m.fav).concat(next).map(row); const favDone = recent.map(row);
+  if (wd >= 3) {
+    const cols = [];
+    if (hasFav) { cols.push(list(favNow, live.length ? 'Kampe' : 'Næste kamp')); cols.push(list(favDone, 'Seneste resultat')); }
+    if (lv.length) { if (hasFav) cols.push(list(lv.flatMap((L) => lgRows(L)), 'Runden')); else lv.forEach((L) => cols.push(list(lgRows(L, false), esc(L.name) + ' · runden'))); }
+    const html = cols.filter(Boolean).join('');
+    return head + (html ? `<div class="fb-cols">${html}</div>` : '<div class="empty">Ingen kampe lige nu.</div>');
+  }
+  // Smalle kort: favoritternes kampe i gang, seneste resultat og næste kamp – derefter ligaernes kampe
+  const mix = live.filter((m) => m.fav).map(row).concat(favDone.slice(0, 1), next.slice(0, 1).map(row), favDone.slice(1), next.slice(1).map(row), lv.flatMap((L) => lgRows(L)));
+  return head + (mix.length ? `<div class="fb-list" data-trim>${mix.join('')}</div>` : '<div class="empty">Ingen kampe lige nu.</div>');
 }
 function fodboldSettings() {
   const fb = settings.football || { leagues: [], teams: [] };
@@ -510,7 +520,8 @@ function fodboldSettings() {
   const chip = (t) => `<button class="fbchip" data-act="fbTeam" data-lg="${esc(t.lg)}" data-id="${esc(t.id)}" aria-pressed="${favIds.includes(t.id)}">${t.logo ? `<img src="${esc(t.logo)}" alt="" loading="lazy">` : ''}<span>${esc(t.short || t.name)}</span></button>`;
   const leagueSec = (L) => { const on = lgs.includes(L.id); const teams = ui.fbTeams && ui.fbTeams[L.id];
     if (on && !teams && hasProxy()) FB.teamsOf(L.id).then((ts) => { ui.fbTeams = { ...(ui.fbTeams || {}), [L.id]: ts }; if (ui.page === 'indstillinger') renderMain(); }).catch(() => { ui.fbTeams = { ...(ui.fbTeams || {}), [L.id]: [] }; if (ui.page === 'indstillinger') renderMain(); });
-    return on ? `<div class="fblg"><b>${esc(L.name)}</b><div class="fbchips">${teams ? (teams.length ? teams.map(chip).join('') : '<span class="small muted">Kunne ikke hente holdene</span>') : '<span class="small muted">Henter hold …</span>'}</div></div>` : ''; };
+    const fol = (fb.follow || []).includes(L.id);
+    return on ? `<div class="fblg"><div class="row" style="justify-content:space-between"><b>${esc(L.name)}</b><button class="pill" data-act="fbFollow" data-id="${L.id}" aria-pressed="${fol}">${fol ? '✓' : '+'} Følg hele ligaen</button></div><div class="fbchips">${teams ? (teams.length ? teams.map(chip).join('') : '<span class="small muted">Kunne ikke hente holdene</span>') : '<span class="small muted">Henter hold …</span>'}</div></div>` : ''; };
   return `<section class="card"><b>Ligaer</b><div class="choices">${[{ id: 'nat', name: 'Landsholdet' }].concat(FB.LEAGUES).map((L) => `<button class="pill" data-act="fbLeague" data-id="${L.id}" aria-pressed="${lgs.includes(L.id)}">${lgs.includes(L.id) ? '✓' : '+'} ${esc(L.name)}</button>`).join('')}</div></section>
     <section class="card"><b>Favorithold</b>${!hasProxy() ? needProxyMsg('Fodbold') : ''}
       ${lgs.includes('nat') ? `<div class="fblg"><b>Landsholdet</b><div class="fbchips">${FB.NATIONAL.map(chip).join('')}</div></div>` : ''}
@@ -1256,6 +1267,7 @@ function trimCards() {
   document.querySelectorAll('#grid .w [data-trim]').forEach((list) => {
     let guard = 60;
     while (guard-- > 0 && list.children.length > 1 && list.scrollHeight > list.clientHeight + 1) list.lastElementChild.remove();
+    while (list.lastElementChild && list.lastElementChild.classList.contains('fb-sub')) list.lastElementChild.remove(); // ingen overskrift uden kampe under
   });
   // Lister, der må fylde resten af kortet: fjern de sidste, til hele kortet kan ses
   document.querySelectorAll('#grid .w [data-trimcard]').forEach((list) => {
@@ -1494,7 +1506,8 @@ const act = {
   calAdd: () => { const colors = ['#D0563C', '#4C78D0', '#D9A400', '#2E9D5B', '#7A5AC8']; const c = { id: uid(), name: 'Ny kalender', color: colors[settings.calendars.length % colors.length], url: '' }; settings.calendars.push(c); ui.calEdit = c.id; save(); renderMain(); setTimeout(() => { const el = document.querySelectorAll('.calname'); if (el.length) { el[el.length - 1].focus(); el[el.length - 1].select(); } }, 50); },
   calEdit: (b) => { ui.calEdit = ui.calEdit === b.dataset.id ? null : b.dataset.id; renderMain(); },
   calEv: (b) => { const e = calRefs[+b.dataset.i]; if (e) showEvent(e); },
-  fbLeague: (b) => { const fb = settings.football = settings.football || { leagues: [], teams: [] }; fb.leagues = fb.leagues || []; const id = b.dataset.id; fb.leagues = fb.leagues.includes(id) ? fb.leagues.filter((x) => x !== id) : fb.leagues.concat(id); if (!fb.leagues.includes(id)) fb.teams = (fb.teams || []).filter((t) => t.lg !== id); save(); renderMain(); loadFootball(true); },
+  fbLeague: (b) => { const fb = settings.football = settings.football || { leagues: [], teams: [] }; fb.leagues = fb.leagues || []; const id = b.dataset.id; fb.leagues = fb.leagues.includes(id) ? fb.leagues.filter((x) => x !== id) : fb.leagues.concat(id); if (!fb.leagues.includes(id)) { fb.teams = (fb.teams || []).filter((t) => t.lg !== id); fb.follow = (fb.follow || []).filter((x) => x !== id); } save(); renderMain(); loadFootball(true); },
+  fbFollow: (b) => { const fb = settings.football = settings.football || { leagues: [], teams: [] }; const f = fb.follow || []; const id = b.dataset.id; fb.follow = f.includes(id) ? f.filter((x) => x !== id) : f.concat(id); save(); renderMain(); loadFootball(true); },
   fbTeam: (b) => { const fb = settings.football = settings.football || { leagues: [], teams: [] }; fb.teams = fb.teams || []; const id = b.dataset.id; const lg = b.dataset.lg;
     if (fb.teams.some((t) => t.id === id)) fb.teams = fb.teams.filter((t) => t.id !== id);
     else { const t = (lg === 'nat' ? FB.NATIONAL : (ui.fbTeams || {})[lg] || []).find((x) => x.id === id); if (t) fb.teams.push({ id: t.id, name: t.name, short: t.short, logo: t.logo, lg }); }

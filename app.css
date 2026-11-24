@@ -1200,3 +1200,5 @@ button.w7r.sel{background:color-mix(in srgb,var(--accent) 16%,transparent);box-s
 .fb-t b{font-size:15px;font-weight:800;letter-spacing:.03em}
 .fb-t.fb-fav img{filter:drop-shadow(0 0 6px color-mix(in srgb,var(--text) 35%,transparent))}
 .fb-mid{min-width:56px;font-size:20px}
+
+.fb-sub{flex:none;font-size:12px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;padding:4px 2px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}

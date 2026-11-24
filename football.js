@@ -14,7 +14,7 @@ const COMP = { 'Danish Superliga': 'Superligaen', 'Danish Cup': 'Pokalen', 'Dani
 const NAMES = { Denmark: 'Danmark', Sweden: 'Sverige', Norway: 'Norge', Germany: 'Tyskland', England: 'England', Scotland: 'Skotland', Greece: 'Grækenland', Czechia: 'Tjekkiet', Belarus: 'Hviderusland', Ukraine: 'Ukraine', Spain: 'Spanien', France: 'Frankrig', Italy: 'Italien', Netherlands: 'Holland', Belgium: 'Belgien', Portugal: 'Portugal', Poland: 'Polen', Switzerland: 'Schweiz', Austria: 'Østrig', Croatia: 'Kroatien', Serbia: 'Serbien', Finland: 'Finland', Iceland: 'Island', 'Northern Ireland': 'Nordirland', 'North Macedonia': 'Nordmakedonien', 'Republic of Ireland': 'Irland', Wales: 'Wales', Lithuania: 'Litauen', Hungary: 'Ungarn', Turkey: 'Tyrkiet', 'Türkiye': 'Tyrkiet' };
 const dk = (n) => NAMES[n] || n;
 
-export const state = { matches: [], error: '', at: 0, loading: false };
+export const state = { matches: [], leagues: {}, error: '', at: 0, loading: false };
 const teamsCache = {};
 
 // Holdene i en liga (til valg af favoritter i Indstillinger)
@@ -29,12 +29,12 @@ export async function teamsOf(lg) {
 
 const favs = () => (settings.football && settings.football.teams) || [];
 const score = (c) => (c.score == null ? '' : typeof c.score === 'object' ? (c.score.displayValue ?? String(c.score.value ?? '')) : String(c.score));
-function parse(ev, fav) {
+function parse(ev, fav, lgDefault = '') {
   const comp = (ev.competitions || [])[0] || {};
   const st = (comp.status || ev.status || {}).type || {};
   const side = (h) => { const c = (comp.competitors || []).find((x) => x.homeAway === h) || {}; const t = c.team || {};
     return { id: String(t.id || ''), name: dk(t.shortDisplayName || t.displayName || ''), abbr: t.abbreviation || '', logo: (t.logos && t.logos[0] && t.logos[0].href) || t.logo || '', score: score(c), win: !!c.winner, pens: c.shootoutScore != null ? String(c.shootoutScore) : '' }; };
-  const lgName = (ev.league && ev.league.name) || (ev.season && ev.season.displayName) || '';
+  const lgName = (ev.league && ev.league.name) || lgDefault || (ev.season && ev.season.displayName) || '';
   return { id: String(ev.id), date: new Date(ev.date), state: st.state || 'pre', detail: st.shortDetail || '', clock: (comp.status || ev.status || {}).displayClock || '', comp: COMP[lgName] || lgName, home: side('home'), away: side('away'), fav };
 }
 
@@ -45,14 +45,26 @@ async function schedule(t, fixture) {
   return evs.map((e) => parse(e, t.id));
 }
 
+const follows = () => (settings.football && settings.football.follow) || [];
+const ymd = (d) => `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
+// En hel liga: kampe en uge omkring i dag (kortet finder selv den aktuelle runde)
+async function leagueDays(lg) {
+  const a = new Date(); a.setDate(a.getDate() - 6); const b = new Date(); b.setDate(b.getDate() + 6);
+  const j = await (await workerFetch(`/espn/${lg}/scoreboard?dates=${ymd(a)}-${ymd(b)}`)).json();
+  const name = ((j.leagues || [])[0] || {}).name || '';
+  return (j.events || []).map((e) => parse(e, '', name)).sort((x, y) => x.date - y.date);
+}
+
 export async function load(force = false) {
-  const ts = favs();
-  if (!ts.length) { state.matches = []; state.at = Date.now(); return; }
-  const live = state.matches.some((m) => m.state === 'in' || (m.state === 'pre' && Math.abs(m.date - Date.now()) < 15 * 60000));
+  const ts = favs(); const fl = follows();
+  if (!ts.length && !fl.length) { state.matches = []; state.leagues = {}; state.at = Date.now(); return; }
+  const live = Object.values(state.leagues).flat().concat(state.matches).some((m) => m.state === 'in' || (m.state === 'pre' && Math.abs(m.date - Date.now()) < 15 * 60000));
   if (!force && state.loading) return;
   if (!force && Date.now() - state.at < (live ? 60000 : 10 * 60000)) return;
   state.loading = true;
   try {
+    const lgs = await Promise.all(fl.map((lg) => leagueDays(lg).then((m) => [lg, m]).catch(() => [lg, state.leagues[lg] || []])));
+    state.leagues = Object.fromEntries(lgs);
     const all = (await Promise.all(ts.flatMap((t) => [schedule(t, false), schedule(t, true)]))).flat();
     const seen = new Map(); all.forEach((m) => { if (!seen.has(m.id) || m.state !== 'pre') seen.set(m.id, m); });
     const now = Date.now();
@@ -75,4 +87,18 @@ export function view() {
   });
   next.sort((a, b) => a.date - b.date); done.sort((a, b) => b.date - a.date);
   return { live, done, next };
+}
+
+// Fulgte ligaer: rundens kampe inkl. resultater. En runde er kampe, der ligger tæt (under 2 døgn imellem).
+// Vises den runde, der er i gang, ellers den nærmeste (den netop spillede eller den kommende).
+export function leagueView() {
+  const now = Date.now();
+  return follows().map((lg) => {
+    const ms = (state.leagues[lg] || []).slice().sort((a, b) => a.date - b.date);
+    const rounds = []; ms.forEach((m) => { const last = rounds.length && rounds[rounds.length - 1]; if (last && m.date - last[last.length - 1].date < 48 * 3600000) last.push(m); else rounds.push([m]); });
+    const dist = (rd) => (now < rd[0].date ? rd[0].date - now : now > rd[rd.length - 1].date.getTime() + 3 * 3600000 ? now - rd[rd.length - 1].date : 0);
+    const round = rounds.length ? rounds.reduce((a, b) => (dist(b) < dist(a) ? b : a)) : [];
+    const name = (LEAGUES.find((L) => L.id === lg) || {}).name || lg;
+    return { lg, name, round };
+  });
 }
