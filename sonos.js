@@ -7,7 +7,7 @@ const api = async (path, method = 'GET', body) => {
   return t ? JSON.parse(t) : {};
 };
 
-export const state = { connected: false, checked: false, household: null, groups: [], players: [], favorites: [], meta: null, playback: null, volume: null, error: null };
+export const state = { connected: false, checked: false, household: null, groups: [], players: [], favorites: [], playlists: [], playerVol: {}, meta: null, playback: null, volume: null, error: null };
 
 export async function status() {
   if (!hasProxy()) { state.connected = false; state.checked = true; return state; }
@@ -37,6 +37,7 @@ export async function loadHousehold() {
     settings.sonos.groupId = (playing || state.groups[0] || {}).id || null; save();
   }
   try { const f = await api(`/households/${state.household}/favorites`); state.favorites = f.items || []; } catch (e) { state.favorites = []; }
+  try { const pl = await api(`/households/${state.household}/playlists`); state.playlists = pl.playlists || []; } catch (e) { state.playlists = []; }
 }
 
 export async function refresh() {
@@ -49,6 +50,11 @@ export async function refresh() {
       api(`/groups/${gid}/playbackMetadata`), api(`/groups/${gid}/playback`), api(`/groups/${gid}/groupVolume`)
     ]);
     state.meta = meta; state.playback = pb; state.volume = vol; state.error = null;
+    const g = currentGroup();
+    if (g) {
+      const vols = await Promise.all((g.playerIds || []).map((pid) => api(`/players/${pid}/playerVolume`).then((v) => [pid, v.volume]).catch(() => [pid, null])));
+      state.playerVol = Object.fromEntries(vols);
+    }
   } catch (e) {
     state.error = e.message;
     if (/HTTP 4(04|10)/.test(e.message)) state.household = null; // grupper ændret: hent igen
@@ -75,3 +81,21 @@ export const prev = () => api(`/groups/${gid()}/playback/skipToPreviousTrack`, '
 export const setVolume = (v) => api(`/groups/${gid()}/groupVolume`, 'POST', { volume: Math.max(0, Math.min(100, Math.round(v))) });
 export const playFavorite = (id) => api(`/groups/${gid()}/favorites`, 'POST', { favoriteId: id, playOnCompletion: true });
 export const playerName = (pid) => (state.players.find((p) => p.id === pid) || {}).name || pid;
+
+export const currentGroup = () => state.groups.find((g) => g.id === settings.sonos.groupId) || null;
+export const groupOfPlayer = (pid) => state.groups.find((g) => (g.playerIds || []).includes(pid)) || null;
+
+// Sæt hvilke rum der er i den valgte gruppe. Gruppens id kan ændre sig, så vi bruger svaret fra Sonos.
+export async function setMembers(playerIds) {
+  const r = await api(`/groups/${gid()}/groups/setGroupMembers`, 'POST', { playerIds });
+  if (r && r.group && r.group.id) { settings.sonos.groupId = r.group.id; save(); }
+  state.household = null; // hent rum og grupper på ny
+}
+export async function soloPlayer(pid) {
+  // Lav en gruppe med kun dette rum (tager det ud af den gruppe, det er i)
+  const r = await api(`/households/${state.household}/groups/createGroup`, 'POST', { playerIds: [pid] });
+  state.household = null;
+  return r;
+}
+export const setPlayerVolume = (pid, v) => api(`/players/${pid}/playerVolume`, 'POST', { volume: Math.max(0, Math.min(100, Math.round(v))) });
+export const playPlaylist = (id) => api(`/groups/${gid()}/playlists`, 'POST', { playlistId: id, playOnCompletion: true });

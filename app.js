@@ -297,6 +297,29 @@ function pageNyheder() {
 }
 
 /* ---------- Musik ---------- */
+function sonosRooms() {
+  const cg = S.currentGroup();
+  const members = cg ? cg.playerIds || [] : [];
+  const coord = cg ? cg.coordinatorId : null;
+  const players = [...S.state.players].sort((x, y) => x.name.localeCompare(y.name, 'da'));
+  const groupPills = S.state.groups.map((g) => `<button class="pill" data-act="sGroup" data-id="${esc(g.id)}" aria-pressed="${g.id === settings.sonos.groupId}">${esc(g.name)}${g.playbackState === 'PLAYBACK_STATE_PLAYING' ? ' ♪' : ''}</button>`).join('');
+  const rows = players.map((pl) => {
+    const inG = members.includes(pl.id);
+    const isCoord = pl.id === coord;
+    const other = !inG ? S.groupOfPlayer(pl.id) : null;
+    const vol = S.state.playerVol[pl.id];
+    return `<div class="room ${inG ? 'on' : ''}">
+      <button class="rtoggle" data-act="sMember" data-pid="${esc(pl.id)}" aria-pressed="${inG}" ${isCoord ? 'disabled' : ''} aria-label="${inG ? 'Tag ' + esc(pl.name) + ' ud af gruppen' : 'Føj ' + esc(pl.name) + ' til gruppen'}"><span class="rbox">${inG ? '✓' : ''}</span>
+        <span class="rname"><b>${esc(pl.name)}</b><span class="psub">${isCoord ? 'Styrer gruppen' : inG ? 'Spiller med' : other && other.playerIds.length > 1 ? 'I gruppen ' + esc(other.name) : other && other.playbackState === 'PLAYBACK_STATE_PLAYING' ? 'Spiller sit eget' : 'Ledig'}</span></span></button>
+      ${inG && vol !== undefined && vol !== null ? `<label class="vol rvol"><span class="small">Lyd</span><input type="range" min="0" max="100" value="${vol}" data-pvol="${esc(pl.id)}" aria-label="Lydstyrke i ${esc(pl.name)}"></label>` : ''}
+    </div>`;
+  }).join('');
+  return `<section class="card"><div class="lab">Styr gruppe</div><div class="row">${groupPills || '<span class="muted">Ingen rum fundet</span>'}</div></section>
+    <section class="card"><div class="row" style="justify-content:space-between"><span class="lab">Rum i ${esc(cg ? cg.name : 'gruppen')}</span>
+      <span class="row" style="gap:6px"><button class="btn" data-act="sAll">Alle rum sammen</button><button class="btn" data-act="sOnly">Kun ${esc(cg && S.state.players.find((x) => x.id === coord) ? S.state.players.find((x) => x.id === coord).name : 'dette rum')}</button></span></div>
+      <div class="rooms">${rows}</div>
+      <div class="note">Tryk på et rum for at sætte det sammen med gruppen eller tage det ud. Rummet, der styrer gruppen, kan ikke tages ud – vælg i stedet en anden gruppe ovenfor.</div></section>`;
+}
 function pageMusik() {
   if (!hasProxy()) return `<div class="ptitle"><h1>Musik</h1></div>${needProxyMsg('Sonos')}`;
   if (!S.state.connected) return `<div class="ptitle"><h1>Musik</h1></div><section class="card"><b style="font-size:18px">Forbind jeres Sonos</b>
@@ -313,9 +336,10 @@ function pageMusik() {
         ${np.volume !== null ? `<label class="vol"><span class="small">Lyd</span><input type="range" min="0" max="100" value="${np.volume}" data-vol aria-label="Lydstyrke"></label>` : ''}
       </section>
       <div style="flex:1;min-width:280px;display:flex;flex-direction:column;gap:14px">
-        <section class="card"><div class="lab">Rum og grupper</div><div class="row">${groups || '<span class="muted">Ingen rum fundet</span>'}</div>
-          <div class="note">Grupper (fx Køkken + Stue) laves i Sonos-appen og vises her automatisk.</div></section>
-        <section class="card"><div class="lab">Favoritter fra Sonos</div>${S.state.favorites.length ? `<div class="favs">${S.state.favorites.map((f) => `<button class="fav" data-act="sFav" data-id="${esc(f.id)}"><i style="${f.imageUrl ? `background-image:url('${esc(f.imageUrl)}')` : ''}"></i>${esc(f.name)}</button>`).join('')}</div>` : '<div class="muted small">Ingen favoritter. Tilføj dem i Sonos-appen (fx radiokanaler og playlister).</div>'}</section>
+        ${sonosRooms()}
+        <section class="card"><div class="lab">Favoritter fra Sonos</div>${S.state.favorites.length ? `<div class="favs">${S.state.favorites.map((f) => `<button class="fav" data-act="sFav" data-id="${esc(f.id)}"><i style="${f.imageUrl ? `background-image:url('${esc(f.imageUrl)}')` : ''}"></i>${esc(f.name)}</button>`).join('')}</div>` : '<div class="muted small">Ingen favoritter endnu.</div>'}
+          <div class="note">Apple Music, radio og andre tjenester: tryk ♡ / "Føj til Sonos-favoritter" i Sonos-appen ved en playliste, et album eller en station – så dukker den op her.</div></section>
+        ${S.state.playlists.length ? `<section class="card"><div class="lab">Sonos-playlister</div><div class="favs">${S.state.playlists.map((pl) => `<button class="fav" data-act="sPlaylist" data-id="${esc(pl.id)}"><i></i>${esc(pl.name)}</button>`).join('')}</div></section>` : ''}
         ${S.state.error ? `<div class="err">${esc(S.state.error)}</div>` : ''}
       </div></div>`;
 }
@@ -499,6 +523,16 @@ const act = {
   sFav: (b) => sonosDo(() => S.playFavorite(b.dataset.id)),
   sGroup: (b) => { settings.sonos.groupId = b.dataset.id; save(); loadSonos(); },
   sReload: () => loadSonos(true),
+  sMember: (b) => {
+    const cg = S.currentGroup(); if (!cg) return;
+    const pid = b.dataset.pid; const cur = cg.playerIds || [];
+    const next = cur.includes(pid) ? cur.filter((x) => x !== pid) : cur.concat([pid]);
+    if (!next.length) return;
+    b.disabled = true; sonosDo(() => S.setMembers(next));
+  },
+  sAll: () => sonosDo(() => S.setMembers(S.state.players.map((p) => p.id))),
+  sOnly: () => { const cg = S.currentGroup(); if (cg) sonosDo(() => S.setMembers([cg.coordinatorId])); },
+  sPlaylist: (b) => sonosDo(() => S.playPlaylist(b.dataset.id)),
   sConnect: async () => { try { await S.startLogin(); } catch (e) { toast('Kunne ikke starte Sonos-login: ' + e.message); } },
   sLogout: async () => { try { await S.logout(); toast('Sonos afbrudt'); renderAll(); } catch (e) { toast(e.message); } },
   testConn: async () => {
@@ -569,6 +603,7 @@ document.addEventListener('change', (e) => {
   else if (t.dataset.place !== undefined) { settings.places[+t.dataset.place].label = t.value.trim(); save(); renderHeader(); }
   else if (t.dataset.tv !== undefined) { settings.tv.channels[+t.dataset.tv][t.dataset.field] = t.value.trim(); save(); }
   else if (t.hasAttribute('data-vol')) { sonosDo(() => S.setVolume(+t.value)); }
+  else if (t.dataset.pvol) { sonosDo(() => S.setPlayerVolume(t.dataset.pvol, +t.value)); }
 });
 window.addEventListener('hashchange', () => { const p = pageFromHash(); if (p !== ui.page) { ui.page = p; renderNav(); renderMain(false); } });
 

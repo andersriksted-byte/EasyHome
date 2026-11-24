@@ -130,6 +130,19 @@ a{color:var(--accent)}
 .fav{min-height:64px;border:0;border-radius:14px;background:var(--card);display:flex;align-items:center;gap:10px;padding:8px;text-align:left;font-size:14px;font-weight:700}
 .fav i{width:48px;height:48px;border-radius:10px;background:var(--track);background-size:cover;flex:none}
 
+/* Rum (Sonos) */
+.rooms{display:flex;flex-direction:column;border:1.5px solid var(--line);border-radius:16px;overflow:hidden}
+.room{display:flex;align-items:center;gap:12px;padding:8px 12px;border-top:1px solid var(--line);flex-wrap:wrap}
+.room:first-child{border-top:0}
+.room.on{background:var(--dayBg)}
+.rtoggle{flex:1;min-width:200px;min-height:56px;border:0;background:transparent;display:flex;align-items:center;gap:12px;text-align:left;padding:0;color:var(--text)}
+.rtoggle:disabled{cursor:default;opacity:1}
+.rbox{width:30px;height:30px;border-radius:9px;border:2px solid var(--line);display:flex;align-items:center;justify-content:center;font-weight:900;flex:none}
+.room.on .rbox{background:var(--accent);border-color:var(--accent);color:var(--onAccent)}
+.rname{display:flex;flex-direction:column}
+.rname b{font-size:16px}
+.rvol{width:240px;max-width:100%}
+
 /* TV */
 .tvgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
 .tvtile{min-height:140px;border-radius:20px;background:var(--inv);color:var(--invFg);display:flex;flex-direction:column;justify-content:flex-end;padding:18px;text-decoration:none;font-size:22px;font-weight:800;gap:6px}
