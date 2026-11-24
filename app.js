@@ -487,7 +487,7 @@ function wFodbold(size, h = 1, wd = 1) {
   const head = cardHead('Fodbold');
   if (!((settings.football || {}).teams || []).length) return head + '<div class="empty">Vælg favorithold under Indstillinger → Fodbold.</div>';
   if (!FB.state.at) return head + '<div class="empty">Henter kampe …</div>';
-  const { live, done, next } = FB.view(6);
+  const { live, done, next } = FB.view();
   const today = startOfDay(new Date());
   const dayTxt = (d) => (sameDay(d, today) ? 'I dag' : sameDay(d, addDays(today, 1)) ? 'I morgen' : sameDay(d, addDays(today, -1)) ? 'I går' : `${cap(DAYS[d.getDay()]).slice(0, 3)} ${d.getDate()}/${d.getMonth() + 1}`);
   const side = (t, fav) => `<span class="fb-t${t.id === fav ? ' fb-fav' : ''}">${t.logo ? `<img src="${esc(t.logo)}" alt="" loading="lazy">` : '<i></i>'}<span>${esc(t.name)}</span></span>`;
@@ -497,10 +497,10 @@ function wFodbold(size, h = 1, wd = 1) {
     return `<div class="fb-row ${m.state}"><span class="fb-when">${when}<small>${esc(m.comp)}</small></span>${side(m.home, m.fav)}${mid}${side(m.away, m.fav)}</div>`;
   };
   const list = (arr, lab) => (arr.length ? `<div class="fb-col"><div class="fb-lab">${lab}</div><div class="fb-list" data-trim>${arr.map(row).join('')}</div></div>` : '');
-  const recent = done.slice().reverse();
-  if (wd >= 3) return head + `<div class="fb-cols">${list(live.concat(next), 'Kampe')}${list(recent, 'Resultater')}</div>`;
-  // Smalle kort: kampe i gang, de to næste og så de seneste resultater
-  const mix = live.concat(next.slice(0, 2), recent);
+  const recent = done;
+  if (wd >= 3) return head + `<div class="fb-cols">${list(live.concat(next), live.length ? 'Kampe' : 'Næste kamp')}${list(recent, 'Seneste resultat')}</div>`;
+  // Smalle kort: kampe i gang, så seneste resultat og næste kamp
+  const mix = live.concat(recent.slice(0, 1), next.slice(0, 1), recent.slice(1), next.slice(1));
   return head + (mix.length ? `<div class="fb-list" data-trim>${mix.map(row).join('')}</div>` : '<div class="empty">Ingen kampe lige nu.</div>');
 }
 function fodboldSettings() {

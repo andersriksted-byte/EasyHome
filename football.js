@@ -62,10 +62,16 @@ export async function load(force = false) {
   state.loading = false;
 }
 
-// Til kortet: kampe i gang, de seneste resultater og de næste kampe
-export function view(nResults = 3) {
+// Til kortet: kampe i gang, hvert holds næste kamp og hvert holds seneste resultat (kun fra de sidste 10 dage)
+export function view() {
+  const now = Date.now(); const ids = favs().map((t) => t.id);
   const live = state.matches.filter((m) => m.state === 'in');
-  const done = state.matches.filter((m) => m.state === 'post').slice(-nResults);
-  const next = state.matches.filter((m) => m.state === 'pre');
+  const next = []; const done = [];
+  ids.forEach((id) => {
+    const mine = state.matches.filter((m) => m.home.id === id || m.away.id === id);
+    const n = mine.find((m) => m.state === 'pre'); if (n && !next.includes(n) && !live.includes(n)) next.push(n);
+    const d = mine.filter((m) => m.state === 'post' && now - m.date.getTime() < 10 * 86400000).pop(); if (d && !done.includes(d)) done.push(d);
+  });
+  next.sort((a, b) => a.date - b.date); done.sort((a, b) => b.date - a.date);
   return { live, done, next };
 }

@@ -1,5 +1,5 @@
 {
-  "version": "1.54.0",
+  "version": "1.54.1",
   "files": [
     "index.html",
     "app.js",
@@ -24,6 +24,15 @@
     "football.js"
   ],
   "notes": [
+    {
+      "version": "1.54.1",
+      "date": "24. november 2026",
+      "title": "Fodbold: det vigtigste",
+      "items": [
+        "Fodbold-kortet viser nu hvert holds seneste resultat og næste kamp",
+        "Kun resultater fra de sidste 10 dage vises"
+      ]
+    },
     {
       "version": "1.54.0",
       "date": "24. november 2026",
