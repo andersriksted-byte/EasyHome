@@ -1,5 +1,5 @@
 {
-  "version": "1.55.0",
+  "version": "1.55.1",
   "files": [
     "index.html",
     "app.js",
@@ -24,6 +24,14 @@
     "football.js"
   ],
   "notes": [
+    {
+      "version": "1.55.1",
+      "date": "24. november 2026",
+      "title": "Fodbold i rækkefølge",
+      "items": [
+        "Kampene i Fodbold-kortet står nu i kronologisk rækkefølge"
+      ]
+    },
     {
       "version": "1.55.0",
       "date": "24. november 2026",

@@ -499,10 +499,10 @@ function wFodbold(size, h = 1, wd = 1) {
     return `<div class="fb-row ${m.state}"><span class="fb-when">${when}<small>${esc(m.lgRow ? (m.state === 'post' ? 'Slut' : '') : m.comp)}</small></span>${side(m.home, m.fav)}${mid}${side(m.away, m.fav)}</div>`;
   };
   const list = (arr, lab) => (arr.length ? `<div class="fb-col"><div class="fb-lab">${lab}</div><div class="fb-list" data-trim>${arr.join('')}</div></div>` : '');
-  const recent = done;
+  const recent = done.slice().sort((a, b) => a.date - b.date); // alt står i kronologisk rækkefølge
   // Fulgte ligaer: en lille overskrift og så rundens kampe
   const lgRows = (L, sub = true) => (L.round.length ? (sub ? [`<div class="fb-sub">${esc(L.name)}</div>`] : []).concat(L.round.map((m) => row({ ...m, lgRow: true }))) : []);
-  const favNow = live.filter((m) => m.fav).concat(next).map(row); const favDone = recent.map(row);
+  const favNow = live.filter((m) => m.fav).concat(next).sort((a, b) => a.date - b.date).map(row); const favDone = recent.map(row);
   if (wd >= 3) {
     const cols = [];
     if (hasFav) { cols.push(list(favNow, live.length ? 'Kampe' : 'Næste kamp')); cols.push(list(favDone, 'Seneste resultat')); }
@@ -510,8 +510,13 @@ function wFodbold(size, h = 1, wd = 1) {
     const html = cols.filter(Boolean).join('');
     return head + (html ? `<div class="fb-cols">${html}</div>` : '<div class="empty">Ingen kampe lige nu.</div>');
   }
-  // Smalle kort: favoritternes kampe i gang, seneste resultat og næste kamp – derefter ligaernes kampe
-  const mix = live.filter((m) => m.fav).map(row).concat(favDone.slice(0, 1), next.slice(0, 1).map(row), favDone.slice(1), next.slice(1).map(row), lv.flatMap((L) => lgRows(L)));
+  // Smalle kort: alle kampe i én liste i kronologisk rækkefølge – resultater først, så kampe i gang, så kommende
+  const seen = new Set(); const all = recent.concat(live.filter((m) => m.fav), next, lv.flatMap((L) => L.round.map((m) => ({ ...m, lgRow: true }))))
+    .filter((m) => (seen.has(m.id) ? false : seen.add(m.id))).sort((a, b) => a.date - b.date);
+  // Er der ikke plads til alt, skal de kommende og igangværende ikke skubbes ud: begynd ved de seneste resultater
+  const firstOpen = all.findIndex((m) => m.state !== 'post');
+  const start = firstOpen < 0 ? Math.max(0, all.length - 3) : Math.max(0, firstOpen - 2);
+  const mix = all.slice(start).map((m) => row({ ...m, lgRow: false }));
   return head + (mix.length ? `<div class="fb-list" data-trim>${mix.join('')}</div>` : '<div class="empty">Ingen kampe lige nu.</div>');
 }
 function fodboldSettings() {
