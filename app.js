@@ -8,6 +8,7 @@ import { startUpdater } from './updater.js';
 import { startSync, syncNow, syncState } from './sync.js';
 import * as R from './reader.js';
 import * as L from './look.js';
+import * as M from './media.js';
 
 const $ = (s, r = document) => r.querySelector(s);
 
@@ -78,7 +79,7 @@ const D = { weather: null, weatherErr: null, wx: {}, wxErr: {}, compare: null, n
 const home = () => settings.places[0];
 const placeLabel = (p) => p.label || p.name;
 const placeById = (id) => settings.places.find((p) => p.id === id) || home();
-const ui = { bgMsg: null, sizeFor: null, newsIdx: 0, newsAt: Date.now(), feedMsg: null, feedDraft: null, page: pageFromHash(), setTab: 'vejr', wPlace: null, fpPlace: 0, fpTouched: 0, editing: false, calWeek: 0, geo: null, geoMsg: '', tick: 0, connMsg: '' };
+const ui = { cdIdx: 0, cdMsg: null, bgMsg: null, sizeFor: null, newsIdx: 0, newsAt: Date.now(), feedMsg: null, feedDraft: null, page: pageFromHash(), setTab: 'vejr', wPlace: null, fpPlace: 0, fpTouched: 0, editing: false, calWeek: 0, geo: null, geoMsg: '', tick: 0, connMsg: '' };
 function pageFromHash() { const h = location.hash.slice(1); return [...PAGES.map((p) => p.id), 'indstillinger'].includes(h) ? h : 'forside'; }
 
 function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), 2600); }
@@ -100,10 +101,13 @@ function evHtml(ev, day, withWho = true) {
   return `<div class="ev" style="${evStyle(ev)}"><time>${esc(evTime(ev, day))}</time>${esc(ev.title)}${withWho && ev.who ? ` <span style="font-weight:600">· ${esc(ev.who)}</span>` : ''}</div>`;
 }
 function weekStart(offset = 0) { const t = startOfDay(new Date()); const dow = (t.getDay() + 6) % 7; return addDays(t, -dow + offset * 7); }
-function countdownDays() {
-  const t = new Date(settings.countdown.date + 'T00:00'); if (isNaN(t)) return null;
-  return Math.round((startOfDay(t) - startOfDay(new Date())) / 86400000);
+const cdDays = (c) => { const t = new Date((c.date || '') + 'T00:00'); return isNaN(t) ? null : Math.round((startOfDay(t) - startOfDay(new Date())) / 86400000); };
+// Nedtællinger sorteret: kommende først (nærmeste øverst), overståede til sidst
+function countdowns(where = 'card') {
+  const list = (settings.countdowns || []).filter((c) => (c.name || c.date) && (where === 'card' ? c.showCard !== false : where === 'top' ? c.showTop !== false : true)).map((c) => ({ ...c, days: cdDays(c) })).filter((c) => c.days !== null);
+  return list.filter((c) => c.days >= 0).sort((a, b) => a.days - b.days).concat(list.filter((c) => c.days < 0).sort((a, b) => b.days - a.days));
 }
+
 const fmtTemp = (t) => (t === null || t === undefined ? '–' : `${Math.round(t)}°`);
 const num = (v, d = 1) => (v === null || v === undefined ? '–' : v.toFixed(d).replace('.', ','));
 const needProxyMsg = (what) => `<div class="empty">${esc(what)} kræver forbindelsen til jeres lille server (Cloudflare Worker). <button class="btn line" data-act="openSet" data-tab="forbindelse">Opsæt i Indstillinger</button></div>`;
@@ -124,11 +128,11 @@ function renderNav() {
 function renderHeader() {
   const now = new Date();
   const w = D.weather;
-  const cd = countdownDays();
+  const next = countdowns('top').find((c) => c.days >= 0);
   $('#hdr').innerHTML = `
     <div class="clock"><b id="clk">${hhmm(now)}</b><span>${esc(longDate(now))}</span></div>
     ${w ? `<button class="chip" data-act="nav" data-page="vejr">${W.weatherIcon(w.now.code, w.now.isDay, 24)} ${fmtTemp(w.now.temp)} · ${esc(W.codeText(w.now.code).toLowerCase())}</button>` : ''}
-    ${cd !== null && cd >= 0 ? `<span class="chip accent">${cd === 0 ? `I dag: ${esc(settings.countdown.name)}` : `${cd} ${cd === 1 ? 'dag' : 'dage'} til ${esc(settings.countdown.name.toLowerCase())}`}</span>` : ''}
+    ${next ? `<span class="chip accent">${next.days === 0 ? `I dag: ${esc(next.name)}` : `${next.days} ${next.days === 1 ? 'dag' : 'dage'} til ${esc(next.name.toLowerCase())}`}</span>` : ''}
     <div class="right">
       
     </div>`;
@@ -271,12 +275,18 @@ function wTv(size, h = 1, wd = 1) {
   const cols = Math.max(1, Math.min(ch.length, h >= 2 ? wd : wd * 2)); const rows = Math.max(1, Math.min(Math.ceil(ch.length / cols), h * 2));
   return `<div class="lab">DR TV</div><div class="tvw" style="--c:${cols};--r:${rows}">${ch.slice(0, cols * rows).map((c) => `<a class="tvtile" href="${esc(c.url)}" target="_blank" rel="noopener">${fillSvg('play', 28)}${esc(c.name)}</a>`).join('')}</div>`;
 }
-function wNed() {
-  const cd = countdownDays();
-  if (cd === null) return '<div class="lab">Nedtælling</div><div class="empty">Vælg en dato i Indstillinger</div>';
-  const d = new Date(settings.countdown.date + 'T00:00');
-  return `<div class="lab">Nedtælling</div><div class="cdw"><div class="cdn">${cd < 0 ? '✓' : cd}</div><div class="cdl">${cd < 0 ? esc(settings.countdown.name) + ' er overstået' : (cd === 1 ? 'dag til ' : 'dage til ') + esc(settings.countdown.name.toLowerCase())}</div><div class="cdd">${cap(DAYS_LONG[d.getDay()])} ${d.getDate()}. ${MONTHS[d.getMonth()]}</div></div>`;
+function wNed(size, h = 1, wd = 1) {
+  const list = countdowns();
+  if (!list.length) return '<div class="cdcard"><div class="cdinner"><div class="lab">Nedtælling</div><div class="empty">Vælg nedtællinger til kortet under Indstillinger → Kalender.</div></div></div>';
+  const n = list.length; const idx = ((ui.cdIdx % n) + n) % n; const c = list[idx];
+  const d = new Date(c.date + 'T00:00');
+  const img = M.getImage(c.imageId);
+  const label = c.days < 0 ? esc(c.name) + ' er overstået' : c.days === 0 ? 'I dag!' : (c.days === 1 ? 'dag til ' : 'dage til ') + esc(c.name.toLowerCase());
+  return `<div class="cdcard ${img ? 'has-img' : ''}" ${img ? `style="background-image:url('${img}')"` : ''}>
+    <div class="cdinner"><div class="whead"><span class="lab">${esc(c.name)}</span>${pageArrows('cd', idx, n, 'nedtælling')}</div>
+    <div class="cdw"><div class="cdn">${c.days < 0 ? '✓' : c.days}</div><div class="cdl">${label}</div><div class="cdd">${cap(DAYS_LONG[d.getDay()])} ${d.getDate()}. ${MONTHS[d.getMonth()]} ${d.getFullYear()}</div></div></div></div>`;
 }
+
 const WRENDER = { uge: wUge, vejr: wVejr, steder: wSteder, nyheder: wNyheder, sonos: wSonos, tv: wTv, nedtaelling: wNed };
 
 function pageForside() {
@@ -515,7 +525,18 @@ function pageIndstillinger() {
       ${s.calendars.map((c, i) => `<div class="calrow"><input type="text" data-cal="${i}" data-field="name" value="${esc(c.name)}" aria-label="Navn"><input type="color" data-cal="${i}" data-field="color" value="${esc(c.color)}" aria-label="Farve"><input type="url" data-cal="${i}" data-field="url" value="${esc(c.url)}" placeholder="https://… .ics" aria-label="iCal-link"><button class="btn" data-act="calRm" data-i="${i}">Fjern</button></div>`).join('')}
       <div><button class="btn primary" data-act="calAdd">+ Tilføj kalender</button></div>
       ${D.cal && D.cal.errors.length ? `<div class="err">${esc(D.cal.errors.map((e) => e.cal + ': ' + e.msg).join(' · '))}</div>` : ''}</section>
-    <section class="card wide"><b>Nedtælling</b><label class="f">Begivenhed<input type="text" data-set="countdown.name" value="${esc(s.countdown.name)}"></label><label class="f">Dato<input type="date" data-set="countdown.date" value="${esc(s.countdown.date)}"></label></section>`,
+    <section class="card wide"><b>Nedtællinger</b><p class="note">Opret så mange nedtællinger, I vil – fx juleaften, sommerferie og fødselsdage. Den nærmeste vises øverst på skærmen, og på forsiden kan man bladre mellem dem. Tryk på billedfeltet for at vælge et billede.</p>
+      <div class="cdrows">${(s.countdowns || []).map((c, i) => { const img = M.getImage(c.imageId); return `<div class="cdrow">
+        <button class="cdthumb" data-act="cdImg" data-i="${i}" aria-label="Vælg billede til ${esc(c.name || 'nedtælling')}" style="${img ? `background-image:url('${img}')` : ''}">${img ? '' : '+ billede'}</button>
+        <label class="f">Navn<input type="text" data-cd="${i}" data-field="name" value="${esc(c.name)}" placeholder="Fx Sommerferie"></label>
+        <label class="f">Dato<input type="date" data-cd="${i}" data-field="date" value="${esc(c.date)}"></label>
+        <span class="cdshow"><label class="check small"><input type="checkbox" data-cdshow="${i}" data-k="showCard" ${c.showCard !== false ? 'checked' : ''}>Vis i kortet på forsiden</label><label class="check small"><input type="checkbox" data-cdshow="${i}" data-k="showTop" ${c.showTop !== false ? 'checked' : ''}>Vis øverst på skærmen</label></span>
+        <span class="row" style="gap:6px">${c.imageId ? `<button class="ibtn" data-act="cdImgRm" data-i="${i}">Fjern billede</button>` : ''}<button class="ibtn danger" data-act="cdRm" data-i="${i}" aria-label="Slet nedtællingen ${esc(c.name)}">Slet</button></span>
+      </div>`; }).join('')}</div>
+      <input type="file" id="cdFile" accept="image/*" hidden>
+      <div><button class="btn primary" data-act="cdAdd">+ Tilføj nedtælling</button></div>
+      ${ui.cdMsg ? `<div class="small ${ui.cdMsg.err ? 'err' : 'muted'}">${esc(ui.cdMsg.text)}</div>` : ''}
+    </section>`,
     musik: () => `
     <section class="card wide"><b>Sonos</b><div class="muted">${!hasProxy() ? 'Opsæt forbindelsen først.' : S.state.connected ? 'Forbundet.' : 'Ikke forbundet.'}</div>
       <div class="row">${hasProxy() && !S.state.connected ? '<button class="btn primary" data-act="sConnect">Forbind Sonos</button>' : ''}${S.state.connected ? '<button class="btn line" data-act="sLogout">Afbryd Sonos</button>' : ''}</div></section>`,
@@ -639,6 +660,10 @@ const act = {
   calPrev: () => { ui.calWeek--; renderMain(); }, calNext: () => { ui.calWeek++; renderMain(); }, calToday: () => { ui.calWeek = 0; renderMain(); },
   wModel: (b) => { settings.weather.model = b.dataset.model; save(); D.wx = {}; renderMain(); loadWeather(); },
   compare: () => { D.compare = D.compare || []; renderMain(); loadCompare(); },
+  cdAdd: () => { settings.countdowns = (settings.countdowns || []).concat([{ id: uid(), name: '', date: '', imageId: '' }]); save(); renderMain(); setTimeout(() => { const el = document.querySelectorAll('[data-cd][data-field=name]'); if (el.length) el[el.length - 1].focus(); }, 50); },
+  cdRm: (b) => { const [c] = settings.countdowns.splice(+b.dataset.i, 1); if (c && c.imageId) M.removeImage(c.imageId); ui.cdIdx = 0; save(); renderHeader(); renderMain(); },
+  cdImg: (b) => { const f = $('#cdFile'); if (f) { f.dataset.i = b.dataset.i; f.value = ''; f.click(); } },
+  cdImgRm: (b) => { const c = settings.countdowns[+b.dataset.i]; if (c) { M.removeImage(c.imageId); c.imageId = ''; save(); renderMain(); } },
   bgPick: (b) => { ui.bgMsg = null; L.setLook({ bg: b.dataset.id }); renderMain(); },
   bgFile: () => { const f = $('#bgFileInput'); if (f) f.click(); },
   bgUrl: () => {
@@ -688,6 +713,7 @@ const act = {
   setTab: (b) => { ui.setTab = b.dataset.tab; ui.geo = null; renderMain(false); },
   wStep: (b) => {
     const n = settings.places.length; const dir = +b.dataset.dir;
+    if (b.dataset.scope === 'cd') { const m = Math.max(1, countdowns().length); ui.cdIdx = (((ui.cdIdx + dir) % m) + m) % m; renderMain(); return; }
     if (b.dataset.scope === 'cal') { ui.calWeek += dir; renderMain(); return; }
     if (b.dataset.scope === 'news') { const m = Math.max(1, newsSources().length); ui.newsIdx = (((ui.newsIdx + dir) % m) + m) % m; ui.newsAt = Date.now(); renderMain(); return; }
     if (b.dataset.scope === 'fp') { ui.fpPlace = (((ui.fpPlace + dir) % n) + n) % n; ui.fpTouched = Date.now(); }
@@ -745,7 +771,7 @@ document.addEventListener('change', (e) => {
     if (t.dataset.set.startsWith('proxy.')) { S.state.checked = false; }
     if (t.dataset.set === 'weather.model') { D.wx = {}; loadWeather(); }
     if (t.dataset.set === 'news.publicProxyForTest') { N.clearNewsCache(); loadNews(); }
-    if (t.dataset.set.startsWith('countdown') || t.dataset.set.endsWith('Theme')) { applyTheme(); renderHeader(); }
+    if (t.dataset.set.endsWith('Theme')) { applyTheme(); renderHeader(); }
   } else if (t.dataset.news) { toggleNews(t.dataset.news); }
   else if (t.dataset.cal !== undefined) { settings.calendars[+t.dataset.cal][t.dataset.field] = t.value.trim(); save(); C.clearCalCache(); loadCal(); }
   else if (t.id === 'bgFileInput' && t.files && t.files[0]) {
@@ -753,6 +779,13 @@ document.addEventListener('change', (e) => {
     L.uploadImage(t.files[0]).then((r) => { ui.bgMsg = { err: false, text: r.shared ? 'Billedet er gemt og deles med jeres andre skærme ✓' : 'Billedet er gemt på denne skærm.' }; renderMain(); })
       .catch((e) => { ui.bgMsg = { err: true, text: e.message }; renderMain(); });
   }
+  else if (t.id === 'cdFile' && t.files && t.files[0]) {
+    const i = +t.dataset.i; ui.cdMsg = { err: false, text: 'Gemmer billedet …' }; renderMain();
+    M.saveImage(t.files[0]).then((r) => { const c = settings.countdowns[i]; if (c) { if (c.imageId) M.removeImage(c.imageId); c.imageId = r.id; save(); } ui.cdMsg = { err: false, text: r.shared ? 'Billedet er gemt og deles med jeres andre skærme ✓' : 'Billedet er gemt på denne skærm.' }; renderMain(); })
+      .catch((e) => { ui.cdMsg = { err: true, text: e.message }; renderMain(); });
+  }
+  else if (t.dataset.cdshow !== undefined) { const c = settings.countdowns[+t.dataset.cdshow]; if (c) { c[t.dataset.k] = t.checked; ui.cdIdx = 0; save(); renderHeader(); } }
+  else if (t.dataset.cd !== undefined) { const c = settings.countdowns[+t.dataset.cd]; if (c) { c[t.dataset.field] = t.value.trim(); save(); renderHeader(); } }
   else if (t.hasAttribute('data-look-blur')) { L.setLook({ blur: t.checked }); }
   else if (t.dataset.place !== undefined) { settings.places[+t.dataset.place].label = t.value.trim(); save(); renderHeader(); }
   else if (t.dataset.tv !== undefined) { settings.tv.channels[+t.dataset.tv][t.dataset.field] = t.value.trim(); save(); }
@@ -762,7 +795,7 @@ document.addEventListener('change', (e) => {
 window.addEventListener('hashchange', () => { const p = pageFromHash(); if (p !== ui.page) { ui.page = p; renderNav(); renderMain(false); } });
 
 /* ---------- Swipe i kort med flere sider (vejr, nyheder) ---------- */
-const SWIPE_SCOPE = { vejr: 'fp', nyheder: 'news' };
+const SWIPE_SCOPE = { vejr: 'fp', nyheder: 'news', nedtaelling: 'cd' };
 let swipe = null; let swipedAt = 0;
 document.addEventListener('pointerdown', (e) => {
   if (ui.editing || e.target.closest('.hours, input, .handle')) return; // timeoversigten scroller selv vandret
@@ -816,6 +849,8 @@ document.addEventListener('pointercancel', endDrag);
 
 /* ---------- Start ---------- */
 function boot() {
+  if (!Array.isArray(settings.countdowns)) { const c = settings.countdown || {}; settings.countdowns = c.name || c.date ? [{ id: uid(), name: c.name || '', date: c.date || '', imageId: '' }] : []; save(); }
+  M.onMediaLoaded(() => softRender());
   if (settings.layout.some((x) => !x.w)) { settings.layout = settings.layout.map((x) => { const [w, h] = shapeOf(x); return { id: x.id, w, h }; }); save(); }
   if (settings.navOpen) { settings.navOpen = false; }
   // Engangsoprydning: 'Vejret andre steder' blev sat på forsiden automatisk i 1.1.0 – fjern det igen

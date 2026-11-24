@@ -175,6 +175,23 @@ a{color:var(--accent)}
 .tvw{flex:1;min-height:0;display:grid;grid-template-columns:repeat(var(--c),minmax(0,1fr));grid-template-rows:repeat(var(--r),minmax(0,1fr));gap:8px}
 .tvw .tvtile{min-height:0;font-size:clamp(15px,5cqmin,22px);padding:14px}
 /* Nedtælling */
+.w[data-wid=nedtaelling]{padding:0}
+.cdcard{flex:1;display:flex;flex-direction:column;border-radius:20px;background-size:cover;background-position:center;min-height:0;overflow:hidden}
+.cdinner{flex:1;display:flex;flex-direction:column;gap:10px;padding:18px 20px}
+.cdcard.has-img .cdinner{background:linear-gradient(180deg,rgba(0,0,0,.35),rgba(0,0,0,.05) 35%,rgba(0,0,0,.6));color:#fff}
+.cdcard.has-img .lab,.cdcard.has-img .cdd{color:rgba(255,255,255,.9)}
+.cdcard.has-img .cdn,.cdcard.has-img .cdl{text-shadow:0 2px 14px rgba(0,0,0,.45)}
+.cdcard.has-img .parrows .arr{background:rgba(255,255,255,.22);color:#fff}
+.cdcard.has-img .parrows .dots i{background:rgba(255,255,255,.4)}.cdcard.has-img .parrows .dots i.on{background:#fff}
+.w[data-wid=nedtaelling] .wbar,.w[data-wid=nedtaelling] .shapes{margin:10px 12px 0}
+.cdrows{display:flex;flex-direction:column;gap:10px}
+.cdrow{display:grid;grid-template-columns:96px minmax(0,1.4fr) minmax(0,1fr) auto auto;gap:12px;align-items:center;padding:10px;border:1.5px solid var(--line);border-radius:16px}
+.cdshow{display:flex;flex-direction:column}
+.cdshow .check{min-height:32px;gap:8px;font-size:13px}
+.cdshow .check input{width:20px;height:20px}
+.cdthumb{width:96px;height:72px;border-radius:12px;border:2px dashed var(--line);background:var(--bg) center/cover no-repeat;color:var(--muted);font-size:12px;font-weight:800}
+.cdthumb[style*=url]{border-style:solid}
+@media (max-width:900px){.cdrow{grid-template-columns:80px 1fr 1fr}.cdrow>.row,.cdrow>.cdshow{grid-column:1/-1}.cdshow{flex-direction:row;gap:16px}}
 .cdw{flex:1;display:flex;flex-direction:column;justify-content:center;gap:4px}
 .cdn{font-size:clamp(56px,38cqmin,220px);font-weight:800;line-height:.9;letter-spacing:-.04em}
 .cdl{font-size:clamp(15px,5cqmin,26px);font-weight:700}

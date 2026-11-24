@@ -1,5 +1,5 @@
 {
-  "version": "1.12.1",
+  "version": "1.13.0",
   "files": [
     "index.html",
     "app.js",
@@ -14,9 +14,21 @@
     "manifest.webmanifest",
     "sync.js",
     "reader.js",
-    "look.js"
+    "look.js",
+    "media.js"
   ],
   "notes": [
+    {
+      "version": "1.13.0",
+      "date": "24. november 2026",
+      "title": "Flere nedtællinger – med billeder",
+      "items": [
+        "Opret så mange nedtællinger, I vil, under Indstillinger → Kalender.",
+        "Giv hver nedtælling sit eget billede – det fylder hele kortet på forsiden.",
+        "Vælg for hver nedtælling, om den skal med i kortet og/eller øverst på skærmen.",
+        "Bladr mellem nedtællingerne i kortet med pilene eller ved at swipe."
+      ]
+    },
     {
       "version": "1.12.1",
       "date": "24. november 2026",

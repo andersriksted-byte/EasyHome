@@ -35,7 +35,8 @@ export const DEFAULTS = {
   weather: { model: 'dmi_seamless' },
   news: { sources: ['dr-seneste', 'tv2', 'jp'], custom: [], publicProxyForTest: false, rotateSecs: 20 },
   calendars: [],
-  countdown: { name: 'Juleaften', date: '2026-12-24' },
+  countdown: { name: 'Juleaften', date: '2026-12-24' }, // ældre felt – flyttes til countdowns ved start
+  countdowns: undefined,
   sonos: { groupId: null },
   look: { bg: 'theme', url: '', imageId: '', alpha: 100, blur: true },
   tv: {

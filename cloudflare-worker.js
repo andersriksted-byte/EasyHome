@@ -156,6 +156,22 @@ export default {
       if (!keyOk(req, env)) return json(env, { error: 'Forkert nøgle' }, 401);
       if (path === '/health') return json(env, { ok: true, sonosConfigured: sonosReady(env), version: 3 });
       if (path === '/proxy') return await proxy(req, env, ctx);
+      if (path.startsWith('/media/')) {
+        if (!env.DASH_KV) return json(env, { error: 'DASH_KV mangler' }, 501);
+        const id = decodeURIComponent(path.slice(7));
+        if (!/^[a-z0-9-]{1,40}$/i.test(id)) return json(env, { error: 'Ugyldigt id' }, 400);
+        if (req.method === 'POST') {
+          const body = await req.text();
+          if (body.length > 3000000) return json(env, { error: 'Billedet er for stort' }, 413);
+          const parsed = JSON.parse(body);
+          if (parsed.delete) { await env.DASH_KV.delete('media_' + id); return json(env, { ok: true }); }
+          if (!/^data:image\/(jpeg|png|webp);base64,/.test(parsed.data || '')) return json(env, { error: 'Ugyldigt billede' }, 400);
+          await env.DASH_KV.put('media_' + id, parsed.data);
+          return json(env, { ok: true });
+        }
+        const data = await env.DASH_KV.get('media_' + id);
+        return json(env, { id, data: data || '' });
+      }
       if (path === '/bg') {
         if (!env.DASH_KV) return json(env, { error: 'DASH_KV mangler' }, 501);
         if (req.method === 'POST') {
