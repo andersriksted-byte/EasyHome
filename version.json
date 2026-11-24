@@ -1,5 +1,5 @@
 {
-  "version": "1.24.0",
+  "version": "1.25.0",
   "files": [
     "index.html",
     "app.js",
@@ -20,6 +20,16 @@
     "madro.js"
   ],
   "notes": [
+    {
+      "version": "1.25.0",
+      "date": "24. november 2026",
+      "title": "Mindre tekst i små kort og blødere flyt",
+      "items": [
+        "Vælger I Mellem eller Små kort, bliver tekst og ikoner nu mindre i samme forhold som kortene.",
+        "Når I flytter kort under Tilpas forside, løftes kortet op og følger fingeren, og de andre kort glider på plads.",
+        "Træk i Flyt – eller hold fingeren på kortet et øjeblik og træk."
+      ]
+    },
     {
       "version": "1.24.0",
       "date": "24. november 2026",

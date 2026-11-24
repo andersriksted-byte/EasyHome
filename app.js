@@ -736,7 +736,7 @@ function renderMain(keepScroll = true) {
   if (ui.hdrPage !== ui.page) { ui.hdrPage = ui.page; renderHeader(); }
   showMadroFrame(ui.page === 'madro');
   m.innerHTML = PAGE_RENDER[ui.page]();
-  if (ui.page === 'forside') { fitCards(); trimCards(); }
+  if (ui.page === 'forside') { scaleGrid(); fitCards(); trimCards(); }
   if (keepScroll) m.scrollTop = y;
 }
 // Sørg for at kort som kalenderen altid viser alt: først kompakt visning, derefter scroll inde i kortet (størrelsen ændres aldrig)
@@ -758,6 +758,19 @@ function fitCards() {
   });
 }
 // Lister (nyheder, dage, favoritter) viser kun hele elementer – det sidste, der ikke kan være der, fjernes
+// Mellem/Små kort: forsiden lægges ud som ved Store (4 i bredden) og skaleres derefter ned,
+// så tekst, ikoner og afstande bliver mindre i samme forhold som kortene.
+function scaleGrid() {
+  const wrap = document.querySelector('.gridwrap'); if (!wrap) return;
+  const cols = settings.gridCols || 4;
+  const narrow = window.matchMedia('(max-width:900px)').matches;
+  wrap.style.zoom = ''; wrap.style.width = '';
+  if (cols <= 4 || narrow) return;
+  const k = 4 / cols;
+  const W = wrap.getBoundingClientRect().width;
+  wrap.style.width = (W / k) + 'px';
+  wrap.style.zoom = k;
+}
 function trimCards() {
   document.querySelectorAll('#grid .w [data-trim]').forEach((list) => {
     let guard = 60;
@@ -1032,35 +1045,85 @@ document.addEventListener('pointercancel', () => { swipe = null; }, true);
 // Et swipe må ikke samtidig åbne en nyhed
 document.addEventListener('click', (e) => { if (Date.now() - swipedAt < 400) { e.preventDefault(); e.stopPropagation(); } }, true);
 
-/* ---------- Træk og slip på forsiden (virker med finger og mus) ---------- */
+/* ---------- Træk og slip på forsiden (virker med finger og mus) ----------
+   Kortet løftes op og følger fingeren, de andre kort glider på plads, og kortet lander blødt.
+   Mus: træk hvor som helst på kortet. Finger: træk i "Flyt", eller hold fingeren på kortet et øjeblik. */
 let drag = null;
+const gridZoom = () => { const w = document.querySelector('.gridwrap'); return (w && +w.style.zoom) || 1; };
 document.addEventListener('pointerdown', (e) => {
-  const h = e.target.closest('.handle'); if (!h || !ui.editing) return;
-  const card = h.closest('.w'); if (!card) return;
-  e.preventDefault();
-  drag = { card, id: card.dataset.wid, last: card.dataset.wid };
-  card.classList.add('dragging');
-  try { h.setPointerCapture(e.pointerId); } catch (err) { /* ignorer */ }
+  if (!ui.editing || e.button > 0) return;
+  const card = e.target.closest('#grid .w'); if (!card) return;
+  const onHandle = !!e.target.closest('.handle');
+  if (!onHandle && e.target.closest('button, input, select, a, label, .shapes')) return;
+  if (onHandle) e.preventDefault();
+  drag = { card, id: card.dataset.wid, x0: e.clientX, y0: e.clientY, x: e.clientX, y: e.clientY, active: false, onHandle, touch: e.pointerType === 'touch', lockUntil: 0 };
+  if (drag.touch && !onHandle) drag.timer = setTimeout(() => { if (drag && !drag.active) startDrag(); }, 260);
 });
+function startDrag() {
+  const d = drag; d.active = true; clearTimeout(d.timer);
+  const k = gridZoom(); d.k = k;
+  const r = d.card.getBoundingClientRect(); d.rect = r;
+  const g = d.card.cloneNode(true);
+  g.classList.add('dragghost'); g.removeAttribute('id');
+  Object.assign(g.style, { left: r.left + 'px', top: r.top + 'px', width: r.width / k + 'px', height: r.height / k + 'px', zoom: k });
+  document.body.appendChild(g); d.ghost = g;
+  requestAnimationFrame(() => g.classList.add('lifted'));
+  d.card.classList.add('dragslot');
+  try { navigator.vibrate && navigator.vibrate(8); } catch (e) { /* ignorer */ }
+  autoScroll();
+}
+function moveGhost() { const d = drag; if (!d || !d.ghost) return; d.ghost.style.transform = `translate(${(d.x - d.x0) / d.k}px,${(d.y - d.y0) / d.k}px)`; }
+function autoScroll() {
+  if (!drag || !drag.active) return;
+  const m = $('#main'); const r = m.getBoundingClientRect(); const edge = 90;
+  const v = drag.y < r.top + edge ? -(r.top + edge - drag.y) : drag.y > r.bottom - edge ? drag.y - (r.bottom - edge) : 0;
+  if (v) { m.scrollTop += Math.max(-22, Math.min(22, v / 4)); reorderAt(drag.x, drag.y); }
+  requestAnimationFrame(autoScroll);
+}
+// Flyt pladsholderen hen under fingeren og lad de andre kort glide på plads (FLIP-animation)
+function reorderAt(x, y) {
+  const d = drag; if (!d || Date.now() < d.lockUntil) return;
+  const el = document.elementFromPoint(x, y); const over = el && el.closest('#grid .w');
+  if (!over || over === d.card) return;
+  const grid = $('#grid'); const cards = [...grid.children];
+  const from = cards.indexOf(d.card); const to = cards.indexOf(over);
+  const before = new Map(cards.map((c) => [c, c.getBoundingClientRect()]));
+  grid.insertBefore(d.card, from < to ? over.nextSibling : over);
+  const k = d.k || 1;
+  cards.forEach((c) => {
+    const a = c.getBoundingClientRect(); const b = before.get(c);
+    const dx = (b.left - a.left) / k; const dy = (b.top - a.top) / k;
+    if (!dx && !dy) return;
+    c.style.transition = 'none'; c.style.transform = `translate(${dx}px,${dy}px)`;
+    requestAnimationFrame(() => requestAnimationFrame(() => { c.style.transition = 'transform .28s cubic-bezier(.2,.8,.2,1)'; c.style.transform = ''; }));
+  });
+  d.lockUntil = Date.now() + 180;
+}
 document.addEventListener('pointermove', (e) => {
   if (!drag) return;
-  const m = $('#main'); const r = m.getBoundingClientRect();
-  if (e.clientY < r.top + 70) m.scrollBy(0, -24); else if (e.clientY > r.bottom - 70) m.scrollBy(0, 24);
-  const el = document.elementFromPoint(e.clientX, e.clientY);
-  const over = el && el.closest('.w');
-  if (!over || over.dataset.wid === drag.last) return;
-  drag.last = over.dataset.wid;
-  if (over === drag.card) return;
-  const grid = $('#grid'); const cards = [...grid.children];
-  const from = cards.indexOf(drag.card); const to = cards.indexOf(over);
-  grid.insertBefore(drag.card, from < to ? over.nextSibling : over);
+  drag.x = e.clientX; drag.y = e.clientY;
+  if (!drag.active) {
+    const dist = Math.hypot(e.clientX - drag.x0, e.clientY - drag.y0);
+    if (drag.touch && !drag.onHandle) { if (dist > 10) { clearTimeout(drag.timer); drag = null; } return; } // fingeren scroller siden
+    if (dist < (drag.onHandle ? 3 : 6)) return;
+    startDrag();
+  }
+  e.preventDefault();
+  moveGhost(); reorderAt(e.clientX, e.clientY);
 });
+// Hold siden stille, mens et kort trækkes med fingeren
+document.addEventListener('touchmove', (e) => { if (drag && drag.active) e.preventDefault(); }, { passive: false });
 const endDrag = () => {
-  if (!drag) return;
-  drag.card.classList.remove('dragging');
+  const d = drag; if (!d) return;
+  clearTimeout(d.timer); drag = null;
+  if (!d.active) return;
+  swipedAt = Date.now(); // et træk må ikke blive til et tryk
   const order = [...$('#grid').children].map((c) => c.dataset.wid);
   settings.layout.sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
-  save(); drag = null;
+  const r = d.card.getBoundingClientRect(); const g = d.ghost;
+  g.classList.remove('lifted'); g.classList.add('landing');
+  g.style.transform = `translate(${(r.left - d.rect.left) / d.k}px,${(r.top - d.rect.top) / d.k}px)`;
+  setTimeout(() => { g.remove(); d.card.classList.remove('dragslot'); save(); }, 240);
 };
 document.addEventListener('pointerup', endDrag);
 document.addEventListener('pointercancel', endDrag);
