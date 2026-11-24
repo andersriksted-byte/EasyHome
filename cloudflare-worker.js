@@ -8,6 +8,7 @@
 //   SONOS_CLIENT_ID      – "Key" fra Sonos developer-portalen
 //   SONOS_CLIENT_SECRET  (secret) – "Secret" fra Sonos developer-portalen
 //   SOMFY_USER, SOMFY_PASSWORD (secrets) – login til Somfy-appen (TaHoma), bruges til at styre screens m.m.
+//   TOMTOM_KEY (secret, valgfri) – giver køretid med trafik til "Næste i kalenderen". Uden den bruges OpenStreetMap uden trafik.
 //   EXTRA_HOSTS          – valgfrit: ekstra domæner til egne RSS-feeds, adskilt af komma
 // KV-binding: DASH_KV (Storage & Databases → KV → opret "easyhome" → bind som DASH_KV)
 
@@ -204,6 +205,54 @@ async function somfy(req, env, path) {
   } catch (e) { return json(env, { error: e.message }, 502); }
 }
 
+/* ---------- Køretid til næste aftale ---------- */
+// Finder adressen (stedet i kalenderen) og beregner køretiden hjemmefra. Med TOMTOM_KEY: med trafik og ankomsttid.
+const UA = { 'User-Agent': 'easyHome/1.0 (privat familie-dashboard)' };
+async function geocode(env, q) {
+  const key = 'geo_' + q.toLowerCase().slice(0, 200);
+  const hit = env.DASH_KV && (await env.DASH_KV.get(key));
+  if (hit) return JSON.parse(hit);
+  const tries = [q, q.split(/\n|, /).slice(1).join(', ')].filter((x, i, a) => x && a.indexOf(x) === i);
+  let found = null;
+  for (const t of tries) {
+    if (env.TOMTOM_KEY) {
+      const r = await fetch(`https://api.tomtom.com/search/2/search/${encodeURIComponent(t)}.json?key=${env.TOMTOM_KEY}&countrySet=DK&limit=1&language=da-DK`).then((x) => x.json()).catch(() => null);
+      const p = r && r.results && r.results[0]; if (p) { found = { lat: p.position.lat, lon: p.position.lon, name: (p.poi && p.poi.name) || (p.address && p.address.freeformAddress) || t }; break; }
+    } else {
+      const r = await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=dk&q=${encodeURIComponent(t)}`, { headers: UA }).then((x) => x.json()).catch(() => null);
+      const p = r && r[0]; if (p) { found = { lat: +p.lat, lon: +p.lon, name: p.name || t }; break; }
+    }
+  }
+  if (env.DASH_KV) await env.DASH_KV.put(key, JSON.stringify(found), { expirationTtl: found ? 60 * 60 * 24 * 30 : 60 * 60 * 24 });
+  return found;
+}
+async function route(req, env, ctx) {
+  const p = new URL(req.url).searchParams;
+  const [flat, flon] = (p.get('from') || '').split(',').map(Number);
+  const to = (p.get('to') || '').trim().slice(0, 300); const at = p.get('at') || '';
+  if (!isFinite(flat) || !isFinite(flon) || !to) return json(env, { error: 'Mangler fra/til' }, 400);
+  const ck = new Request('https://cache.easyhome/route/' + encodeURIComponent([flat.toFixed(3), flon.toFixed(3), to, at.slice(0, 15)].join('|')));
+  const hit = await caches.default.match(ck);
+  if (hit) { const o = new Response(hit.body, hit); for (const [k, v] of Object.entries(cors(env))) o.headers.set(k, v); return o; }
+  const dest = await geocode(env, to);
+  let out = { found: !!dest };
+  if (dest) {
+    if (env.TOMTOM_KEY) {
+      const arrive = at && new Date(at) > new Date(Date.now() + 10 * 60000) ? `&arriveAt=${encodeURIComponent(new Date(at).toISOString())}` : '';
+      const r = await fetch(`https://api.tomtom.com/routing/1/calculateRoute/${flat},${flon}:${dest.lat},${dest.lon}/json?key=${env.TOMTOM_KEY}&traffic=true&travelMode=car${arrive}`).then((x) => x.json()).catch(() => null);
+      const s = r && r.routes && r.routes[0] && r.routes[0].summary;
+      if (s) out = { found: true, place: dest.name, min: Math.round(s.travelTimeInSeconds / 60), km: Math.round(s.lengthInMeters / 100) / 10, delayMin: Math.round((s.trafficDelayInSeconds || 0) / 60), departAt: s.departureTime || null, traffic: true };
+    } else {
+      const r = await fetch(`https://router.project-osrm.org/route/v1/driving/${flon},${flat};${dest.lon},${dest.lat}?overview=false`, { headers: UA }).then((x) => x.json()).catch(() => null);
+      const rt = r && r.routes && r.routes[0];
+      if (rt) out = { found: true, place: dest.name, min: Math.round(rt.duration / 60), km: Math.round(rt.distance / 100) / 10, traffic: false };
+    }
+  }
+  const res = new Response(JSON.stringify(out), { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'max-age=' + (out.traffic ? 600 : 3600) } });
+  ctx.waitUntil(caches.default.put(ck, res.clone()));
+  const o = new Response(res.body, res); for (const [k, v] of Object.entries(cors(env))) o.headers.set(k, v); return o;
+}
+
 /* ---------- Sonos ---------- */
 const sonosReady = (env) => !!(env.SONOS_CLIENT_ID && env.SONOS_CLIENT_SECRET && env.DASH_KV);
 const basic = (env) => 'Basic ' + btoa(env.SONOS_CLIENT_ID + ':' + env.SONOS_CLIENT_SECRET);
@@ -290,6 +339,7 @@ export default {
       if (path.startsWith('/auth/')) return await auth(req, env, path);
       if (!(await authOk(req, env))) return json(env, { error: 'Forkert nøgle' }, 401);
       if (path.startsWith('/somfy/')) return await somfy(req, env, path);
+      if (path === '/route') return await route(req, env, ctx);
       if (path === '/health') return json(env, { ok: true, sonosConfigured: sonosReady(env), version: 3 });
       if (path === '/proxy') return await proxy(req, env, ctx);
       if (path === '/art') {

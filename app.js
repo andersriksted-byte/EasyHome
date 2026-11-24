@@ -418,7 +418,22 @@ function wMadplan(size, h = 1, wd = 1, x = {}) {
   const layout = cols ? `style="grid-template-columns:repeat(${n},minmax(0,1fr))"` : `style="grid-template-rows:repeat(${n},minmax(0,1fr))"`;
   return `${cardHead('Madplan · 5 dage')}<div class="mdplan md-${cols ? 'wide' : kind === 'big' ? 'list' : kind}" ${layout}>${cells}</div>`;
 }
-// Næste i kalenderen: den næste aftale stort med "om 25 min", derefter de følgende
+// Køretid hjemmefra til aftalens sted (hentes via workeren, gemmes 10 min)
+const ROUTES = {};
+const isPlace = (loc) => loc && !/^https?:|teams|zoom|meet\.google|online|virtuel/i.test(loc) && loc.trim().length > 2;
+function routeFor(e) {
+  if (!hasProxy() || !isPlace(e.location)) return null;
+  const home = settings.places[0]; if (!home) return null;
+  const key = e.location + '|' + e.start.toISOString();
+  const r = ROUTES[key];
+  if (!r || Date.now() - r.at > 10 * 60000) {
+    ROUTES[key] = { at: Date.now(), data: r && r.data };
+    workerFetch(`/route?from=${home.lat},${home.lon}&to=${encodeURIComponent(e.location)}&at=${encodeURIComponent(e.start.toISOString())}`).then((x) => x.json()).then((d) => { ROUTES[key] = { at: Date.now(), data: d }; if (ui.page === 'forside') softRender(); }).catch(() => {});
+  }
+  return ROUTES[key].data || null;
+}
+const durTxt = (min) => (min >= 60 ? `${Math.floor(min / 60)} t${min % 60 ? ' ' + (min % 60) + ' min' : ''}` : `${Math.max(1, min)} min`);
+// Næste i kalenderen: hvor lang tid der er til – og hvornår man skal køre, hvis aftalen er et andet sted
 function wNaeste(size, h = 1, wd = 1) {
   if (!D.cal) return cardHead('Næste') + '<div class="empty">Henter kalender …</div>';
   const now = Date.now();
@@ -426,16 +441,31 @@ function wNaeste(size, h = 1, wd = 1) {
   if (!evs.length) return cardHead('Næste') + '<div class="empty">Ingen kommende aftaler.</div>';
   const e = evs[0]; const running = e.start.getTime() <= now;
   const mins = Math.round((e.start.getTime() - now) / 60000);
-  const when = running ? `I gang · slutter ${hhmm(e.end)}` : mins < 60 ? `Om ${Math.max(1, mins)} min` : sameDay(e.start, new Date()) ? `I dag kl. ${hhmm(e.start)}` : sameDay(e.start, addDays(new Date(), 1)) ? `I morgen kl. ${hhmm(e.start)}` : `${cap(DAYS_LONG[e.start.getDay()])} kl. ${hhmm(e.start)}`;
-  const kind = shapeKind(wd, h); const more = kind === 'tiny' ? 2 : kind === 'wide' ? 2 : 5;
-  const day = (d) => (sameDay(d, new Date()) ? '' : sameDay(d, addDays(new Date(), 1)) ? 'I morgen ' : cap(DAYS[d.getDay()]) + ' ');
-  return cardHead('Næste', `<span class="small muted">${running ? 'nu' : hhmm(e.start)}</span>`) + `<div class="nx ${kind === 'wide' ? 'nx-wide' : ''}">
+  const kind = shapeKind(wd, h);
+  // Ring: hvor meget af de sidste 3 timer før aftalen der er tilbage
+  const frac = running ? 1 - (now - e.start) / Math.max(1, e.end - e.start) : Math.max(0, Math.min(1, mins / 180));
+  const big = running ? 'Nu' : mins < 60 ? `${Math.max(1, mins)}` : mins < 24 * 60 ? `${Math.floor(mins / 60)}:${pad(mins % 60)}` : `${Math.round(mins / 1440)}`;
+  const unit = running ? `til ${hhmm(e.end)}` : mins < 60 ? 'min' : mins < 24 * 60 ? 'timer' : Math.round(mins / 1440) === 1 ? 'dag' : 'dage';
+  const ring = `<svg class="nx-ring" viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="44" class="bg"/><circle cx="50" cy="50" r="44" class="fg" style="stroke:${esc(e.color || 'var(--accent)')};stroke-dasharray:${(frac * 276.5).toFixed(1)} 276.5"/></svg>`;
+  const day = sameDay(e.start, new Date()) ? 'I dag' : sameDay(e.start, addDays(new Date(), 1)) ? 'I morgen' : cap(DAYS_LONG[e.start.getDay()]);
+  // Køreplan
+  let drive = '';
+  const rt = !running ? routeFor(e) : null;
+  if (rt && rt.found && rt.min >= 3) {
+    const leave = new Date(rt.departAt ? Date.parse(rt.departAt) - 5 * 60000 : e.start.getTime() - (rt.min + 5) * 60000);
+    const lm = Math.round((leave - now) / 60000);
+    const cls = lm <= 0 ? 'go' : lm <= 15 ? 'soon' : '';
+    const head = lm <= 0 ? 'Kør nu!' : lm <= 60 ? `Kør om ${lm} min` : `Kør kl. ${hhmm(leave)}`;
+    drive = `<div class="nx-drive ${cls}"><span class="nx-car" aria-hidden="true">🚗</span><span><b>${head}</b><small>${durTxt(rt.min)} · ${String(rt.km).replace('.', ',')} km${rt.traffic ? (rt.delayMin >= 2 ? ` · +${rt.delayMin} min trafik` : ' · fri trafik') : ''}</small></span></div>`;
+  } else if (isPlace(e.location) && !running) drive = `<div class="nx-drive muted"><span class="nx-car" aria-hidden="true">📍</span><span><small>${esc(e.location.split('\n')[0])}</small></span></div>`;
+  const more = kind === 'tiny' ? 1 : kind === 'wide' ? 3 : 5;
+  const rows = evs.slice(1, 1 + more).map((x) => `<div class="nx-row" style="--c:${esc(x.color || 'var(--accent)')}"><span class="nx-t">${sameDay(x.start, new Date()) ? '' : sameDay(x.start, addDays(new Date(), 1)) ? 'I morgen ' : cap(DAYS[x.start.getDay()]) + ' '}${hhmm(x.start)}</span><span class="nx-n">${esc(x.title)}</span></div>`).join('');
+  return cardHead('Næste aftale', `<span class="small muted">${day}</span>`) + `<div class="nx ${kind === 'wide' || kind === 'big' ? 'nx-wide' : ''}">
     <button class="nx-main" data-act="nav" data-page="kalender" style="--c:${esc(e.color || 'var(--accent)')}">
-      <span class="nx-when ${running ? 'now' : mins < 60 ? 'soon' : ''}">${esc(when)}</span>
-      <b>${esc(e.title)}</b>
-      <span class="nx-sub">${hhmm(e.start)}–${hhmm(e.end)}${e.who ? ' · ' + esc(e.who) : ''}${e.location ? ' · ' + esc(e.location) : ''}</span>
+      <span class="nx-count">${ring}<span class="nx-num ${!running && mins <= 15 ? 'soon' : ''}"><b>${big}</b><small>${unit}</small></span></span>
+      <span class="nx-info"><b>${esc(e.title)}</b><span class="nx-sub">${hhmm(e.start)}–${hhmm(e.end)}${e.who ? ' · ' + esc(e.who) : ''}</span>${drive}</span>
     </button>
-    <div class="nx-list">${evs.slice(1, 1 + more).map((x) => `<div class="nx-row" style="--c:${esc(x.color || 'var(--accent)')}"><span class="nx-t">${day(x.start)}${hhmm(x.start)}</span><span class="nx-n">${esc(x.title)}</span></div>`).join('')}</div>
+    ${rows ? `<div class="nx-list">${rows}</div>` : ''}
   </div>`;
 }
 // Dagens ret: stort billede, navn, tid og om der er handlet ind. Efter kl. 20 vises morgendagens ret.
