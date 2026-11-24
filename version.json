@@ -1,5 +1,5 @@
 {
-  "version": "1.55.1",
+  "version": "1.55.2",
   "files": [
     "index.html",
     "app.js",
@@ -24,6 +24,15 @@
     "football.js"
   ],
   "notes": [
+    {
+      "version": "1.55.2",
+      "date": "24. november 2026",
+      "title": "Fodbold: fulgte ligaer virker",
+      "items": [
+        "Kampe fra de ligaer, du følger, vises nu i Fodbold-kortet",
+        "Kampe, hvor resultatet endnu ikke er kommet, står med \"Afventer resultat\""
+      ]
+    },
     {
       "version": "1.55.1",
       "date": "24. november 2026",

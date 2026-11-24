@@ -50,9 +50,13 @@ const ymd = (d) => `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0'
 // En hel liga: kampe en uge omkring i dag (kortet finder selv den aktuelle runde)
 async function leagueDays(lg) {
   const a = new Date(); a.setDate(a.getDate() - 6); const b = new Date(); b.setDate(b.getDate() + 6);
-  const j = await (await workerFetch(`/espn/${lg}/scoreboard?dates=${ymd(a)}-${ymd(b)}`)).json();
-  const name = ((j.leagues || [])[0] || {}).name || '';
-  return (j.events || []).map((e) => parse(e, '', name)).sort((x, y) => x.date - y.date);
+  // ESPN tager ikke imod et datointerval, men gerne en hel måned – hent de måneder, ugen rører
+  const months = [...new Set([a, new Date(), b].map((d) => ymd(d).slice(0, 6)))];
+  const res = await Promise.all(months.map((m) => workerFetch(`/espn/${lg}/scoreboard?dates=${m}`).then((x) => x.json())));
+  const name = ((res[0].leagues || [])[0] || {}).name || '';
+  const seen = new Set();
+  return res.flatMap((j) => j.events || []).filter((e) => (seen.has(e.id) ? false : seen.add(e.id))).map((e) => parse(e, '', name))
+    .filter((m) => m.date >= a && m.date <= b).sort((x, y) => x.date - y.date);
 }
 
 export async function load(force = false) {
@@ -68,13 +72,15 @@ export async function load(force = false) {
     const all = (await Promise.all(ts.flatMap((t) => [schedule(t, false), schedule(t, true)]))).flat();
     const seen = new Map(); all.forEach((m) => { if (!seen.has(m.id) || m.state !== 'pre') seen.set(m.id, m); });
     const now = Date.now();
-    // Kampe, der stadig står som "ikke spillet" langt efter starttid, er udskudt eller forkerte – de vises ikke
-    state.matches = [...seen.values()].filter((m) => !(m.state === 'pre' && m.date.getTime() < now - 6 * 3600000)).sort((a, b) => a.date - b.date);
+    // Kampe, der stadig står som "ikke spillet" flere dage efter starttid, er udskudt – de vises ikke
+    state.matches = [...seen.values()].filter((m) => !(m.state === 'pre' && m.date.getTime() < now - 4 * 86400000)).sort((a, b) => a.date - b.date);
     state.error = ''; state.at = Date.now();
   } catch (e) { state.error = e.message; state.at = Date.now(); }
   state.loading = false;
 }
 
+// Kampen er spillet, men ESPN har endnu ikke resultatet
+export const pending = (m) => m.state === 'pre' && m.date.getTime() < Date.now() - 3 * 3600000;
 // Til kortet: kampe i gang, hvert holds næste kamp og hvert holds seneste resultat (kun fra de sidste 10 dage)
 export function view() {
   const now = Date.now(); const ids = favs().map((t) => t.id);
@@ -82,8 +88,8 @@ export function view() {
   const next = []; const done = [];
   ids.forEach((id) => {
     const mine = state.matches.filter((m) => m.home.id === id || m.away.id === id);
-    const n = mine.find((m) => m.state === 'pre'); if (n && !next.includes(n) && !live.includes(n)) next.push(n);
-    const d = mine.filter((m) => m.state === 'post' && now - m.date.getTime() < 10 * 86400000).pop(); if (d && !done.includes(d)) done.push(d);
+    const n = mine.find((m) => m.state === 'pre' && !pending(m)); if (n && !next.includes(n) && !live.includes(n)) next.push(n);
+    const d = mine.filter((m) => (m.state === 'post' || pending(m)) && now - m.date.getTime() < 10 * 86400000).pop(); if (d && !done.includes(d)) done.push(d);
   });
   next.sort((a, b) => a.date - b.date); done.sort((a, b) => b.date - a.date);
   return { live, done, next };

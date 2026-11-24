@@ -494,9 +494,10 @@ function wFodbold(size, h = 1, wd = 1) {
   // Kun klublogo (forkortelse hvis der ikke er et logo) – navnet står i logoets beskrivelse
   const side = (t, fav) => `<span class="fb-t${t.id === fav ? ' fb-fav' : ''}" title="${esc(t.name)}">${t.logo ? `<img src="${esc(t.logo)}" alt="${esc(t.name)}" loading="lazy">` : `<b>${esc(t.abbr || t.name.slice(0, 3).toUpperCase())}</b>`}</span>`;
   const row = (m) => {
-    const mid = m.state === 'pre' ? `<span class="fb-mid time">${hhmm(m.date)}</span>` : `<span class="fb-mid"><b class="${m.home.win ? 'w' : ''}">${esc(m.home.score)}</b>–<b class="${m.away.win ? 'w' : ''}">${esc(m.away.score)}</b></span>`;
+    const pend = FB.pending(m);
+    const mid = pend ? '<span class="fb-mid">–</span>' : m.state === 'pre' ? `<span class="fb-mid time">${hhmm(m.date)}</span>` : `<span class="fb-mid"><b class="${m.home.win ? 'w' : ''}">${esc(m.home.score)}</b>–<b class="${m.away.win ? 'w' : ''}">${esc(m.away.score)}</b></span>`;
     const when = m.state === 'in' ? `<span class="fb-live">● ${esc(m.clock || m.detail || 'Live')}</span>` : esc(dayTxt(m.date));
-    return `<div class="fb-row ${m.state}"><span class="fb-when">${when}<small>${esc(m.lgRow ? (m.state === 'post' ? 'Slut' : '') : m.comp)}</small></span>${side(m.home, m.fav)}${mid}${side(m.away, m.fav)}</div>`;
+    return `<div class="fb-row ${m.state}"><span class="fb-when">${when}<small>${esc(pend ? 'Afventer resultat' : m.lgRow ? (m.state === 'post' ? 'Slut' : '') : m.comp)}</small></span>${side(m.home, m.fav)}${mid}${side(m.away, m.fav)}</div>`;
   };
   const list = (arr, lab) => (arr.length ? `<div class="fb-col"><div class="fb-lab">${lab}</div><div class="fb-list" data-trim>${arr.join('')}</div></div>` : '');
   const recent = done.slice().sort((a, b) => a.date - b.date); // alt står i kronologisk rækkefølge
@@ -514,7 +515,7 @@ function wFodbold(size, h = 1, wd = 1) {
   const seen = new Set(); const all = recent.concat(live.filter((m) => m.fav), next, lv.flatMap((L) => L.round.map((m) => ({ ...m, lgRow: true }))))
     .filter((m) => (seen.has(m.id) ? false : seen.add(m.id))).sort((a, b) => a.date - b.date);
   // Er der ikke plads til alt, skal de kommende og igangværende ikke skubbes ud: begynd ved de seneste resultater
-  const firstOpen = all.findIndex((m) => m.state !== 'post');
+  const firstOpen = all.findIndex((m) => m.state !== 'post' && !FB.pending(m));
   const start = firstOpen < 0 ? Math.max(0, all.length - 3) : Math.max(0, firstOpen - 2);
   const mix = all.slice(start).map((m) => row({ ...m, lgRow: false }));
   return head + (mix.length ? `<div class="fb-list" data-trim>${mix.join('')}</div>` : '<div class="empty">Ingen kampe lige nu.</div>');
