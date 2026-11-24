@@ -139,10 +139,10 @@ function mineEvent(ev) {
   return !cal || !cal.owner || cal.owner === me.id;
 }
 const initials = (n) => String(n || '?').trim().slice(0, 1).toUpperCase();
-function eventsOn(day) {
+function eventsOn(day, page = false) {
   if (!D.cal) return [];
-  const s = startOfDay(day); const e = addDays(s, 1);
-  return D.cal.events.filter((ev) => ev.start < e && ev.end > s && mineEvent(ev));
+  const s = startOfDay(day); const e = addDays(s, 1); const hid = page ? settings.calHidden || [] : [];
+  return D.cal.events.filter((ev) => ev.start < e && ev.end > s && mineEvent(ev) && !hid.includes(ev.cal));
 }
 const evTime = (ev, day) => (ev.allDay ? 'Hele dagen' : (ev.start < startOfDay(day) ? 'Fortsat' : hhmm(ev.start)));
 // Dagens menu fra Madro nederst i hver dag i kalenderen
@@ -632,15 +632,15 @@ function pageKalender() {
   const days = [0, 1, 2, 3, 4, 5, 6].map((i) => addDays(ws, i));
   const we = days[6];
   const title = `Uge ${isoWeek(ws)} · ${ws.getDate()}. ${MONTHS[ws.getMonth()].slice(0, 3)} – ${we.getDate()}. ${MONTHS[we.getMonth()].slice(0, 3)}`;
-  const cals = settings.calendars.length ? settings.calendars : [];
+  const meK0 = meMember(); const cals = settings.calendars.filter((c) => c.url && (!meK0 || !c.owner || c.owner === meK0.id));
   const meK = meMember();
   return `<div class="ptitle"><h1>Kalender${meK ? ' · ' + esc(meK.name) : ''}</h1><span class="muted" style="font-weight:700">${esc(title)}</span>
       <div class="tools"><button class="btn" data-act="calPrev" aria-label="Forrige uge">‹</button><button class="btn" data-act="calToday">I dag</button><button class="btn" data-act="calNext" aria-label="Næste uge">›</button></div></div>
     ${D.cal && D.cal.demo ? '<div class="empty">Viser eksempler. Tilføj jeres kalendere under Indstillinger → Kalendere.</div>' : ''}
     ${D.cal && D.cal.errors.length ? `<div class="err">${esc(D.cal.errors.map((e) => e.cal + ': ' + e.msg).join(' · '))}</div>` : ''}
     <div class="days calweek" data-swipe="cal" style="grid-template-columns:repeat(7,minmax(0,1fr))">${days.map((d) => `
-      <div class="day ${sameDay(d, today) ? 'today' : ''}"><h3>${cap(DAYS[d.getDay()])} <span>${d.getDate()}.</span></h3>${eventsOn(d).map((e) => evHtml(e, d)).join('') || '<span class="small muted">–</span>'}${dayMenu(d)}</div>`).join('')}</div>
-    ${cals.length ? `<div class="legend">${cals.map((c) => `<span style="background:${lighten(c.color)}">${esc(c.name)}</span>`).join('')}</div>` : ''}`;
+      <div class="day ${sameDay(d, today) ? 'today' : ''}"><h3>${cap(DAYS[d.getDay()])} <span>${d.getDate()}.</span></h3>${eventsOn(d, true).map((e) => evHtml(e, d)).join('') || '<span class="small muted">–</span>'}${dayMenu(d)}</div>`).join('')}</div>
+    ${cals.length ? `<div class="legend">${cals.map((c) => { const on = !(settings.calHidden || []).includes(c.id); return `<button class="lchip${on ? '' : ' off'}" data-act="calShow" data-id="${esc(c.id)}" aria-pressed="${on}" style="--c:${esc(c.color)};--l:${lighten(c.color)}"><i></i>${esc(c.name)}</button>`; }).join('')}</div>` : ''}`;
 }
 function isoWeek(d) { const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())); const day = t.getUTCDay() || 7; t.setUTCDate(t.getUTCDate() + 4 - day); const y = new Date(Date.UTC(t.getUTCFullYear(), 0, 1)); return Math.ceil(((t - y) / 86400000 + 1) / 7); }
 
@@ -1359,6 +1359,7 @@ const act = {
   customRm: (b) => { settings.news.custom = settings.news.custom.filter((c) => c.id !== b.dataset.id); settings.news.sources = settings.news.sources.filter((x) => x !== b.dataset.id); save(); N.clearNewsCache(); renderMain(); loadNews(); },
   calAdd: () => { const colors = ['#D0563C', '#4C78D0', '#D9A400', '#2E9D5B', '#7A5AC8']; const c = { id: uid(), name: 'Ny kalender', color: colors[settings.calendars.length % colors.length], url: '' }; settings.calendars.push(c); ui.calEdit = c.id; save(); renderMain(); setTimeout(() => { const el = document.querySelectorAll('.calname'); if (el.length) { el[el.length - 1].focus(); el[el.length - 1].select(); } }, 50); },
   calEdit: (b) => { ui.calEdit = ui.calEdit === b.dataset.id ? null : b.dataset.id; renderMain(); },
+  calShow: (b) => { const h = settings.calHidden || []; const id = b.dataset.id; settings.calHidden = h.includes(id) ? h.filter((x) => x !== id) : h.concat(id); save(); renderMain(); },
   calRm: (b) => { settings.calendars.splice(+b.dataset.i, 1); save(); C.clearCalCache(); renderMain(); loadCal(); },
   tvAdd: () => { settings.tv.channels.push({ name: 'Ny knap', url: 'https://www.dr.dk/drtv' }); save(); renderMain(); },
   tvRm: (b) => { settings.tv.channels.splice(+b.dataset.i, 1); save(); renderMain(); },

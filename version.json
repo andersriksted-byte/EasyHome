@@ -1,5 +1,5 @@
 {
-  "version": "1.44.1",
+  "version": "1.45.0",
   "files": [
     "index.html",
     "app.js",
@@ -22,6 +22,15 @@
     "timer.js"
   ],
   "notes": [
+    {
+      "version": "1.45.0",
+      "date": "24. november 2026",
+      "title": "Vis og skjul kalendere",
+      "items": [
+        "Tryk på en kalender nederst på Kalender-siden for at skjule eller vise den",
+        "Valget huskes på hver skærm"
+      ]
+    },
     {
       "version": "1.44.1",
       "date": "24. november 2026",
