@@ -1,5 +1,5 @@
 {
-  "version": "1.33.2",
+  "version": "1.33.3",
   "files": [
     "index.html",
     "app.js",
@@ -21,6 +21,15 @@
     "somfy.js"
   ],
   "notes": [
+    {
+      "version": "1.33.3",
+      "date": "24. november 2026",
+      "title": "Store knapper til alle screens",
+      "items": [
+        "Screens-kortet med \"Alle samlet\" har nu store knapper, der fylder kortet: to rækker i et kvadratisk kort og stop-knappen nederst i hele bredden.",
+        "I et bredt kort står knapperne på én række."
+      ]
+    },
     {
       "version": "1.33.2",
       "date": "24. november 2026",

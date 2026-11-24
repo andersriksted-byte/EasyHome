@@ -408,7 +408,7 @@ function wScreens(size, h = 1, wd = 1, x = {}) {
   const mode = x.mode || 3; // 1 = kun alle samlet, 2 = kun hver for sig, 3 = begge
   if (mode === 1) {
     const sts = st.devices.map(SF.stateText).filter(Boolean); const same = sts.length && sts.every((t) => t === sts[0]);
-    return cardHead('Screens', `<span class="small muted">${st.devices.length} stk.</span>`) + `<div class="sfone"><span class="sfname"><b>Alle screens</b>${same ? `<small>${esc(sts[0])}</small>` : ''}</span>${btns(st.devices.map((d) => d.url), null, true)}</div>`;
+    return cardHead('Screens', `<span class="small muted">${st.devices.length} stk.</span>`) + `<div class="sfone ${wd >= 2 * h ? 'one-row' : 'grid2'}" style="--cols:${wd >= 2 * h ? presets.length : Math.min(3, Math.max(2, Math.ceil(presets.length / 2)))};--prow:${wd >= 2 * h ? 1 : Math.ceil(presets.length / Math.min(3, Math.max(2, Math.ceil(presets.length / 2))))}"><span class="sfname"><b>Alle screens</b>${same ? `<small>${esc(sts[0])}</small>` : ''}</span>${btns(st.devices.map((d) => d.url), null, true)}</div>`;
   }
   const all = mode === 3 && st.devices.length > 1 ? `<div class="sfrow sfall"><span class="sfname"><b>Alle</b></span>${btns(st.devices.map((d) => d.url), null, true)}</div>` : '';
   return cardHead('Screens') + `<div class="sflist">${all}${rows}</div>`;
