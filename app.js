@@ -440,7 +440,7 @@ function routeFor(e) {
 }
 const durTxt = (min) => (min >= 60 ? `${Math.floor(min / 60)} t${min % 60 ? ' ' + (min % 60) + ' min' : ''}` : `${Math.max(1, min)} min`);
 // Næste i kalenderen: hvor lang tid der er til – og hvornår man skal køre, hvis aftalen er et andet sted
-function wNaeste(size, h = 1, wd = 1) {
+function wNaeste(size, h = 1, wd = 1, x = null) {
   if (!D.cal) return cardHead('Næste') + '<div class="empty">Henter kalender …</div>';
   const now = Date.now();
   // Kun aftaler, der ikke er begyndt endnu – en aftale i gang springes over
@@ -470,7 +470,14 @@ function wNaeste(size, h = 1, wd = 1) {
     <span class="nx2-time"><b>${hhmm(e.start)}</b><span class="${!running && mins <= 15 ? 'soon' : ''}">${esc(until)}</span></span>
     <span class="nx2-title">${esc(e.title)}</span>
     ${drive || (e.who ? `<span class="nx2-who">${esc(e.who)}</span>` : '')}
-  </button>`;
+  </button>${later(evs, e, x)}`;
+}
+// Flere af dagens aftaler under den næste – antallet vælges under Tilpas forside
+function later(evs, e, x) {
+  const n = Math.max(1, Math.min(6, +(x && x.count) || 1)) - 1; if (!n) return '';
+  const rest = evs.slice(1).filter((y) => sameDay(y.start, e.start)).slice(0, n);
+  if (!rest.length) return '';
+  return `<div class="nx-later" data-trimcard>${rest.map((y) => `<div class="nx-li" ${evRef(y)} style="--c:${esc(y.color || 'var(--accent)')}"><time>${hhmm(y.start)}</time><span>${esc(y.title)}</span></div>`).join('')}</div>`;
 }
 // Dagens ret: stort billede, navn, tid og om der er handlet ind. Efter kl. 20 vises morgendagens ret.
 function wDagensRet(size, h = 1, wd = 1) {
@@ -623,6 +630,7 @@ function pageForside() {
     <section class="card w" data-wid="${x.id}" ${FIT.includes(x.id) ? `data-fit data-h="${h}"` : ''} style="--w:${w};--h:${h}">
       ${ui.editing ? `<div class="wbar"><button class="handle" aria-label="Træk for at flytte ${esc(WIDGETS[x.id])}">${GRIP}Flyt</button><span class="nm">${esc(WIDGETS[x.id])}</span>
         ${x.id === 'screens' ? `<span class="wopt" role="group" aria-label="Betjening">${[[1, 'Alle samlet'], [2, 'Hver for sig'], [3, 'Begge']].map(([v, l]) => `<button data-act="wOpt" data-id="screens" data-k="mode" data-v="${v}" aria-pressed="${(x.mode || 3) === v}">${l}</button>`).join('')}</span>` : ''}
+        ${x.id === 'naeste' ? `<select class="wsel" data-wsel="naeste" data-k="count" aria-label="Antal aftaler">${[1, 2, 3, 4, 5, 6].map((v) => `<option value="${v}"${String(x.count || 1) === String(v) ? ' selected' : ''}>${v === 1 ? 'Kun den næste' : v + ' aftaler'}</option>`).join('')}</select>` : ''}
         ${x.id === 'uge' ? `<select class="wsel" data-wsel="uge" data-k="days" aria-label="Antal dage">${[['', 'Automatisk'], ...[1, 2, 3, 4, 5, 6, 7].map((v) => [String(v), v === 1 ? '1 dag' : v + ' dage'])].map(([v, l]) => `<option value="${v}"${String(x.days || '') === v ? ' selected' : ''}>${l}</option>`).join('')}</select>` : ''}
         ${x.id === 'inspiration' ? `<select class="wsel" data-wsel="inspiration" data-k="meal" aria-label="Måltid">${['', ...MD.MEALS].map((m) => `<option value="${m}"${(x.meal || '') === m ? ' selected' : ''}>${m || 'Alle måltider'}</option>`).join('')}</select>` : ''}
         ${x.id === 'madplan' ? `<span class="wopt" role="group" aria-label="Antal dage">${[[1, '1 dag'], [5, '5 dage']].map(([v, l]) => `<button data-act="wOpt" data-id="madplan" data-k="days" data-v="${v}" aria-pressed="${(x.days || 5) === v}">${l}</button>`).join('')}</span>` : ''}
@@ -1210,6 +1218,13 @@ function trimCards() {
   document.querySelectorAll('#grid .w [data-trim]').forEach((list) => {
     let guard = 60;
     while (guard-- > 0 && list.children.length > 1 && list.scrollHeight > list.clientHeight + 1) list.lastElementChild.remove();
+  });
+  // Lister, der må fylde resten af kortet: fjern de sidste, til hele kortet kan ses
+  document.querySelectorAll('#grid .w [data-trimcard]').forEach((list) => {
+    const card = list.closest('.w'); let guard = 20;
+    const bottom = () => card.getBoundingClientRect().bottom - (parseFloat(getComputedStyle(card).paddingBottom) || 0) + 1;
+    while (guard-- > 0 && list.children.length && (card.scrollHeight > card.clientHeight + 1 || list.lastElementChild.getBoundingClientRect().bottom > bottom())) list.lastElementChild.remove();
+    if (!list.children.length) list.remove();
   });
 }
 let fitTimer = null;

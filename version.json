@@ -1,5 +1,5 @@
 {
-  "version": "1.52.1",
+  "version": "1.53.0",
   "files": [
     "index.html",
     "app.js",
@@ -23,6 +23,16 @@
     "mcats.js"
   ],
   "notes": [
+    {
+      "version": "1.53.0",
+      "date": "24. november 2026",
+      "title": "Flere aftaler i Næste-kortet",
+      "items": [
+        "Næste aftale-kortet kan nu også vise de følgende aftaler samme dag",
+        "Vælg antal (1–6) under Tilpas forside",
+        "Tryk på en aftale for at se detaljer"
+      ]
+    },
     {
       "version": "1.52.1",
       "date": "24. november 2026",
