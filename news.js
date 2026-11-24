@@ -31,7 +31,13 @@ export function parseFeed(xml, src) {
     if (!link && l) link = l.getAttribute('href') || '';
     const d = txt(n, 'pubDate') || txt(n, 'published') || txt(n, 'updated') || txt(n, 'dc:date');
     const date = d ? new Date(d) : null;
-    return { title: strip(txt(n, 'title')), link: link.trim(), date: date && !isNaN(date) ? date : null, summary: strip(txt(n, 'description') || txt(n, 'summary')).slice(0, 220), source: src.group, sourceId: src.id };
+    let image = '';
+    for (const tag of ['media:content', 'media:thumbnail', 'enclosure']) {
+      for (const el of n.getElementsByTagName(tag)) { const u = el.getAttribute('url'); const ty = el.getAttribute('type') || el.getAttribute('medium') || 'image'; if (u && /image/i.test(ty)) { image = u; break; } }
+      if (image) break;
+    }
+    if (!image) { const m = /<img[^>]+src=["']([^"']+)["']/i.exec(txt(n, 'description') || txt(n, 'content:encoded')); if (m) image = m[1]; }
+    return { title: strip(txt(n, 'title')), link: link.trim(), date: date && !isNaN(date) ? date : null, summary: strip(txt(n, 'description') || txt(n, 'summary')).slice(0, 220), image: /^https?:/.test(image) ? image : '', source: src.group, sourceId: src.id };
   }).filter((i) => i.title);
 }
 

@@ -178,21 +178,32 @@ function pageArrows(scope, idx, n, what) {
     <button class="arr" data-act="wStep" data-scope="${scope}" data-dir="1" aria-label="Næste ${what}">›</button></span>`;
 }
 const placeArrows = (scope, idx) => pageArrows(scope, idx, settings.places.length, 'sted');
-function wVejr(size, h = 1) {
+// Kortets form: lille (1×1), bred (≥2×1), høj (1×≥2) eller stor (≥2×≥2)
+const shapeKind = (w, h) => (w >= 2 && h >= 2 ? 'big' : w >= 2 ? 'wide' : h >= 2 ? 'tall' : 'tiny');
+function wVejr(size, h = 1, wd = 1) {
   const n = settings.places.length;
   const idx = ((ui.fpPlace % n) + n) % n;
   const place = settings.places[idx];
   const w = D.wx[place.id];
   const title = `<div class="whead"><span class="lab">Vejret · ${esc(placeLabel(place))}</span>${placeArrows('fp', idx)}</div>`;
   if (!w) return `${title}<div class="empty">${D.wxErr[place.id] ? esc(D.wxErr[place.id]) : 'Henter vejret …'}</div>`;
-  const head = `${title}
-    <div class="wnow">${W.weatherIcon(w.now.code, w.now.isDay, size === 'S' ? 48 : 56)}<div><div class="t">${fmtTemp(w.now.temp)}</div><div class="small muted">${esc(W.codeText(w.now.code))} · føles som ${fmtTemp(w.now.feels)}</div></div></div>`;
-  const week = h >= 2 ? `<div class="dlist" style="margin-top:4px">${w.days.slice(0, Math.min(7, 2 + h * 2)).map((d, i) => `<div class="drow" style="grid-template-columns:56px 34px 1fr;min-height:40px"><b>${i === 0 ? 'I dag' : cap(DAYS[d.date.getDay()])}</b>${W.weatherIcon(d.code, 1, 26)}<span style="font-weight:700;white-space:nowrap;text-align:right">${fmtTemp(d.min)} / ${fmtTemp(d.max)}${d.rain > 0 ? ` <span class="small" style="color:var(--accent)">${num(d.rain)} mm</span>` : ''}</span></div>`).join('')}</div>` : '';
-  if (size === 'S') return head + (week || `<div class="small" style="margin-top:auto">I dag ${fmtTemp(w.days[0].max)} / ${fmtTemp(w.days[0].min)} · vind ${num(w.now.wind, 0)} m/s</div>`);
-  const hours = `<div class="hours">${w.hours.slice(0, size === 'M' ? 8 : 12).map((h) => `<div class="hour"><span>${pad(h.time.getHours())}</span>${W.weatherIcon(h.code, h.isDay, 26)}<span>${fmtTemp(h.temp)}</span><span class="r">${h.rain > 0 ? num(h.rain) + ' mm' : '&nbsp;'}</span></div>`).join('')}</div>`;
-  if (size === 'M') return head + hours + week;
-  if (week) return head + hours + week;
-  return head + hours + `<div class="row" style="gap:8px">${w.days.slice(1, 6).map((d) => `<div class="hour" style="flex:1"><span>${cap(DAYS[d.date.getDay()])}</span>${W.weatherIcon(d.code, 1, 26)}<span>${fmtTemp(d.max)} / ${fmtTemp(d.min)}</span></div>`).join('')}</div>`;
+  const kind = shapeKind(wd, h);
+  const t = w.days[0];
+  const now = `<div class="wxnow">${W.weatherIcon(w.now.code, w.now.isDay, 64)}<div><div class="t">${fmtTemp(w.now.temp)}</div><div class="wxtxt">${esc(W.codeText(w.now.code))}</div></div></div>
+    <div class="wxsum"><span>↑ ${fmtTemp(t.max)}</span><span>↓ ${fmtTemp(t.min)}</span><span>${num(w.now.wind, 0)} m/s</span>${t.rain > 0 ? `<span class="rn">${num(t.rain)} mm</span>` : ''}</div>`;
+  const hourTile = (x) => `<div class="hour"><span>${pad(x.time.getHours())}</span>${W.weatherIcon(x.code, x.isDay, 26)}<b>${fmtTemp(x.temp)}</b><span class="r">${x.rain > 0 ? num(x.rain) + ' mm' : '&nbsp;'}</span></div>`;
+  const dayRow = (d, i) => `<div class="wxday"><b>${i === 0 ? 'I dag' : cap(DAYS[d.date.getDay()])}</b>${W.weatherIcon(d.code, 1, 26)}<span class="mm">${d.rain > 0 ? num(d.rain) + ' mm' : ''}</span><span class="hl">${fmtTemp(d.min)} / <b>${fmtTemp(d.max)}</b></span></div>`;
+  const hoursN = Math.min(12, { tiny: 3, tall: 4, wide: wd === 2 ? 6 : wd * 3, big: 6 }[kind]);
+  const hcols = kind === 'wide' && wd === 2 ? 3 : kind === 'big' ? 3 : hoursN;
+  const hours = `<div class="wxhours" style="--n:${hcols}">${w.hours.slice(0, hoursN).map(hourTile).join('')}</div>`;
+  const days = `<div class="wxdays" data-trim>${w.days.map(dayRow).join('')}</div>`;
+  const body = {
+    tiny: `<div class="wx wx-tiny">${now}${hours}</div>`,
+    wide: `<div class="wx wx-wide" style="grid-template-columns:minmax(0,1fr) minmax(0,${wd - 1}fr)"><div class="wxl">${now}</div><div class="wxr">${hours}${wd >= 3 ? `<div class="wxdrow">${w.days.slice(1, 1 + wd + 1).map((d) => `<div class="hour"><span>${cap(DAYS[d.date.getDay()])}</span>${W.weatherIcon(d.code, 1, 26)}<b>${fmtTemp(d.max)}</b><span class="r">${fmtTemp(d.min)}</span></div>`).join('')}</div>` : ''}</div></div>`,
+    tall: `<div class="wx wx-tall">${now}${hours}${days}</div>`,
+    big: `<div class="wx wx-big"><div class="wxl">${now}${hours}</div><div class="wxr">${days}</div></div>`
+  }[kind];
+  return title + body;
 }
 function wSteder(size) {
   const others = settings.places.slice(1);
@@ -215,39 +226,54 @@ function newsList(n, big = false) {
   if (!items.length) return `<div class="empty">Ingen nyheder lige nu.${D.news.errors.length ? ' ' + esc(D.news.errors.map((e) => e.source + ': ' + e.msg).join(' · ')) : ''}</div>`;
   return `<div class="news ${big ? 'big-news' : ''}">${items.map((i) => `<a href="${esc(i.link)}" data-read="${esc(i.source)}" target="_blank" rel="noopener"><span class="meta"><span class="src">${esc(i.source)}</span>${i.date ? ' · ' + esc(relTime(i.date)) : ''}</span><b>${esc(i.title)}</b>${big && i.summary ? `<p>${esc(i.summary)}</p>` : ''}</a>`).join('')}</div>`;
 }
-const NEWS_SECS = 20;
-const newsLeft = () => Math.max(0, Math.ceil(NEWS_SECS - (Date.now() - ui.newsAt) / 1000));
+const newsSecs = () => (settings.news.rotateSecs === undefined ? 20 : +settings.news.rotateSecs);
+const newsLeft = () => Math.max(0, Math.ceil(newsSecs() - (Date.now() - ui.newsAt) / 1000));
 function newsSources() { return N.allSources().filter((src) => settings.news.sources.includes(src.id)); }
-function wNyheder(size, h = 1) {
-  const count = 3 + (h - 1) * 4;
+function wNyheder(size, h = 1, wd = 1) {
   const srcs = newsSources();
   if (!hasProxy() && !settings.news.publicProxyForTest) return `<div class="lab">Nyheder</div>${needProxyMsg('Nyheder')}`;
   if (!srcs.length) return '<div class="lab">Nyheder</div><div class="empty">Vælg nyhedskilder under Indstillinger → Nyheder.</div>';
   const n = srcs.length; const idx = ((ui.newsIdx % n) + n) % n; const src = srcs[idx];
   const left = n > 1 ? newsLeft() : 0;
   const head = `<div class="whead"><span class="lab">${esc(src.name)}</span>${pageArrows('news', idx, n, 'nyhedskilde')}</div>
-    ${n > 1 ? `<div class="nbar" aria-hidden="true"><i id="newsBar" style="width:${(left / NEWS_SECS) * 100}%"></i></div>` : ''}`;
+    ${n > 1 && newsSecs() > 0 ? `<div class="nbar" aria-hidden="true"><i id="newsBar" style="width:${(left / newsSecs()) * 100}%"></i></div>` : ''}`;
   if (!D.news) return head + '<div class="empty">Henter nyheder …</div>';
-  const items = D.news.items.filter((i) => i.sourceId === src.id).slice(0, count);
+  const all = D.news.items.filter((i) => i.sourceId === src.id).slice(0, 30);
   const err = D.news.errors.find((e) => e.source === src.name);
-  if (!items.length) return head + `<div class="empty">${err ? 'Kunne ikke hente lige nu: ' + esc(err.msg) : 'Ingen nyheder lige nu.'}</div>`;
-  return head + `<div class="news">${items.map((i) => `<a href="${esc(i.link)}" data-read="${esc(src.name)}" target="_blank" rel="noopener"><span class="meta">${i.date ? esc(relTime(i.date)) : ''}</span><b>${esc(i.title)}</b></a>`).join('')}</div>`;
+  if (!all.length) return head + `<div class="empty">${err ? 'Kunne ikke hente lige nu: ' + esc(err.msg) : 'Ingen nyheder lige nu.'}</div>`;
+  const kind = shapeKind(wd, h);
+  const heroItem = kind !== 'tiny' ? all.find((i) => i.image) : null;
+  const rest = heroItem ? all.filter((i) => i !== heroItem) : all;
+  const link = (i, cls = '') => `<a class="${cls}" href="${esc(i.link)}" data-read="${esc(src.name)}" target="_blank" rel="noopener"><span class="meta">${i.date ? esc(relTime(i.date)) : ''}</span><b>${esc(i.title)}</b></a>`;
+  const hero = heroItem ? `<a class="nhero" href="${esc(heroItem.link)}" data-read="${esc(src.name)}" target="_blank" rel="noopener"><span class="nimg" style="background-image:url('${esc(heroItem.image)}')"></span><span class="ntxt"><span class="meta">${heroItem.date ? esc(relTime(heroItem.date)) : ''}</span><b>${esc(heroItem.title)}</b></span></a>` : '';
+  const cols = kind === 'big' || (kind === 'wide' && wd >= 3) ? 2 : 1;
+  const list = `<div class="news nlist" data-trim style="--ncols:${heroItem && kind === 'wide' ? 1 : cols}">${rest.map((i) => link(i)).join('')}</div>`;
+  return head + `<div class="nbody nb-${kind}${heroItem ? ' has-hero' : ''}">${hero}${list}</div>`;
 }
-function wSonos(size) {
+function wSonos(size, h = 1, wd = 1) {
   if (!S.state.connected) return `<div class="lab">Musik</div><div class="empty">Sonos er ikke forbundet endnu.</div><button class="btn line" data-act="nav" data-page="musik">Gå til Musik</button>`;
   const np = S.nowPlaying();
-  return `<div class="lab">Musik · ${esc(np.group)}</div>
-    <div class="row" style="flex-wrap:nowrap">${np.image ? `<span class="art" style="width:64px;flex:none;background-image:url('${esc(np.image)}')"></span>` : ''}<div><b style="font-size:17px">${esc(np.title || 'Intet spiller')}</b><div class="small muted">${esc(np.artist || '')}</div></div></div>
-    <div class="row" style="margin-top:auto"><button class="btn dark" data-act="sPlay" aria-label="${np.playing ? 'Pause' : 'Afspil'}">${fillSvg(np.playing ? 'pause' : 'play', 18)}</button><button class="btn" data-act="sNext" aria-label="Næste">${fillSvg('next', 18)}</button>
-    ${size !== 'S' && np.volume !== null ? `<label class="vol" style="flex:1"><span class="small">Lyd</span><input type="range" min="0" max="100" value="${np.volume}" data-vol aria-label="Lydstyrke"></label>` : ''}</div>`;
+  const kind = shapeKind(wd, h);
+  const art = np.image ? `background-image:url('${esc(np.image)}')` : '';
+  const ctl = `<div class="mwctl"><button class="mwb" data-act="sPrev" aria-label="Forrige">${fillSvg('prev', 16)}</button><button class="mwb main" data-act="sPlay" aria-label="${np.playing ? 'Pause' : 'Afspil'}">${fillSvg(np.playing ? 'pause' : 'play', 20)}</button><button class="mwb" data-act="sNext" aria-label="Næste">${fillSvg('next', 16)}</button></div>`;
+  const vol = np.volume !== null ? `<label class="vol mwvol"><span class="small">Lyd</span><input type="range" min="0" max="100" value="${np.volume}" data-vol aria-label="Lydstyrke"></label>` : '';
+  const info = `<div class="mwinfo"><span class="mwgrp">${esc(np.group)}</span><b>${esc(np.title || 'Intet spiller')}</b><span>${esc(np.artist || '')}</span></div>`;
+  const favs = S.state.favorites.length ? `<div class="mwfavs" data-trim>${S.state.favorites.map((f) => `<button class="mtile" data-act="sFav" data-id="${esc(f.id)}"><i style="${f.imageUrl ? `background-image:url('${esc(f.imageUrl)}')` : ''}"></i><span>${esc(f.name)}</span></button>`).join('')}</div>` : '';
+  if (kind === 'tiny') return `<div class="mw mw-tiny" style="${art}"><div class="mwshade">${info}${ctl}</div></div>`;
+  if (kind === 'wide') return `<div class="mw mw-wide" style="grid-template-columns:auto minmax(0,1fr)${wd >= 3 ? ` minmax(0,${wd - 2}fr)` : ''}"><div class="mwart" style="${art}"></div><div class="mwside">${info}${ctl}${vol}</div>${wd >= 3 ? `<div class="mwfavcol">${favs}</div>` : ''}</div>`;
+  if (kind === 'tall') return `<div class="mw mw-tall"><div class="mwart" style="${art}"></div>${info}${ctl}${vol}${favs}</div>`;
+  return `<div class="mw mw-big"><div class="mwtop"><div class="mwart" style="${art}"></div><div class="mwside">${info}${ctl}${vol}</div></div>${favs}</div>`;
 }
-function wTv(size) {
-  const ch = settings.tv.channels.slice(0, size === 'S' ? 2 : 4);
-  return `<div class="lab">DR TV</div><div class="row" style="flex:1;align-items:stretch">${ch.map((c) => `<a class="tvtile" style="flex:1;min-height:90px;font-size:18px" href="${esc(c.url)}" target="_blank" rel="noopener">${fillSvg('play', 28)}${esc(c.name)}</a>`).join('')}</div>`;
+function wTv(size, h = 1, wd = 1) {
+  const ch = settings.tv.channels;
+  const cols = Math.max(1, Math.min(ch.length, h >= 2 ? wd : wd * 2)); const rows = Math.max(1, Math.min(Math.ceil(ch.length / cols), h * 2));
+  return `<div class="lab">DR TV</div><div class="tvw" style="--c:${cols};--r:${rows}">${ch.slice(0, cols * rows).map((c) => `<a class="tvtile" href="${esc(c.url)}" target="_blank" rel="noopener">${fillSvg('play', 28)}${esc(c.name)}</a>`).join('')}</div>`;
 }
 function wNed() {
   const cd = countdownDays();
-  return `<div class="lab">Nedtælling</div>${cd === null ? '<div class="empty">Vælg en dato i Indstillinger</div>' : `<div style="font-size:64px;font-weight:800;line-height:1">${cd < 0 ? '✓' : cd}</div><div style="font-weight:700">${cd < 0 ? esc(settings.countdown.name) + ' er overstået' : (cd === 1 ? 'dag til ' : 'dage til ') + esc(settings.countdown.name.toLowerCase())}</div>`}`;
+  if (cd === null) return '<div class="lab">Nedtælling</div><div class="empty">Vælg en dato i Indstillinger</div>';
+  const d = new Date(settings.countdown.date + 'T00:00');
+  return `<div class="lab">Nedtælling</div><div class="cdw"><div class="cdn">${cd < 0 ? '✓' : cd}</div><div class="cdl">${cd < 0 ? esc(settings.countdown.name) + ' er overstået' : (cd === 1 ? 'dag til ' : 'dage til ') + esc(settings.countdown.name.toLowerCase())}</div><div class="cdd">${cap(DAYS_LONG[d.getDay()])} ${d.getDate()}. ${MONTHS[d.getMonth()]}</div></div>`;
 }
 const WRENDER = { uge: wUge, vejr: wVejr, steder: wSteder, nyheder: wNyheder, sonos: wSonos, tv: wTv, nedtaelling: wNed };
 
@@ -456,6 +482,8 @@ function pageIndstillinger() {
   const T = {
     vejr: () => vejrSettings(),
     nyheder: () => `
+    <section class="card wide"><b>Skift side i nyhedskortet</b><p class="note">Hvor længe nyhedskortet på forsiden viser hvert medie, før det selv skifter til det næste.</p>
+      <div class="row">${[10, 15, 20, 30, 45, 60, 0].map((v) => `<button class="pill" data-act="newsSecs" data-v="${v}" aria-pressed="${newsSecs() === v}">${v ? v + ' sek' : 'Aldrig'}</button>`).join('')}</div></section>
     <section class="card wide"><b>Nyhedskilder</b><p class="note">Vælg en eller flere. Nyhederne blandes og sorteres efter tid. Kilder markeret "afprøves" er ikke bekræftet endnu.</p>
       <div class="form">${Object.entries(groups).map(([g, list]) => `<div>${list.map((src) => `<label class="check"><input type="checkbox" data-news="${esc(src.id)}" ${s.news.sources.includes(src.id) ? 'checked' : ''}>${esc(src.name)}${src.unverified ? ' <span class="small muted">(afprøves)</span>' : ''}${src.custom ? ` <button class="btn" data-act="customRm" data-id="${esc(src.id)}" aria-label="Fjern ${esc(src.name)}">Fjern</button>` : ''}</label>`).join('')}</div>`).join('')}</div>
       <div class="lab" style="margin-top:6px">Tilføj egen kilde</div>
@@ -506,7 +534,7 @@ const PAGE_RENDER = { forside: pageForside, kalender: pageKalender, vejr: pageVe
 function renderMain(keepScroll = true) {
   const m = $('#main'); const y = m.scrollTop;
   m.innerHTML = PAGE_RENDER[ui.page]();
-  if (ui.page === 'forside') fitCards();
+  if (ui.page === 'forside') { fitCards(); trimCards(); }
   if (keepScroll) m.scrollTop = y;
 }
 // Sørg for at kort som kalenderen altid viser alt: først kompakt visning, derefter flere kvadrater i højden
@@ -525,8 +553,15 @@ function fitCards() {
     card.style.setProperty('--h', Math.max(base, need)); card.classList.add('grown');
   });
 }
+// Lister (nyheder, dage, favoritter) viser kun hele elementer – det sidste, der ikke kan være der, fjernes
+function trimCards() {
+  document.querySelectorAll('#grid .w [data-trim]').forEach((list) => {
+    let guard = 60;
+    while (guard-- > 0 && list.children.length > 1 && list.scrollHeight > list.clientHeight + 1) list.lastElementChild.remove();
+  });
+}
 let fitTimer = null;
-window.addEventListener('resize', () => { clearTimeout(fitTimer); fitTimer = setTimeout(fitCards, 150); });
+window.addEventListener('resize', () => { clearTimeout(fitTimer); fitTimer = setTimeout(() => { if (ui.page === 'forside') renderMain(); }, 150); });
 // Opdater kun hvis brugeren ikke er i gang med at skrive eller trække
 function softRender() {
   if (ui.page === 'indstillinger' || drag) return;
@@ -584,6 +619,7 @@ const act = {
   calPrev: () => { ui.calWeek--; renderMain(); }, calNext: () => { ui.calWeek++; renderMain(); }, calToday: () => { ui.calWeek = 0; renderMain(); },
   wModel: (b) => { settings.weather.model = b.dataset.model; save(); D.wx = {}; renderMain(); loadWeather(); },
   compare: () => { D.compare = D.compare || []; renderMain(); loadCompare(); },
+  newsSecs: (b) => { settings.news.rotateSecs = +b.dataset.v; ui.newsAt = Date.now(); save(); renderMain(); },
   newsToggle: (b) => { toggleNews(b.dataset.id); renderMain(); },
   newsRefresh: () => { N.clearNewsCache(); D.news = null; renderMain(); loadNews(); },
   sPlay: () => sonosDo(S.togglePlay), sNext: () => sonosDo(S.next), sPrev: () => sonosDo(S.prev),
@@ -764,7 +800,7 @@ function boot() {
     if (!bar || ui.editing || ui.page !== 'forside' || drag || R.isOpen()) { ui.newsAt = Date.now(); if (bar) bar.style.width = '100%'; return; }
     const left = newsLeft();
     if (left <= 0) { act.wStep({ dataset: { scope: 'news', dir: '1' } }); return; }
-    bar.style.width = (left / NEWS_SECS) * 100 + '%';
+    bar.style.width = (left / newsSecs()) * 100 + '%';
   }, 1000);
   setInterval(() => { if (ui.fpPlace !== 0 && Date.now() - ui.fpTouched > 3 * 60000) { ui.fpPlace = 0; softRender(); } }, 30000);
   setInterval(loadNews, 5 * 60000);

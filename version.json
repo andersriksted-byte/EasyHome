@@ -1,5 +1,5 @@
 {
-  "version": "1.10.0",
+  "version": "1.11.0",
   "files": [
     "index.html",
     "app.js",
@@ -16,6 +16,16 @@
     "reader.js"
   ],
   "notes": [
+    {
+      "version": "1.11.0",
+      "date": "24. november 2026",
+      "title": "Kortene fylder hele deres plads",
+      "items": [
+        "Vejret, musikken, nyhederne, DR TV og nedtællingen bruger nu hele kortet – jo større kort, jo mere indhold og større tekst.",
+        "Musik viser albumcoveret og jeres favoritter, når der er plads. Nyheder viser et billede fra topnyheden.",
+        "Under Indstillinger → Nyheder kan du vælge, hvor mange sekunder nyhedskortet venter, før det skifter medie (standard 20)."
+      ]
+    },
     {
       "version": "1.10.0",
       "date": "24. november 2026",

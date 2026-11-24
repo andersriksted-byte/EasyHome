@@ -33,7 +33,7 @@ export const DEFAULTS = {
   location: { name: 'København', lat: 55.6761, lon: 12.5683 }, // ældre felt – flyttes ind i places ved start
   places: [], // [{ id, label, name, lat, lon }] – første sted er 'hjem'
   weather: { model: 'dmi_seamless' },
-  news: { sources: ['dr-seneste', 'tv2', 'jp'], custom: [], publicProxyForTest: false },
+  news: { sources: ['dr-seneste', 'tv2', 'jp'], custom: [], publicProxyForTest: false, rotateSecs: 20 },
   calendars: [],
   countdown: { name: 'Juleaften', date: '2026-12-24' },
   sonos: { groupId: null },

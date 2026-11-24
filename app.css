@@ -88,6 +88,96 @@ a{color:var(--accent)}
 .sw{display:flex;border-radius:10px;overflow:hidden;border:1px solid var(--line)}
 .sw i{width:16px;height:34px;display:block}
 
+
+/* ---------- Kort der udfylder deres form ---------- */
+.w{container-type:size}
+.w>.lab,.w>.whead,.w>.nbar,.w>.wbar,.w>.shapes{flex:none}
+/* Vejr */
+.wx{flex:1;min-height:0;display:flex;flex-direction:column;gap:10px}
+.wxnow{display:flex;align-items:center;gap:clamp(8px,3cqmin,20px)}
+.wxnow .wicon{width:clamp(44px,26cqmin,150px);height:clamp(44px,26cqmin,150px);flex:none}
+.wxnow .t{font-size:clamp(36px,20cqmin,120px);font-weight:800;line-height:.95;letter-spacing:-.03em}
+.wxtxt{font-size:clamp(13px,4.5cqmin,20px);font-weight:600;color:var(--muted)}
+.wxsum{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:clamp(13px,4cqmin,17px);font-weight:700}
+.wxsum .rn{color:var(--accent)}
+.wx-tiny{justify-content:space-between}
+.wx-tiny .wxnow{margin:auto 0}
+.wx-tiny .wxnow .wicon{width:clamp(44px,30cqmin,150px);height:clamp(44px,30cqmin,150px)}
+.wx-tiny .wxnow .t{font-size:clamp(36px,24cqmin,130px)}
+.wx-tiny .wxhours{flex:none;min-height:0;max-height:none}
+.wx-tiny .wxhours .hour{padding:4px 2px;font-size:11px}
+.wx-tiny .wxhours .hour b{font-size:13px}
+.wx-tiny .wxhours .r{display:none}
+.wxhours{display:grid;grid-template-columns:repeat(var(--n),minmax(0,1fr));grid-auto-rows:minmax(0,1fr);gap:6px;flex:1;min-height:70px;max-height:150px}
+.wxhours .hour{justify-content:center}
+.wxhours .hour b{font-size:15px}
+.wx-wide{display:grid;gap:16px}
+.wx-wide .wxl{display:flex;flex-direction:column;justify-content:center;gap:10px;min-width:0}
+.wx-wide .wxr{display:flex;flex-direction:column;gap:8px;min-width:0}
+.wx-wide .wxhours{max-height:none}
+.wxdrow{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:6px;flex:1}
+.wxdrow .hour{justify-content:center}
+.wxdays{flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column}
+.wxday{display:grid;grid-template-columns:48px 30px 1fr auto;align-items:center;gap:8px;flex:1;max-height:56px;min-height:40px;border-bottom:1px solid var(--line);font-size:15px}
+.wxday:last-child{border-bottom:0}
+.wxday .mm{font-size:12px;color:var(--accent);font-weight:700}
+.wxday .hl{white-space:nowrap;text-align:right}
+.wx-tall .wxhours{max-height:110px;flex:none}
+.wx-big{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:18px}
+.wx-big .wxl{display:flex;flex-direction:column;gap:12px;min-height:0}
+.wx-big .wxhours{max-height:none;flex:1}
+.wx-big .wxday{max-height:none}
+.wx-big .wxr{display:flex;flex-direction:column;min-height:0}
+/* Nyheder */
+.nbody{flex:1;min-height:0;display:flex;flex-direction:column;gap:12px}
+.nlist{flex:1;min-height:0;overflow:hidden;display:grid;grid-template-columns:repeat(var(--ncols,1),minmax(0,1fr));align-content:start;column-gap:20px}
+.nlist a{border-bottom:1px solid var(--line)}
+.nhero{display:flex;flex-direction:column;gap:8px;text-decoration:none;color:var(--text);min-height:0}
+.nimg{display:block;border-radius:14px;background:var(--track) center/cover no-repeat;flex:1;min-height:110px}
+.ntxt b{font-size:clamp(16px,4.6cqmin,24px);line-height:1.25;display:block}
+.ntxt .meta{font-size:12px;font-weight:700;color:var(--muted)}
+.nb-wide.has-hero{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px}
+.nb-wide.has-hero .nimg{flex:1}
+.nb-tall.has-hero .nhero{flex:0 0 46%}
+.nb-big.has-hero .nhero{flex:0 0 52%}
+.nb-big.has-hero .nimg{flex:1}
+/* Sonos */
+.mw{flex:1;min-height:0;display:flex;flex-direction:column;gap:10px}
+.mwart{border-radius:14px;background:var(--accent) center/cover no-repeat;aspect-ratio:1;flex:none}
+.mwinfo{display:flex;flex-direction:column;min-width:0}
+.mwinfo b{font-size:clamp(16px,5cqmin,26px);line-height:1.2;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.mwinfo span{font-size:14px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mwinfo .mwgrp{font-size:12px;font-weight:800;color:var(--accent);text-transform:none}
+.mwctl{display:flex;align-items:center;gap:10px}
+.mwb{width:44px;height:44px;border:0;border-radius:99px;background:var(--bg);color:var(--text);display:flex;align-items:center;justify-content:center;flex:none}
+.mwb.main{width:56px;height:56px;background:var(--text);color:var(--bg)}
+.mwvol{width:100%}
+.mw-tiny{margin:-18px -20px;border-radius:20px;background:var(--inv) center/cover no-repeat;position:relative;overflow:hidden}
+.mwshade{flex:1;display:flex;flex-direction:column;justify-content:flex-end;gap:10px;padding:18px 20px;background:linear-gradient(180deg,rgba(0,0,0,.05) 20%,rgba(0,0,0,.72));color:#fff}
+.mw-tiny .mwinfo span,.mw-tiny .mwinfo .mwgrp{color:rgba(255,255,255,.85)}
+.mw-tiny .mwb{background:rgba(255,255,255,.18);color:#fff}
+.mw-tiny .mwb.main{background:#fff;color:#111}
+.mw-tiny:not([style*=url]) {background:var(--inv)}
+.mw-wide{display:grid;gap:18px;align-items:stretch}
+.mw-wide .mwart{height:100%;width:auto;aspect-ratio:1}
+.mw-wide .mwside{display:flex;flex-direction:column;justify-content:center;gap:12px;min-width:0}
+.mwfavcol{min-width:0;min-height:0;display:flex}
+.mwfavs{flex:1;min-height:0;overflow:hidden;display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;align-content:start}
+.mw-tall .mwart{width:100%;max-height:45cqh;aspect-ratio:auto;flex:0 1 45cqh}
+.mw-big .mwtop{display:grid;grid-template-columns:auto minmax(0,1fr);gap:20px;flex:0 0 58%;min-height:0}
+.mw-big .mwtop .mwart{height:100%;width:auto}
+.mw-big .mwinfo b{font-size:clamp(18px,6cqmin,34px)}
+.mw-big .mwfavs{grid-auto-rows:minmax(56px,1fr);flex:1}
+.mw-big .mwside{display:flex;flex-direction:column;justify-content:center;gap:12px;min-width:0}
+/* DR TV */
+.tvw{flex:1;min-height:0;display:grid;grid-template-columns:repeat(var(--c),minmax(0,1fr));grid-template-rows:repeat(var(--r),minmax(0,1fr));gap:8px}
+.tvw .tvtile{min-height:0;font-size:clamp(15px,5cqmin,22px);padding:14px}
+/* Nedtælling */
+.cdw{flex:1;display:flex;flex-direction:column;justify-content:center;gap:4px}
+.cdn{font-size:clamp(56px,38cqmin,220px);font-weight:800;line-height:.9;letter-spacing:-.04em}
+.cdl{font-size:clamp(15px,5cqmin,26px);font-weight:700}
+.cdd{font-size:clamp(12px,3.6cqmin,16px);color:var(--muted);font-weight:600}
+
 /* Kalender */
 .days{display:grid;gap:8px;flex:1}
 .day{border-radius:14px;background:var(--dayBg);border:2px solid var(--line);padding:10px;display:flex;flex-direction:column;gap:6px}
