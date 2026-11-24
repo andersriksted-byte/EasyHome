@@ -1,5 +1,5 @@
 {
-  "version": "1.23.0",
+  "version": "1.23.1",
   "files": [
     "index.html",
     "app.js",
@@ -20,6 +20,14 @@
     "madro.js"
   ],
   "notes": [
+    {
+      "version": "1.23.1",
+      "date": "24. november 2026",
+      "title": "Vejret time for time",
+      "items": [
+        "Vejrkortet på forsiden viser igen prognosen time for time."
+      ]
+    },
     {
       "version": "1.23.0",
       "date": "24. november 2026",

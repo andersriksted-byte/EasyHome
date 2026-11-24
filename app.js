@@ -1050,6 +1050,7 @@ function boot() {
   if (!Array.isArray(settings.countdowns)) { const c = settings.countdown || {}; settings.countdowns = c.name || c.date ? [{ id: uid(), name: c.name || '', date: c.date || '', imageId: '' }] : []; save(); }
   // Kun én nedtælling øverst: vælg den nærmeste, første gang
   if (settings.cdTop === undefined) { const n = countdowns('top').find((c) => c.days >= 0); settings.cdTop = n ? n.id : ''; save(); }
+  if (!settings.weather.stepRev) { settings.weather.step = 60; settings.weather.stepRev = 1; save(); } // vejrkortet viser timer som standard
   M.onMediaLoaded(() => softRender());
   MD.onMadroChange(() => { if (ui.page === 'forside') softRender(); });
   // Madplan og indkøbsliste på forsiden – brugeren bad selv om dem (én gang)

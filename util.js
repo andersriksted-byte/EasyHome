@@ -35,7 +35,7 @@ export const DEFAULTS = {
   services: {}, // tjenester slået fra: { nyheder: false, … }
   location: { name: 'København', lat: 55.6761, lon: 12.5683 }, // ældre felt – flyttes ind i places ved start
   places: [], // [{ id, label, name, lat, lon }] – første sted er 'hjem'
-  weather: { model: 'dmi_seamless', step: 30 }, // step: minutter mellem punkterne i vejrkortet
+  weather: { model: 'dmi_seamless', step: 60 }, // step: minutter mellem punkterne i vejrkortet
   news: { sources: ['dr-seneste', 'tv2', 'jp'], custom: [], publicProxyForTest: false, rotateSecs: 20 },
   calendars: [],
   countdown: { name: 'Juleaften', date: '2026-12-24' }, // ældre felt – flyttes til countdowns ved start
