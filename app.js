@@ -328,6 +328,54 @@ function pageTv() {
 }
 
 /* ---------- Indstillinger ---------- */
+const ICO2 = {
+  home: 'M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z',
+  pin: 'M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21zM12 12a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z',
+  trash: 'M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13',
+  edit: 'M4 20h4L19 9l-4-4L4 16v4zM14 6l4 4',
+  search: 'M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM20 20l-4-4',
+  plus: 'M12 5v14M5 12h14',
+  check: 'M5 12l5 5 9-10'
+};
+const ico = (n, size = 20) => `<svg aria-hidden="true" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="${ICO2[n]}"/></svg>`;
+
+function vejrSettings() {
+  const s = settings;
+  const many = s.places.length > 1;
+  const rows = s.places.map((p, i) => {
+    const w = D.wx[p.id];
+    return `<li class="prow ${i === 0 ? 'is-home' : ''}">
+      <span class="pico">${ico(i === 0 ? 'home' : 'pin', 22)}</span>
+      <div class="pmain">
+        <label class="pname">${ico('edit', 16)}<input type="text" data-place="${i}" value="${esc(p.label || '')}" placeholder="${esc(p.name)}" aria-label="Navn på stedet ${esc(p.name)}" enterkeyhint="done"></label>
+        <span class="psub">${i === 0 ? '<b class="hometag">Hjem</b>' : ''}${esc(p.name)}${w ? ` · nu ${fmtTemp(w.now.temp)}` : ''}</span>
+      </div>
+      <div class="pact">
+        ${i > 0 ? `<button class="ibtn" data-act="placeHome" data-i="${i}" aria-label="Gør ${esc(placeLabel(p))} til hjem">${ico('home', 18)}<span>Gør til hjem</span></button>` : ''}
+        ${many ? `<button class="ibtn danger" data-act="placeRm" data-i="${i}" aria-label="Fjern ${esc(placeLabel(p))}">${ico('trash', 18)}</button>` : ''}
+      </div></li>`;
+  }).join('');
+  const results = ui.geo ? (ui.geo.length ? `<ul class="glist">${ui.geo.map((g, i) => `<li><button data-act="geoPick" data-i="${i}"><span class="gname"><b>${esc(g.name)}</b><span class="psub">${esc(g.area)}</span></span><span class="gadd">${ico('plus', 18)} Tilføj</span></button></li>`).join('')}</ul>` : '<div class="empty">Ingen steder fundet. Prøv et andet navn.</div>') : '';
+  const sources = W.MODELS.map((m) => {
+    const on = s.weather.model === m.id;
+    return `<button class="srcard" data-act="wModel" data-model="${m.id}" aria-pressed="${on}"><span class="srhead"><b>${esc(m.name)}</b><span class="srcheck">${on ? ico('check', 16) : ''}</span></span><span class="psub">${esc(m.desc)}</span></button>`;
+  }).join('');
+  return `
+    <section class="card wide">
+      <div class="sechead"><div><h2>Steder</h2><p class="note">Skift mellem stederne med pilene i vejrkortet. Hjem vises også i toppen af skærmen. Tryk på et navn for at omdøbe det.</p></div></div>
+      <ul class="plist">${rows}</ul>
+      <div class="addbox">
+        <label class="search">${ico('search', 20)}<input type="text" id="geoQ" placeholder="Tilføj sted – søg fx Skagen eller Spodsbjerg" aria-label="Søg efter et sted at tilføje" enterkeyhint="search"></label>
+        <button class="btn primary" data-act="geoSearch">Søg</button>
+      </div>
+      ${results}${ui.geoMsg ? `<div class="err">${esc(ui.geoMsg)}</div>` : ''}
+    </section>
+    <section class="card wide">
+      <div class="sechead"><div><h2>Vejrkilde</h2><p class="note">Gælder for alle steder. Du kan altid sammenligne kilderne på siden Vejret.</p></div></div>
+      <div class="srgrid">${sources}</div>
+    </section>`;
+}
+
 const SET_TABS = [
   { id: 'vejr', label: 'Vejret' }, { id: 'nyheder', label: 'Nyheder' }, { id: 'kalender', label: 'Kalender' }, { id: 'musik', label: 'Musik' },
   { id: 'tv', label: 'DR TV' }, { id: 'udseende', label: 'Udseende' }, { id: 'forbindelse', label: 'Forbindelse' }, { id: 'backup', label: 'Sikkerhedskopi' }
@@ -339,14 +387,7 @@ function pageIndstillinger() {
   const tab = SET_TABS.some((t) => t.id === ui.setTab) ? ui.setTab : 'vejr';
   const needsConn = ['nyheder', 'kalender', 'musik'].includes(tab) && !hasProxy();
   const T = {
-    vejr: () => `
-    <section class="card"><b>Steder</b><p class="note">Det øverste sted er <b>hjem</b> og bruges i toppen af skærmen. Giv stederne et navn, fx "Sommerhuset".</p>
-      ${s.places.map((p, i) => `<div class="calrow" style="grid-template-columns:1fr auto auto"><label class="f" style="gap:2px">${i === 0 ? '⌂ Hjem' : 'Navn'}<input type="text" data-place="${i}" value="${esc(p.label)}" placeholder="${esc(p.name)}" aria-label="Navn på ${esc(p.name)}"><span class="small muted">${esc(p.name)} · ${num(p.lat, 2)}, ${num(p.lon, 2)}</span></label>
-        ${i > 0 ? `<button class="btn" data-act="placeHome" data-i="${i}">Gør til hjem</button>` : '<span></span>'}${s.places.length > 1 ? `<button class="btn" data-act="placeRm" data-i="${i}">Fjern</button>` : '<span></span>'}</div>`).join('')}
-      <div class="lab" style="margin-top:6px">Tilføj sted</div>
-      <div class="row" style="flex-wrap:nowrap"><input type="text" id="geoQ" placeholder="Søg by, fx Skagen" aria-label="Søg sted"><button class="btn primary" data-act="geoSearch">Søg</button></div>
-      ${ui.geo ? `<div class="row">${ui.geo.map((g, i) => `<button class="pill" data-act="geoPick" data-i="${i}">+ ${esc(g.name)}<span class="muted small">&nbsp;${esc(g.area)}</span></button>`).join('') || '<span class="muted">Ingen resultater</span>'}</div>` : ''}${ui.geoMsg ? `<div class="err">${esc(ui.geoMsg)}</div>` : ''}</section>
-    <section class="card"><b>Vejrkilde</b>${W.MODELS.map((m) => `<label class="check"><input type="radio" name="wmodel" data-set="weather.model" value="${m.id}" ${s.weather.model === m.id ? 'checked' : ''}><span><b>${esc(m.name)}</b><br><span class="small muted">${esc(m.desc)}</span></span></label>`).join('')}</section>`,
+    vejr: () => vejrSettings(),
     nyheder: () => `
     <section class="card wide"><b>Nyhedskilder</b><p class="note">Vælg en eller flere. Nyhederne blandes og sorteres efter tid. Kilder markeret "afprøves" er ikke bekræftet endnu.</p>
       <div class="form">${Object.entries(groups).map(([g, list]) => `<div>${list.map((src) => `<label class="check"><input type="checkbox" data-news="${esc(src.id)}" ${s.news.sources.includes(src.id) ? 'checked' : ''}>${esc(src.name)}${src.unverified ? ' <span class="small muted">(afprøves)</span>' : ''}${src.custom ? ` <button class="btn" data-act="customRm" data-id="${esc(src.id)}" aria-label="Fjern ${esc(src.name)}">Fjern</button>` : ''}</label>`).join('')}</div>`).join('')}</div>
@@ -509,7 +550,7 @@ document.addEventListener('click', (e) => {
   const b = e.target.closest('[data-act]');
   if (b && act[b.dataset.act]) { e.preventDefault(); act[b.dataset.act](b, e); }
 });
-document.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.id === 'geoQ') act.geoSearch(); });
+document.addEventListener('keydown', (e) => { if (e.key !== 'Enter') return; if (e.target.id === 'geoQ') act.geoSearch(); else if (e.target.dataset && e.target.dataset.place !== undefined) e.target.blur(); });
 document.addEventListener('change', (e) => {
   const t = e.target;
   if (t.dataset.set) {

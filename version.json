@@ -1,5 +1,5 @@
 {
-  "version": "1.3.0",
+  "version": "1.3.1",
   "files": [
     "index.html",
     "app.js",
@@ -14,6 +14,17 @@
     "manifest.webmanifest"
   ],
   "notes": [
+    {
+      "version": "1.3.1",
+      "date": "24. november 2026",
+      "title": "Pænere indstillinger for vejret",
+      "items": [
+        "Stederne står nu i en overskuelig liste, hvor hjem er markeret tydeligt.",
+        "Tryk på et navn for at omdøbe det, fx til Sommerhuset.",
+        "Søg efter et nyt sted og tryk Tilføj ud for det rigtige resultat.",
+        "Vejrkilden vælges med store kort i stedet for små knapper."
+      ]
+    },
     {
       "version": "1.3.0",
       "date": "24. november 2026",
