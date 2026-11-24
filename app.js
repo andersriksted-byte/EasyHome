@@ -263,7 +263,7 @@ function wUge(size, h = 1, w = 1, x = null) {
   const tag = (d) => (sameDay(d, today) ? 'I dag' : sameDay(d, addDays(today, 1)) ? 'I morgen' : cap(DAYS[d.getDay()]));
   const evRow = (e, d) => e.allDay ? `<div class="cw-ad" ${evRef(e)} style="--c:${esc(e.color || '#888')};--l:${lighten(e.color)}">${esc(e.title)}</div>`
     : `<div class="cw-ev" ${evRef(e)} style="--c:${esc(e.color || '#888')};--l:${lighten(e.color)}"><time>${esc(evTime(e, d))}</time><span>${esc(e.title)}</span></div>`;
-  const sorted = (d) => { const l = eventsOn(d); return l.filter((e) => e.allDay).concat(l.filter((e) => !e.allDay)); };
+  const sorted = (d) => { const now = Date.now(); const l = eventsOn(d).filter((e) => e.allDay || e.end.getTime() > now); /* overståede aftaler forsvinder */ return l.filter((e) => e.allDay).concat(l.filter((e) => !e.allDay)); };
   const list = (d) => { const l = sorted(d); return l.length ? l.map((e) => evRow(e, d)).join('') : '<span class="cw-none">Ingen aftaler</span>'; };
   const cols = w >= 2 && n > 1 ? Math.min(n, w * 2) : 1;
   if (cols === 1) {
@@ -1669,7 +1669,7 @@ function boot() {
     bar.style.width = (left / newsSecs()) * 100 + '%';
   }, 1000);
   // "Næste i kalenderen" tæller ned i minutter
-  setInterval(() => { if (ui.page === 'forside' && !ui.editing && curLayout().some((x) => x.id === 'naeste')) softRender(); }, 60000);
+  setInterval(() => { if (ui.page === 'forside' && !ui.editing && curLayout().some((x) => x.id === 'naeste' || x.id === 'uge')) softRender(); }, 60000);
   // "Én nyhed ad gangen": skift efter samme tid som nyhedskortet
   setInterval(() => {
     const on = ui.page === 'forside' && !ui.editing && !drag && !R.isOpen() && curLayout().some((x) => x.id === 'nyhed1') && widgetOn('nyhed1') && mixedNews().length > 1;

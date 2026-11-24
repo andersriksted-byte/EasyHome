@@ -1,5 +1,5 @@
 {
-  "version": "1.50.0",
+  "version": "1.50.1",
   "files": [
     "index.html",
     "app.js",
@@ -23,6 +23,14 @@
     "mcats.js"
   ],
   "notes": [
+    {
+      "version": "1.50.1",
+      "date": "24. november 2026",
+      "title": "Overståede aftaler forsvinder",
+      "items": [
+        "Kalenderkortet på forsiden fjerner nu aftaler, når de er slut"
+      ]
+    },
     {
       "version": "1.50.0",
       "date": "24. november 2026",
