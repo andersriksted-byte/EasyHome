@@ -49,6 +49,7 @@ const themeLabel = (id) => (id === 'auto' ? 'Automatisk' : THEMES[id].label);
 
 /* ---------- Ikoner ---------- */
 const ICON = {
+  sunon: 'M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10zM12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4', sunoff: 'M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z',
   timer: 'M12 8v5l3 2M9 2h6M12 22a8 8 0 1 0 0-16 8 8 0 0 0 0 16z', pause: 'M7 5h4v14H7zM13 5h4v14h-4z',
   blinds: 'M4 4h16M5 4v9M19 4v9M5 13h14M7 7h10M7 10h10M12 13v4M10 19a2 2 0 1 0 4 0 2 2 0 0 0-4 0',
   somfy: 'M4 4h16M5 4v9M19 4v9M5 13h14M7 7h10M7 10h10M12 13v4M10 19a2 2 0 1 0 4 0 2 2 0 0 0-4 0',
@@ -174,8 +175,23 @@ function renderNav() {
   shade.classList.toggle('show', settings.navOpen);
   const item = (p) => `<button data-act="nav" data-page="${p.id}" aria-label="${esc(p.label)}" ${ui.page === p.id ? 'aria-current="page"' : ''}>${svg(p.id)}<span class="lbl">${esc(p.label)}</span></button>`;
   nav.innerHTML = `<button class="toggle" data-act="toggleNav" aria-expanded="${settings.navOpen}" aria-label="${settings.navOpen ? 'Luk menu' : 'Åbn menu'}">${svg(settings.navOpen ? 'back' : 'menu', 22)}<span class="lbl">Luk menu</span></button>
-    ${PAGES.filter((p) => pageOn(p.id)).map(item).join('')}<div class="sp"></div>${item({ id: 'indstillinger', label: 'Indstillinger' })}`;
+    ${PAGES.filter((p) => pageOn(p.id)).map(item).join('')}<div class="sp"></div>
+    <button class="awake" data-act="awake" aria-pressed="${!!settings.keepAwake}" aria-label="${settings.keepAwake ? 'Skærmen holdes tændt – tryk for at slå fra' : 'Hold skærmen tændt'}">${svg(settings.keepAwake ? 'sunon' : 'sunoff')}<span class="lbl">${settings.keepAwake ? 'Skærmen er altid tændt' : 'Hold skærmen tændt'}</span></button>
+    ${item({ id: 'indstillinger', label: 'Indstillinger' })}`;
 }
+
+/* ---------- Hold skærmen tændt (Wake Lock) ---------- */
+let wakeLock = null;
+async function applyWakeLock() {
+  try {
+    if (settings.keepAwake && !document.hidden) {
+      if (!('wakeLock' in navigator)) { toast('Denne skærm kan ikke holdes tændt fra appen – slå automatisk lås fra i enhedens indstillinger'); return; }
+      if (!wakeLock) { wakeLock = await navigator.wakeLock.request('screen'); wakeLock.addEventListener('release', () => { wakeLock = null; }); }
+    } else if (wakeLock) { await wakeLock.release(); wakeLock = null; }
+  } catch (e) { wakeLock = null; }
+}
+// Låsen slipper, når appen skjules – tag den igen, når den kommer frem
+document.addEventListener('visibilitychange', applyWakeLock);
 
 /* ---------- Header ---------- */
 // Vejret i toppen: sted, nu, og hvordan det udvikler sig de næste timer
@@ -1077,6 +1093,7 @@ const act = {
     renderAll(); if (svcOn(id)) loadAll();
   },
   wStepSet: (b) => { settings.weather.step = +b.dataset.v; save(); renderMain(); },
+  awake: () => { settings.keepAwake = !settings.keepAwake; save(); applyWakeLock(); renderNav(); toast(settings.keepAwake ? 'Skærmen holdes tændt' : 'Skærmen må slukke igen'); },
   tmStart: (b) => { TM.start(+b.dataset.m); },
   tmToggle: (b) => { TM.toggle(b.dataset.id); },
   tmAdd: (b) => { TM.add(b.dataset.id, +b.dataset.m); },
@@ -1405,6 +1422,7 @@ function boot() {
   M.onMediaLoaded(() => softRender());
   TM.onTimerChange(() => { renderHeader(); if (ui.page === 'forside') softRender(); });
   setInterval(timerTick, 1000);
+  applyWakeLock(); document.addEventListener('pointerdown', () => { if (settings.keepAwake && !wakeLock) applyWakeLock(); }, { passive: true });
   MD.onMadroChange(() => { if (ui.page === 'forside' || ui.page === 'kalender') softRender(); });
   SF.onSomfyChange(() => { if (ui.page === 'somfy' || (ui.page === 'forside' && curLayout().some((x) => x.id === 'screens'))) softRender(); });
   setInterval(() => { if (svcOn('somfy') && !document.hidden && (ui.page === 'somfy' || curLayout().some((x) => x.id === 'screens'))) SF.refresh(); }, ui.page === 'somfy' ? 20000 : 60000);

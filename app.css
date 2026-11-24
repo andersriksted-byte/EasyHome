@@ -935,3 +935,7 @@ button.w7r.sel{background:color-mix(in srgb,var(--accent) 16%,transparent);box-s
 .nhero .nimg{flex:1 1 auto;min-height:48px}
 .nhero .ntxt{flex:none}
 @container (max-height:300px){.nbody .nhero{display:none}.nb-wide.has-hero{display:flex}}
+
+/* Hold skærmen tændt (over tandhjulet) */
+.nav .awake{opacity:.7}
+.nav .awake[aria-pressed=true]{opacity:1;color:#FFD36B}
