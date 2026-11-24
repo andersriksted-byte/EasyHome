@@ -19,9 +19,9 @@ export async function getForecast(lat, lon, model) {
   const p = new URLSearchParams({
     latitude: lat, longitude: lon, timezone: 'Europe/Copenhagen', wind_speed_unit: 'ms', forecast_days: '7',
     current: 'temperature_2m,apparent_temperature,weather_code,wind_speed_10m,wind_direction_10m,precipitation,is_day,relative_humidity_2m',
-    hourly: 'temperature_2m,precipitation,precipitation_probability,weather_code,is_day',
+    hourly: 'temperature_2m,precipitation,precipitation_probability,weather_code,is_day,cloud_cover,wind_speed_10m,wind_gusts_10m,wind_direction_10m,sunshine_duration',
     minutely_15: 'temperature_2m,precipitation,weather_code,is_day', forecast_minutely_15: '64',
-    daily: 'weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,wind_speed_10m_max,sunrise,sunset'
+    daily: 'weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,wind_speed_10m_max,wind_gusts_10m_max,wind_direction_10m_dominant,sunshine_duration,sunrise,sunset'
   });
   if (model && model !== 'best_match') p.set('models', model);
   const res = await fetch('https://api.open-meteo.com/v1/forecast?' + p.toString());
@@ -31,7 +31,10 @@ export async function getForecast(lat, lon, model) {
   const hours = j.hourly.time.map((t, i) => ({
     time: new Date(t), temp: j.hourly.temperature_2m[i], rain: j.hourly.precipitation[i],
     prob: j.hourly.precipitation_probability ? j.hourly.precipitation_probability[i] : null,
-    code: j.hourly.weather_code[i], isDay: j.hourly.is_day ? j.hourly.is_day[i] : 1
+    code: j.hourly.weather_code[i], isDay: j.hourly.is_day ? j.hourly.is_day[i] : 1,
+    cloud: j.hourly.cloud_cover ? j.hourly.cloud_cover[i] : null, wind: j.hourly.wind_speed_10m ? j.hourly.wind_speed_10m[i] : null,
+    gust: j.hourly.wind_gusts_10m ? j.hourly.wind_gusts_10m[i] : null, windDir: j.hourly.wind_direction_10m ? j.hourly.wind_direction_10m[i] : null,
+    sun: j.hourly.sunshine_duration ? Math.round((j.hourly.sunshine_duration[i] || 0) / 60) : null
   })).filter((h) => h.time.getTime() > now - 3600000 && h.temp !== null);
   // Kvarterer (15 min) til vejrkortets korte intervaller – beregnes ud fra timeværdierne, hvor kilden ikke har dem
   const m = j.minutely_15;
@@ -47,7 +50,7 @@ export async function getForecast(lat, lon, model) {
   const days = j.daily.time.map((t, i) => ({
     date: new Date(t + 'T12:00'), code: j.daily.weather_code[i], max: j.daily.temperature_2m_max[i], min: j.daily.temperature_2m_min[i],
     rain: j.daily.precipitation_sum[i], prob: j.daily.precipitation_probability_max ? j.daily.precipitation_probability_max[i] : null,
-    wind: j.daily.wind_speed_10m_max[i], sunrise: new Date(j.daily.sunrise[i]), sunset: new Date(j.daily.sunset[i])
+    wind: j.daily.wind_speed_10m_max[i], gust: j.daily.wind_gusts_10m_max ? j.daily.wind_gusts_10m_max[i] : null, windDir: j.daily.wind_direction_10m_dominant ? j.daily.wind_direction_10m_dominant[i] : null, sunH: j.daily.sunshine_duration ? Math.round((j.daily.sunshine_duration[i] || 0) / 360) / 10 : null, sunrise: new Date(j.daily.sunrise[i]), sunset: new Date(j.daily.sunset[i])
   })).filter((d) => d.max !== null);
   const cur = j.current;
   const data = {

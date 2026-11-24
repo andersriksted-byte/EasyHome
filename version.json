@@ -1,5 +1,5 @@
 {
-  "version": "1.33.4",
+  "version": "1.34.0",
   "files": [
     "index.html",
     "app.js",
@@ -21,6 +21,17 @@
     "somfy.js"
   ],
   "notes": [
+    {
+      "version": "1.34.0",
+      "date": "24. november 2026",
+      "title": "Vejret: det vigtigste først",
+      "items": [
+        "Vejrsiden fortæller nu udviklingen i hele sætninger: temperatur, regn, sol og vind de næste timer.",
+        "De næste 24 timer viser temperaturkurve, sol og skyer, regn og vind time for time.",
+        "7 dage viser også solskinstimer og vind.",
+        "I Sonos pulserer nu kun fluebenskassen, mens et rum skiftes."
+      ]
+    },
     {
       "version": "1.33.4",
       "date": "24. november 2026",

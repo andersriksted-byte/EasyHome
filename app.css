@@ -825,3 +825,53 @@ span.avatar{opacity:1}
 @keyframes pendingPulse{0%,100%{box-shadow:0 0 0 0 color-mix(in srgb,var(--accent) 55%,transparent);filter:brightness(1)}50%{box-shadow:0 0 0 6px color-mix(in srgb,var(--accent) 0%,transparent);filter:brightness(1.25)}}
 .pending{animation:pendingPulse 1s ease-in-out infinite;position:relative}
 .pending[aria-pressed=true],.rtoggle.pending .rbox{animation:pendingPulse 1s ease-in-out infinite}
+
+/* Vejrsiden: udvikling og meteogram */
+.wx24{gap:12px}
+.wxstory{display:grid;grid-template-columns:1fr 1fr;gap:6px 18px}
+.ws{display:flex;gap:8px;align-items:baseline;font-size:14px;font-weight:700;line-height:1.3}
+.ws span{flex:none;width:20px}
+.mg{display:grid;grid-template-columns:1fr;gap:2px}
+.mg-row{display:grid;grid-template-columns:repeat(var(--n),minmax(0,1fr));align-items:end}
+.mg-row span{display:flex;flex-direction:column;align-items:center;gap:1px;font-size:12px;min-width:0}
+.mg-time span{font-weight:800;color:var(--muted)}
+.mg-ico svg{width:26px;height:26px}
+.mg-temp{width:100%;height:90px;display:block;overflow:visible}
+.mg-temp .ct{font:800 18px Manrope,system-ui,sans-serif;fill:var(--text)}
+.mg-lab{font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin-top:6px}
+.mg-sky{gap:2px;height:18px}
+.mg-sky i{height:100%;border-radius:4px;background:color-mix(in srgb,#f2b33d calc(var(--sun)*100%),color-mix(in srgb,#9aa6b2 calc(var(--cloud)*100%),#cfe6f7))}
+.mg-sky i.night{background:color-mix(in srgb,#9aa6b2 calc(var(--cloud)*100%),#34446b)}
+.mg-rain{gap:2px;height:28px}
+.mg-rain i{align-self:end;height:max(2px,calc(var(--r)*100%));border-radius:3px 3px 0 0;background:#4C9BE8;opacity:calc(.25 + var(--r)*.75)}
+.mg-rainv span{font-weight:800;color:#4C9BE8;font-size:11px;min-height:14px}
+.mg-wind span{flex-direction:row;justify-content:center;gap:3px;font-size:13px}
+.mg-wind small{color:var(--muted);font-size:11px}
+.w7r{grid-template-columns:52px 30px 56px 50px 40px 34px minmax(0,1fr) 34px}
+.w7sun{font-size:12px;font-weight:800;color:#d99a1b;white-space:nowrap}
+.w7wind{font-size:12px;font-weight:700;color:var(--muted);display:flex;align-items:center;gap:3px;white-space:nowrap}
+
+/* Vejrsiden: venstre = nu + 7 dage, højre = udvikling og 24 timer */
+.wxpage{grid-template-rows:auto minmax(0,1fr)}
+.wxhero{grid-row:auto;grid-column:1;padding:20px;gap:10px}
+.wx24{grid-column:2;grid-row:1 / span 2;overflow:hidden}
+.wx7{grid-column:1;grid-row:2}
+.wxh-t{font-size:64px}
+.wxh-main svg{width:72px;height:72px}
+.wstats{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:6px}
+.wstat{padding:8px 10px;border-radius:12px}
+.wstat b{font-size:16px}
+.w7r{grid-template-columns:40px 26px minmax(0,46px) minmax(0,44px) 34px 26px minmax(0,1fr) 26px;gap:6px;font-size:14px}
+.w7r svg{width:22px;height:22px}
+.w7r .w7wind svg{width:11px;height:11px}
+.mg-temp{height:120px}
+@media (max-width:900px){.wxhero,.wx24,.wx7{grid-column:1;grid-row:auto}}
+
+.mg-tw{position:relative;height:120px}
+.mg-tw .mg-temp{position:absolute;inset:0;width:100%;height:100%}
+.mg-pt{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;pointer-events:none}
+.mg-pt b{position:absolute;bottom:10px;font-size:15px;font-weight:800;white-space:nowrap}
+.mg-pt i{width:9px;height:9px;border-radius:50%;background:var(--card);border:2.5px solid var(--accent)}
+/* Rum i Sonos: kun fluebenskassen pulserer, ikke hele rækken */
+.rtoggle.pending{animation:none}
+.rtoggle.pending .rbox{animation:pendingPulse 1s ease-in-out infinite}

@@ -503,24 +503,56 @@ function wxTheme(code, isDay) {
   if (code >= 2) return 'cloud';
   return 'sun';
 }
+// Udviklingen de næste 24 timer i hele sætninger: temperatur, regn, sol og vind
+function wxStory(w) {
+  const H = w.hours.filter((h) => h.time.getTime() > Date.now() - 3600000).slice(0, 24); if (!H.length) return [];
+  const hh = (h) => 'kl. ' + pad(h.time.getHours());
+  const out = [];
+  const mx = H.reduce((a, b) => (b.temp > a.temp ? b : a)); const mn = H.reduce((a, b) => (b.temp < a.temp ? b : a));
+  out.push({ k: 'temp', t: `${fmtTemp(w.now.temp)} nu · højst ${fmtTemp(mx.temp)} ${hh(mx)} · lavest ${fmtTemp(mn.temp)} ${hh(mn)}` });
+  const wet = H.filter((h) => h.rain >= 0.1);
+  if (!wet.length) out.push({ k: 'rain', t: 'Tørt det næste døgn' });
+  else { const tot = wet.reduce((a, h) => a + h.rain, 0); const first = wet[0], last = wet[wet.length - 1]; out.push({ k: 'rain', t: `Regn ${first === H[0] ? 'nu' : 'fra ' + hh(first)} til kl. ${pad((last.time.getHours() + 1) % 24)} · i alt ${num(tot)} mm` }); }
+  const d0 = (H.find((h) => h.isDay) || H[0]).time.toDateString(); const sunH = H.filter((h) => h.isDay && h.time.toDateString() === d0); const sunMin = sunH.reduce((a, h) => a + (h.sun || 0), 0);
+  if (sunH.length && H[0].sun !== null) {
+    if (sunMin < 20) { const cl = Math.round(sunH.reduce((a, h) => a + (h.cloud || 0), 0) / sunH.length); out.push({ k: 'sun', t: cl > 80 ? 'Overskyet – ingen sol i sigte' : 'Næsten ingen sol' }); }
+    else { const best = sunH.filter((h) => (h.sun || 0) >= 30); out.push({ k: 'sun', t: `${d0 === new Date().toDateString() ? 'I dag' : 'I morgen'} sol i ca. ${num(sunMin / 60)} timer${best.length ? `, mest kl. ${pad(best[0].time.getHours())}–${pad((best[best.length - 1].time.getHours() + 1) % 24)}` : ''}` }); }
+  }
+  if (H[0].wind !== null) {
+    const wmax = H.reduce((a, b) => (b.wind > a.wind ? b : a)); const g = Math.max(...H.map((h) => h.gust || 0));
+    const now = w.now.wind; const dir = W.windDirText(w.now.windDir);
+    const change = wmax.wind - now >= 3 ? `, tager til ${num(wmax.wind, 0)} m/s ${hh(wmax)}` : wmax.wind - now <= -3 ? ', aftager' : '';
+    out.push({ k: 'wind', t: `${num(now, 0)} m/s fra ${dir}${change}${g >= 10 ? ` · stød op til ${num(g, 0)} m/s` : ''}` });
+  }
+  return out;
+}
+const STORY_ICON = { temp: '🌡️', rain: '🌧️', sun: '☀️', wind: '💨' };
 function hourChart(hours) {
-  const H = hours.slice(0, 24); if (H.length < 2) return '';
-  const Wd = 960, Ht = 200, top = 34, bot = 150, gx = 20;
+  const H = hours.filter((h) => h.time.getTime() > Date.now() - 3600000).slice(0, 24); if (H.length < 2) return '';
+  const n = H.length; const Wd = 960, Ht = 110;
   const ts = H.map((h) => h.temp); const mx = Math.max(...ts), mn = Math.min(...ts); const span = Math.max(4, mx - mn);
-  const x = (i) => gx + (i * (Wd - 2 * gx)) / (H.length - 1);
-  const y = (t) => top + (1 - (t - mn) / span) * (bot - top - 20) + 10;
+  const x = (i) => ((i + 0.5) * Wd) / n; const y = (t) => 26 + (1 - (t - mn) / span) * (Ht - 40);
   const pts = H.map((h, i) => [x(i), y(h.temp)]);
   let d = `M${pts[0][0]},${pts[0][1]}`;
   for (let i = 0; i < pts.length - 1; i++) { const [x0, y0] = pts[Math.max(0, i - 1)], [x1, y1] = pts[i], [x2, y2] = pts[i + 1], [x3, y3] = pts[Math.min(pts.length - 1, i + 2)]; d += ` C${x1 + (x2 - x0) / 6},${y1 + (y2 - y0) / 6} ${x2 - (x3 - x1) / 6},${y2 - (y3 - y1) / 6} ${x2},${y2}`; }
+  // Tal og prikker lægges som HTML ovenpå, så de ikke bliver trukket skæve, når kurven strækkes i bredden
+  const labels = H.map((h, i) => (i % 3 === 0 ? `<span class="mg-pt" style="left:${(x(i) / Wd) * 100}%;top:${(y(h.temp) / Ht) * 100}%"><b>${Math.round(h.temp)}°</b><i></i></span>` : '')).join('');
   const maxRain = Math.max(1, ...H.map((h) => h.rain || 0));
-  const bars = H.map((h, i) => h.rain > 0 ? `<rect x="${x(i) - 9}" y="${Ht - 6 - (h.rain / maxRain) * 34}" width="18" height="${(h.rain / maxRain) * 34}" rx="4" fill="var(--rainc)" opacity=".8"/>` : '').join('');
-  const labels = H.map((h, i) => (i % 3 === 0 ? `<text x="${x(i)}" y="${y(h.temp) - 12}" text-anchor="middle" class="ct">${Math.round(h.temp)}°</text><circle cx="${x(i)}" cy="${y(h.temp)}" r="4" fill="var(--card)" stroke="var(--accent)" stroke-width="2.5"/>` : '')).join('');
-  const now = `<line x1="${x(0)}" y1="${top - 6}" x2="${x(0)}" y2="${Ht - 6}" stroke="var(--line)" stroke-dasharray="3 4"/>`;
-  return `<svg class="hchart" viewBox="0 0 ${Wd} ${Ht}" role="img" aria-label="Temperatur og nedbør de næste 24 timer">
-    <defs><linearGradient id="tfill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--accent)" stop-opacity=".28"/><stop offset="1" stop-color="var(--accent)" stop-opacity="0"/></linearGradient></defs>
-    ${now}<path d="${d} L${pts[pts.length - 1][0]},${bot + 10} L${pts[0][0]},${bot + 10} Z" fill="url(#tfill)"/>
-    <path d="${d}" fill="none" stroke="var(--accent)" stroke-width="3.5" stroke-linecap="round"/>${labels}${bars}</svg>
-    <div class="hicons">${H.map((h, i) => (i % 3 === 0 ? `<span><b>${i === 0 ? 'Nu' : pad(h.time.getHours())}</b>${W.weatherIcon(h.code, h.isDay, 26)}${h.rain > 0 ? `<i>${num(h.rain)}</i>` : '<i></i>'}</span>` : '')).join('')}</div>`;
+  const col = (i, span = 3) => `grid-column:${i + 1} / span ${span}`;
+  const every3 = (f) => H.map((h, i) => (i % 3 === 0 ? f(h, i) : '')).join('');
+  return `<div class="mg" style="--n:${n}">
+    <div class="mg-row mg-time">${every3((h, i) => `<span style="${col(i)}">${i === 0 ? 'Nu' : pad(h.time.getHours())}</span>`)}</div>
+    <div class="mg-row mg-ico">${every3((h, i) => `<span style="${col(i)}">${W.weatherIcon(h.code, h.isDay, 28)}</span>`)}</div>
+    <div class="mg-tw"><svg class="mg-temp" viewBox="0 0 ${Wd} ${Ht}" preserveAspectRatio="none" aria-label="Temperatur"><defs><linearGradient id="tfill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--accent)" stop-opacity=".25"/><stop offset="1" stop-color="var(--accent)" stop-opacity="0"/></linearGradient></defs>
+      <path d="${d} L${pts[n - 1][0]},${Ht} L${pts[0][0]},${Ht} Z" fill="url(#tfill)"/><path d="${d}" fill="none" stroke="var(--accent)" stroke-width="3" stroke-linecap="round" vector-effect="non-scaling-stroke"/></svg>${labels}</div>
+    <div class="mg-lab">Sol og skyer</div>
+    <div class="mg-row mg-sky">${H.map((h) => `<i title="${h.sun || 0} min sol · ${h.cloud ?? '–'} % skyer" style="--sun:${h.isDay ? Math.min(1, (h.sun || 0) / 60) : 0};--cloud:${(h.cloud || 0) / 100}" class="${h.isDay ? '' : 'night'}"></i>`).join('')}</div>
+    <div class="mg-lab">Regn</div>
+    <div class="mg-row mg-rain">${H.map((h) => `<i style="--r:${Math.min(1, (h.rain || 0) / maxRain)}" title="${num(h.rain || 0)} mm"></i>`).join('')}</div>
+    <div class="mg-row mg-rainv">${every3((h, i) => { const r = H.slice(i, i + 3).reduce((a, x) => a + (x.rain || 0), 0); return `<span style="${col(i)}">${r >= 0.1 ? num(r) + ' mm' : ''}</span>`; })}</div>
+    <div class="mg-lab">Vind (m/s)</div>
+    <div class="mg-row mg-wind">${every3((h, i) => `<span style="${col(i)}"><svg width="18" height="18" viewBox="0 0 24 24" style="transform:rotate(${(h.windDir || 0) + 180}deg)"><path d="M12 3l6 16-6-4-6 4z" fill="currentColor"/></svg><b>${num(h.wind, 0)}</b>${h.gust ? `<small>(${num(h.gust, 0)})</small>` : ''}</span>`)}</div>
+  </div>`;
 }
 function pageVejr() {
   const place = placeById(ui.wPlace);
@@ -542,14 +574,13 @@ function pageVejr() {
         <div class="wxh-sub">Føles som ${fmtTemp(w.now.feels)} · ↑ ${fmtTemp(t0.max)} ↓ ${fmtTemp(t0.min)}${trend && trend.msg ? ` · ${esc(trend.msg)}` : ''}</div>
         <div class="wstats">
           ${stat('Vind', `${arrow} ${num(w.now.wind, 0)} m/s`, `<small>fra ${W.windDirText(w.now.windDir)}</small>`)}
-          ${stat('Nedbør i dag', t0.rain > 0 ? num(t0.rain) + ' mm' : '0 mm', t0.prob != null ? `<small>${t0.prob} % risiko</small>` : '')}
           ${stat('Fugt', (w.now.humidity ?? '–') + ' %')}
           ${stat('Sol', `${hhmm(t0.sunrise)}`, `<small>ned ${hhmm(t0.sunset)}</small>`)}
         </div>
       </section>
-      <section class="card wx24"><div class="lab">De næste 24 timer</div>${hourChart(w.hours)}</section>
+      <section class="card wx24"><div class="wxstory">${wxStory(w).map((x) => `<div class="ws ws-${x.k}"><span aria-hidden="true">${STORY_ICON[x.k]}</span>${esc(x.t)}</div>`).join('')}</div>${hourChart(w.hours)}</section>
       <section class="card wx7"><div class="lab">7 dage</div><div class="w7">${w.days.map((d, i) => `<div class="w7r ${i === 0 ? 'today' : ''}"><b>${i === 0 ? 'I dag' : cap(DAYS[d.date.getDay()])}</b>${W.weatherIcon(d.code, 1, 28)}
-        <span class="w7rain">${d.rain > 0.05 ? num(d.rain) + ' mm' : ''}</span><span class="w7min">${fmtTemp(d.min)}</span>
+        <span class="w7rain">${d.rain > 0.05 ? num(d.rain) + ' mm' : ''}</span><span class="w7sun">${d.sunH != null && d.sunH >= 0.1 ? '☀ ' + num(d.sunH) + ' t' : ''}</span><span class="w7wind">${d.windDir != null ? `<svg width="12" height="12" viewBox="0 0 24 24" style="transform:rotate(${d.windDir + 180}deg)"><path d="M12 3l6 16-6-4-6 4z" fill="currentColor"/></svg>` : ''}${num(d.wind, 0)}</span><span class="w7min">${fmtTemp(d.min)}</span>
         <div class="rng"><i style="left:${((d.min - minT) / span) * 100}%;right:${100 - ((d.max - minT) / span) * 100}%"></i></div><span class="w7max">${fmtTemp(d.max)}</span></div>`).join('')}</div></section>
     </div>`;
   }
