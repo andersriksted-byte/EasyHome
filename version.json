@@ -1,5 +1,5 @@
 {
-  "version": "1.4.0",
+  "version": "1.4.1",
   "files": [
     "index.html",
     "app.js",
@@ -14,6 +14,15 @@
     "manifest.webmanifest"
   ],
   "notes": [
+    {
+      "version": "1.4.1",
+      "date": "24. november 2026",
+      "title": "Musik på én skærm",
+      "items": [
+        "Siden Musik er samlet i tre kolonner – afspiller, rum og favoritter – så der ikke skal scrolles.",
+        "Tryk på det, der spiller, nederst på skærmen for at komme direkte til Musik."
+      ]
+    },
     {
       "version": "1.4.0",
       "date": "24. november 2026",

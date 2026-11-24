@@ -130,9 +130,9 @@ function renderFooter() {
   let music;
   if (S.state.connected) {
     music = `<button class="pp" data-act="sPlay" aria-label="${np.playing ? 'Pause' : 'Afspil'}">${fillSvg(np.playing ? 'pause' : 'play', 18)}</button>
-      <div class="np"><b>${esc(np.title || 'Intet spiller')}</b><span>Sonos · ${esc(np.group || '')}</span></div>`;
+      <button class="np" data-act="nav" data-page="musik" aria-label="Gå til Musik"><b>${esc(np.title || 'Intet spiller')}</b><span>Sonos · ${esc(np.group || '')}</span></button>`;
   } else {
-    music = `<button class="pp" data-act="nav" data-page="musik" aria-label="Musik">${svg('musik', 20)}</button><div class="np"><b>Sonos</b><span>Ikke forbundet endnu</span></div>`;
+    music = `<button class="pp" data-act="nav" data-page="musik" aria-label="Musik">${svg('musik', 20)}</button><button class="np" data-act="nav" data-page="musik" aria-label="Gå til Musik"><b>Sonos</b><span>Ikke forbundet endnu</span></button>`;
   }
   $('#ftr').innerHTML = `${music}<div class="sep"></div>
     ${top ? `<a class="ticker" href="${esc(top.link)}" target="_blank" rel="noopener"><b>${esc(top.source)}</b><span>${esc(top.title)}</span></a>`
@@ -301,24 +301,25 @@ function sonosRooms() {
   const cg = S.currentGroup();
   const members = cg ? cg.playerIds || [] : [];
   const coord = cg ? cg.coordinatorId : null;
+  const coordName = (S.state.players.find((x) => x.id === coord) || {}).name || 'dette rum';
   const players = [...S.state.players].sort((x, y) => x.name.localeCompare(y.name, 'da'));
-  const groupPills = S.state.groups.map((g) => `<button class="pill" data-act="sGroup" data-id="${esc(g.id)}" aria-pressed="${g.id === settings.sonos.groupId}">${esc(g.name)}${g.playbackState === 'PLAYBACK_STATE_PLAYING' ? ' ♪' : ''}</button>`).join('');
+  const groups = S.state.groups.length > 1 ? `<div class="mgroups">${S.state.groups.map((g) => `<button class="chipbtn" data-act="sGroup" data-id="${esc(g.id)}" aria-pressed="${g.id === settings.sonos.groupId}">${esc(g.name)}${g.playbackState === 'PLAYBACK_STATE_PLAYING' ? ' ♪' : ''}</button>`).join('')}</div>` : '';
   const rows = players.map((pl) => {
     const inG = members.includes(pl.id);
     const isCoord = pl.id === coord;
     const other = !inG ? S.groupOfPlayer(pl.id) : null;
     const vol = S.state.playerVol[pl.id];
+    const status = isCoord ? 'styrer' : inG ? 'med' : other && other.playerIds.length > 1 ? esc(other.name) : other && other.playbackState === 'PLAYBACK_STATE_PLAYING' ? 'spiller selv' : 'ledig';
     return `<div class="room ${inG ? 'on' : ''}">
-      <button class="rtoggle" data-act="sMember" data-pid="${esc(pl.id)}" aria-pressed="${inG}" ${isCoord ? 'disabled' : ''} aria-label="${inG ? 'Tag ' + esc(pl.name) + ' ud af gruppen' : 'Føj ' + esc(pl.name) + ' til gruppen'}"><span class="rbox">${inG ? '✓' : ''}</span>
-        <span class="rname"><b>${esc(pl.name)}</b><span class="psub">${isCoord ? 'Styrer gruppen' : inG ? 'Spiller med' : other && other.playerIds.length > 1 ? 'I gruppen ' + esc(other.name) : other && other.playbackState === 'PLAYBACK_STATE_PLAYING' ? 'Spiller sit eget' : 'Ledig'}</span></span></button>
-      ${inG && vol !== undefined && vol !== null ? `<label class="vol rvol"><span class="small">Lyd</span><input type="range" min="0" max="100" value="${vol}" data-pvol="${esc(pl.id)}" aria-label="Lydstyrke i ${esc(pl.name)}"></label>` : ''}
+      <button class="rtoggle" data-act="sMember" data-pid="${esc(pl.id)}" aria-pressed="${inG}" ${isCoord ? 'disabled' : ''} aria-label="${inG ? 'Tag ' + esc(pl.name) + ' ud af gruppen' : 'Føj ' + esc(pl.name) + ' til gruppen'}"><span class="rbox">${inG ? '✓' : ''}</span><span class="rname"><b>${esc(pl.name)}</b><span class="psub">${status}</span></span></button>
+      ${inG && vol !== undefined && vol !== null ? `<input class="rslider" type="range" min="0" max="100" value="${vol}" data-pvol="${esc(pl.id)}" aria-label="Lydstyrke i ${esc(pl.name)}">` : ''}
     </div>`;
   }).join('');
-  return `<section class="card"><div class="lab">Styr gruppe</div><div class="row">${groupPills || '<span class="muted">Ingen rum fundet</span>'}</div></section>
-    <section class="card"><div class="row" style="justify-content:space-between"><span class="lab">Rum i ${esc(cg ? cg.name : 'gruppen')}</span>
-      <span class="row" style="gap:6px"><button class="btn" data-act="sAll">Alle rum sammen</button><button class="btn" data-act="sOnly">Kun ${esc(cg && S.state.players.find((x) => x.id === coord) ? S.state.players.find((x) => x.id === coord).name : 'dette rum')}</button></span></div>
-      <div class="rooms">${rows}</div>
-      <div class="note">Tryk på et rum for at sætte det sammen med gruppen eller tage det ud. Rummet, der styrer gruppen, kan ikke tages ud – vælg i stedet en anden gruppe ovenfor.</div></section>`;
+  return `<section class="card mcol">
+      <div class="mhead"><span class="lab">Rum</span><span class="row" style="gap:6px"><button class="chipbtn" data-act="sAll">Alle sammen</button><button class="chipbtn" data-act="sOnly">Kun ${esc(coordName)}</button></span></div>
+      ${groups}
+      <div class="rooms mscroll">${rows || '<span class="muted">Ingen rum fundet</span>'}</div>
+    </section>`;
 }
 function pageMusik() {
   if (!hasProxy()) return `<div class="ptitle"><h1>Musik</h1></div>${needProxyMsg('Sonos')}`;
@@ -326,22 +327,25 @@ function pageMusik() {
     <p class="note">Du logger ind hos Sonos én gang og giver dashboardet lov til at styre afspilning. Login-nøglerne gemmes i jeres egen worker, ikke på tabletten.</p>
     <div><button class="btn primary big" data-act="sConnect">Forbind Sonos</button></div>${S.state.error ? `<div class="err">${esc(S.state.error)}</div>` : ''}</section>`;
   const np = S.nowPlaying();
-  const groups = S.state.groups.map((g) => `<button class="pill" data-act="sGroup" data-id="${esc(g.id)}" aria-pressed="${g.id === settings.sonos.groupId}">${esc(g.name)}${g.playbackState === 'PLAYBACK_STATE_PLAYING' ? ' ♪' : ''}</button>`).join('');
-  return `<div class="ptitle"><h1>Musik</h1><div class="tools"><button class="btn line" data-act="sReload">${svg('refresh', 18)} Opdater rum</button></div></div>
-    <div class="row" style="align-items:flex-start;flex-wrap:wrap">
-      <section class="player" style="width:300px;flex:none">
-        <div class="art" style="${np.image ? `background-image:url('${esc(np.image)}')` : ''}"></div>
-        <div><b style="font-size:20px">${esc(np.title || 'Intet spiller')}</b><div style="opacity:.8">${esc(np.artist || '')}</div><div class="small" style="opacity:.7">${esc(np.group)}</div></div>
-        <div class="ctl"><button data-act="sPrev" aria-label="Forrige">${fillSvg('prev', 18)}</button><button class="pbig" data-act="sPlay" aria-label="${np.playing ? 'Pause' : 'Afspil'}">${fillSvg(np.playing ? 'pause' : 'play', 22)}</button><button data-act="sNext" aria-label="Næste">${fillSvg('next', 18)}</button></div>
-        ${np.volume !== null ? `<label class="vol"><span class="small">Lyd</span><input type="range" min="0" max="100" value="${np.volume}" data-vol aria-label="Lydstyrke"></label>` : ''}
-      </section>
-      <div style="flex:1;min-width:280px;display:flex;flex-direction:column;gap:14px">
-        ${sonosRooms()}
-        <section class="card"><div class="lab">Favoritter fra Sonos</div>${S.state.favorites.length ? `<div class="favs">${S.state.favorites.map((f) => `<button class="fav" data-act="sFav" data-id="${esc(f.id)}"><i style="${f.imageUrl ? `background-image:url('${esc(f.imageUrl)}')` : ''}"></i>${esc(f.name)}</button>`).join('')}</div>` : '<div class="muted small">Ingen favoritter endnu.</div>'}
-          <div class="note">Apple Music, radio og andre tjenester: tryk ♡ / "Føj til Sonos-favoritter" i Sonos-appen ved en playliste, et album eller en station – så dukker den op her.</div></section>
-        ${S.state.playlists.length ? `<section class="card"><div class="lab">Sonos-playlister</div><div class="favs">${S.state.playlists.map((pl) => `<button class="fav" data-act="sPlaylist" data-id="${esc(pl.id)}"><i></i>${esc(pl.name)}</button>`).join('')}</div></section>` : ''}
-        ${S.state.error ? `<div class="err">${esc(S.state.error)}</div>` : ''}
-      </div></div>`;
+  const tile = (act, id, name, img) => `<button class="mtile" data-act="${act}" data-id="${esc(id)}"><i style="${img ? `background-image:url('${esc(img)}')` : ''}"></i><span>${esc(name)}</span></button>`;
+  const favs = S.state.favorites.map((f) => tile('sFav', f.id, f.name, f.imageUrl)).join('');
+  const pls = S.state.playlists.map((pl) => tile('sPlaylist', pl.id, pl.name, '')).join('');
+  return `<div class="music">
+    <section class="player mplayer">
+      <div class="art" style="${np.image ? `background-image:url('${esc(np.image)}')` : ''}"></div>
+      <div class="mnow"><b>${esc(np.title || 'Intet spiller')}</b><span>${esc(np.artist || '')}</span><span class="mgrp">${esc(np.group)}</span></div>
+      <div class="ctl"><button data-act="sPrev" aria-label="Forrige">${fillSvg('prev', 18)}</button><button class="pbig" data-act="sPlay" aria-label="${np.playing ? 'Pause' : 'Afspil'}">${fillSvg(np.playing ? 'pause' : 'play', 22)}</button><button data-act="sNext" aria-label="Næste">${fillSvg('next', 18)}</button></div>
+      ${np.volume !== null ? `<label class="vol"><span class="small">Lyd</span><input type="range" min="0" max="100" value="${np.volume}" data-vol aria-label="Lydstyrke for hele gruppen"></label>` : ''}
+    </section>
+    ${sonosRooms()}
+    <section class="card mcol">
+      <div class="mhead"><span class="lab">Favoritter</span><button class="chipbtn" data-act="sReload" aria-label="Opdater rum og favoritter">${svg('refresh', 16)}</button></div>
+      <div class="mscroll"><div class="mtiles">${favs || '<span class="muted small">Ingen favoritter endnu.</span>'}</div>
+        ${pls ? `<div class="lab" style="margin:12px 0 8px">Sonos-playlister</div><div class="mtiles">${pls}</div>` : ''}</div>
+      <div class="small muted">Apple Music m.m.: føj til Sonos-favoritter i Sonos-appen.</div>
+    </section>
+    ${S.state.error ? `<div class="err" style="grid-column:1/-1">${esc(S.state.error)}</div>` : ''}
+  </div>`;
 }
 
 /* ---------- DR TV ---------- */
