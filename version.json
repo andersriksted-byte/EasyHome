@@ -1,5 +1,5 @@
 {
-  "version": "1.33.0",
+  "version": "1.33.1",
   "files": [
     "index.html",
     "app.js",
@@ -21,6 +21,14 @@
     "somfy.js"
   ],
   "notes": [
+    {
+      "version": "1.33.1",
+      "date": "24. november 2026",
+      "title": "Større knapper til screens",
+      "items": [
+        "Knapperne på Screens-kortet er større og lige brede og står på deres egen linje under navnet – nemmere at ramme med fingeren."
+      ]
+    },
     {
       "version": "1.33.0",
       "date": "24. november 2026",
