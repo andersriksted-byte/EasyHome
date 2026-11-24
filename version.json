@@ -1,5 +1,5 @@
 {
-  "version": "1.16.2",
+  "version": "1.16.3",
   "files": [
     "index.html",
     "app.js",
@@ -19,6 +19,15 @@
     "login.js"
   ],
   "notes": [
+    {
+      "version": "1.16.3",
+      "date": "24. november 2026",
+      "title": "Nedtælling øverst kan slås fra",
+      "items": [
+        "Under Indstillinger → Kalender → Nedtællinger er der en kontakt 'Vis øverst på skærmen', der slår nedtællingen i toppen helt fra.",
+        "Er den slået til, vælger I stadig, hvilken nedtælling der vises."
+      ]
+    },
     {
       "version": "1.16.2",
       "date": "24. november 2026",

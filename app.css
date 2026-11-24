@@ -491,3 +491,6 @@ span.avatar{opacity:1}
 .sechead2{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .inl{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;color:var(--muted)}
 .inl select{width:auto;min-height:36px;padding:0 10px;font-size:14px;font-weight:700}
+
+.svc.mini{display:inline-flex;grid-template-columns:none;min-height:40px;padding:4px 6px 4px 14px;gap:10px;font-size:13px;font-weight:700;border-radius:99px}
+.svc.mini .tgl{width:44px;height:28px}.svc.mini .tgl i{width:22px;height:22px}.svc.mini.on .tgl i{left:19px}

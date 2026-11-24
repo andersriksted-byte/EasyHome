@@ -506,15 +506,14 @@ function calSection(s) {
       </section>`;
 }
 function cdSection(s) {
-  return `<section class="card wide"><b>Nedtællinger</b>
+  return `<section class="card wide"><div class="sechead2"><b>Nedtællinger</b><button class="svc mini ${settings.cdTop ? 'on' : ''}" data-act="cdTopToggle" role="switch" aria-checked="${!!settings.cdTop}"><span>Vis øverst på skærmen</span><span class="tgl" aria-hidden="true"><i></i></span></button></div>
       <div class="cdrows">${(s.countdowns || []).map((c, i) => { const img = M.getImage(c.imageId); return `<div class="cdrow">
         <button class="cdthumb" data-act="cdImg" data-i="${i}" aria-label="Vælg billede til ${esc(c.name || 'nedtælling')}" style="${img ? `background-image:url('${img}')` : ''}">${img ? '' : '+ billede'}</button>
         <label class="f">Navn<input type="text" data-cd="${i}" data-field="name" value="${esc(c.name)}" placeholder="Fx Sommerferie"></label>
         <label class="f">Dato<input type="date" data-cd="${i}" data-field="date" value="${esc(c.date)}"></label>
-        <span class="cdshow"><label class="check small"><input type="checkbox" data-cdshow="${i}" data-k="showCard" ${c.showCard !== false ? 'checked' : ''}>Vis i kortet på forsiden</label><label class="check small"><input type="radio" name="cdtop" data-cdtop="${esc(c.id)}" ${settings.cdTop === c.id ? 'checked' : ''}>Vis øverst på skærmen</label></span>
+        <span class="cdshow"><label class="check small"><input type="checkbox" data-cdshow="${i}" data-k="showCard" ${c.showCard !== false ? 'checked' : ''}>Vis i kortet på forsiden</label>${settings.cdTop ? `<label class="check small"><input type="radio" name="cdtop" data-cdtop="${esc(c.id)}" ${settings.cdTop === c.id ? 'checked' : ''}>Vis øverst på skærmen</label>` : ''}</span>
         <span class="row" style="gap:6px">${c.imageId ? `<button class="ibtn" data-act="cdImgRm" data-i="${i}">Fjern billede</button>` : ''}<button class="ibtn danger" data-act="cdRm" data-i="${i}" aria-label="Slet nedtællingen ${esc(c.name)}">Slet</button></span>
       </div>`; }).join('')}</div>
-      <label class="check small"><input type="radio" name="cdtop" data-cdtop="" ${!settings.cdTop ? 'checked' : ''}>Ingen nedtælling øverst på skærmen</label>
       <input type="file" id="cdFile" accept="image/*" hidden>
       <div><button class="btn primary" data-act="cdAdd">+ Tilføj nedtælling</button></div>
       ${ui.cdMsg ? `<div class="small ${ui.cdMsg.err ? 'err' : 'muted'}">${esc(ui.cdMsg.text)}</div>` : ''}
@@ -758,6 +757,11 @@ const act = {
     try { const r = await A.authCall('/auth/logout-all'); settings.proxy.key = r.token; save(); ui.famMsg = { err: false, text: 'Alle andre skærme er logget ud ✓' }; }
     catch (e) { ui.famMsg = { err: true, text: e.message }; }
     renderMain();
+  },
+  cdTopToggle: () => {
+    if (settings.cdTop) settings.cdTop = '';
+    else { const n = countdowns('all').find((c) => c.days >= 0) || (settings.countdowns || [])[0]; settings.cdTop = n ? n.id : ''; }
+    save(); renderHeader(); renderMain();
   },
   cdAdd: () => { settings.countdowns = (settings.countdowns || []).concat([{ id: uid(), name: '', date: '', imageId: '' }]); save(); renderMain(); setTimeout(() => { const el = document.querySelectorAll('[data-cd][data-field=name]'); if (el.length) el[el.length - 1].focus(); }, 50); },
   cdRm: (b) => { const [c] = settings.countdowns.splice(+b.dataset.i, 1); if (c && settings.cdTop === c.id) settings.cdTop = ''; if (c && c.imageId) M.removeImage(c.imageId); ui.cdIdx = 0; save(); renderHeader(); renderMain(); },
