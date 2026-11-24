@@ -20,17 +20,7 @@ export async function refresh() {
 const workerUrl = (p) => settings.proxy.url.replace(/\/+$/, '') + p;
 const hdr = () => ({ 'X-Dash-Key': settings.proxy.key });
 
-export async function command(urls, cmd) {
-  urls.forEach((u) => { state.busy[u] = cmd; }); onChange();
-  try {
-    const r = await fetch(workerUrl('/somfy/exec'), { method: 'POST', headers: { ...hdr(), 'Content-Type': 'application/json' }, body: JSON.stringify({ urls, command: cmd }) });
-    const j = await r.json().catch(() => ({}));
-    if (!r.ok) throw new Error(j.error || 'Fejl ' + r.status);
-  } finally {
-    setTimeout(() => { urls.forEach((u) => { delete state.busy[u]; }); onChange(); }, 1500);
-    [3000, 20000, 50000].forEach((t) => setTimeout(refresh, t));
-  }
-}
+export async function command(urls, cmd) { return send(urls, cmd); }
 
 export function stateText(d) {
   const awning = d.ui === 'Awning' || d.ui === 'Pergola';
@@ -40,3 +30,37 @@ export function stateText(d) {
   if (awning) return v <= 2 ? 'Inde' : v >= 98 ? 'Ude' : `Ude ${v} %`;
   return v <= 2 ? 'Oppe' : v >= 98 ? 'Nede' : `Nede ${v} %`;
 }
+
+// Forudindstillinger: v = 0–100 (hvor langt nede/ude) eller 'my' (motorens egen foretrukne stilling)
+export const DEFAULT_PRESETS = [{ id: 'op', name: 'Op', v: 0 }, { id: 'halv', name: 'Halvt', v: 50 }, { id: 'ned', name: 'Ned', v: 100 }, { id: 'my', name: 'My', v: 'my' }];
+const isAwning = (d) => d.ui === 'Awning' || d.ui === 'Pergola';
+export async function preset(devs, v) {
+  const groups = {}; const add = (cmd, val, url) => { const k = cmd + '|' + (val ?? ''); (groups[k] = groups[k] || { cmd, val, urls: [] }).urls.push(url); };
+  let skipped = 0;
+  devs.forEach((d) => {
+    if (v === 'my') return add('my', undefined, d.url);
+    const n = Math.max(0, Math.min(100, +v));
+    if (isAwning(d)) {
+      if (n === 0) add('close', undefined, d.url); else if (n === 100) add('open', undefined, d.url);
+      else if (!d.rts && d.commands.includes('setDeployment')) add('setDeployment', n, d.url); else skipped++;
+    } else {
+      if (n === 0) add('open', undefined, d.url); else if (n === 100) add('close', undefined, d.url);
+      else if (!d.rts && d.commands.includes('setClosure')) add('setClosure', n, d.url); else skipped++;
+    }
+  });
+  await Promise.all(Object.values(groups).map((g) => send(g.urls, g.cmd, g.val)));
+  return skipped;
+}
+async function send(urls, cmd, value) {
+  urls.forEach((u) => { state.busy[u] = cmd; }); onChange();
+  try {
+    const r = await fetch(workerUrl('/somfy/exec'), { method: 'POST', headers: { ...hdr(), 'Content-Type': 'application/json' }, body: JSON.stringify({ urls, command: cmd, value }) });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.error || 'Fejl ' + r.status);
+  } finally {
+    setTimeout(() => { urls.forEach((u) => { delete state.busy[u]; }); onChange(); }, 1500);
+    [3000, 20000, 50000].forEach((t) => setTimeout(refresh, t));
+  }
+}
+// Står enheden på forudindstillingen? (kun io-motorer kender deres stilling)
+export function atPreset(d, v) { if (v === 'my' || d.closure === null || d.closure === undefined) return false; return Math.abs(+d.closure - +v) <= 3; }

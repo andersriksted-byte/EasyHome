@@ -1,5 +1,5 @@
 {
-  "version": "1.30.0",
+  "version": "1.31.0",
   "files": [
     "index.html",
     "app.js",
@@ -21,6 +21,16 @@
     "somfy.js"
   ],
   "notes": [
+    {
+      "version": "1.31.0",
+      "date": "24. november 2026",
+      "title": "Faste knapper til screens",
+      "items": [
+        "Screens-kortet har nu faste knapper i stedet for pile: Op, Halvt, Ned og My – plus en lille stop-knap.",
+        "Knappen for den stilling, en screen står i, lyser op.",
+        "Ret, tilføj eller fjern knapperne under Indstillinger → Somfy."
+      ]
+    },
     {
       "version": "1.30.0",
       "date": "24. november 2026",

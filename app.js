@@ -87,7 +87,7 @@ const SERVICES = [
 const svcOn = (id) => !settings.services || settings.services[id] !== false;
 const pageOn = (p) => SERVICES.every((x) => !x.pages.includes(p) || svcOn(x.id));
 const widgetOn = (w) => SERVICES.every((x) => !x.widgets.includes(w) || svcOn(x.id));
-const tabOn = (t) => (t === 'kalender' ? svcOn('kalender') || svcOn('nedtaelling') : SERVICES.every((x) => !x.tabs.includes(t) || svcOn(x.id)));
+const tabOn = (t) => (t === 'somfy' ? svcOn('somfy') : t === 'kalender' ? svcOn('kalender') || svcOn('nedtaelling') : SERVICES.every((x) => !x.tabs.includes(t) || svcOn(x.id)));
 const WIDGETS = { screens: 'Screens (Somfy)', madplan: 'Madplan', indkob: 'Indkøbsliste', inspiration: 'Opskrift-inspiration', uge: 'Familiens uge', vejr: 'Vejret', steder: 'Vejret andre steder', nyheder: 'Nyheder', sonos: 'Musik (Sonos)', tv: 'DR TV', nedtaelling: 'Nedtælling' };
 // Forsiden er et gitter af ens kvadrater. Et kort fylder w kvadrater i bredden og h i højden.
 const SHAPES = [[1, 1], [2, 1], [3, 1], [4, 1], [1, 2], [1, 3], [1, 4], [2, 2]];
@@ -397,16 +397,11 @@ function wScreens(size, h = 1, wd = 1, x = {}) {
   if (st.configured === false) return cardHead('Screens') + '<div class="empty">Somfy er ikke sat op endnu (Indstillinger → Forbindelse).</div>';
   if (st.error && !st.devices.length) return cardHead('Screens') + `<div class="empty">${esc(st.error)}</div>`;
   if (!st.devices.length) return cardHead('Screens') + '<div class="empty">Ingen screens fundet i Somfy.</div>';
-  const awn = (d) => d.ui === 'Awning' || d.ui === 'Pergola';
+  const presets = (settings.somfyPresets && settings.somfyPresets.length ? settings.somfyPresets : SF.DEFAULT_PRESETS);
   const btns = (urls, d, all = false) => {
     const k = urls.join('|'); const busy = urls.some((u) => st.busy[u]);
-    const hasMy = all ? st.devices.some((x) => x.commands.includes('my')) : d.commands.includes('my');
-    const a = all ? false : awn(d);
-    return `<span class="sfb${busy ? ' busy' : ''}">
-      <button data-act="sfCmd" data-urls="${esc(k)}" data-cmd="${a ? 'close' : 'open'}" aria-label="${a ? 'Ind' : 'Op'}">${svg('up', 20)}</button>
-      <button data-act="sfCmd" data-urls="${esc(k)}" data-cmd="stop" aria-label="Stop">${fillSvg('stop', 14)}</button>
-      ${hasMy ? `<button data-act="sfCmd" data-urls="${esc(k)}" data-cmd="my" aria-label="Foretrukken stilling (my)" class="my">my</button>` : ''}
-      <button data-act="sfCmd" data-urls="${esc(k)}" data-cmd="${a ? 'open' : 'close'}" aria-label="${a ? 'Ud' : 'Ned'}">${svg('down', 20)}</button></span>`;
+    const devs = st.devices.filter((x) => urls.includes(x.url));
+    return `<span class="sfb sfp${busy ? ' busy' : ''}">${presets.map((p) => `<button data-act="sfPreset" data-urls="${esc(k)}" data-v="${esc(String(p.v))}" aria-pressed="${devs.length > 0 && devs.every((x) => SF.atPreset(x, p.v))}">${esc(p.name)}</button>`).join('')}<button class="sfstop" data-act="sfCmd" data-urls="${esc(k)}" data-cmd="stop" aria-label="Stop">${fillSvg('stop', 12)}</button></span>`;
   };
   const rows = st.devices.map((d) => `<div class="sfrow${d.available ? '' : ' off'}"><span class="sfname"><b title="${esc(d.label)}">${esc(d.label)}</b>${SF.stateText(d) ? `<small>${esc(SF.stateText(d))}</small>` : ''}</span>${btns([d.url], d)}</div>`).join('');
   const mode = x.mode || 3; // 1 = kun alle samlet, 2 = kun hver for sig, 3 = begge
@@ -764,7 +759,7 @@ const SET_TABS = [
   { id: 'familie', label: 'Familie' },
   { id: 'tjenester', label: 'Tjenester' },
   { id: 'vejr', label: 'Vejret' }, { id: 'nyheder', label: 'Nyheder' }, { id: 'kalender', label: 'Kalender' }, 
-  { id: 'tv', label: 'DR TV' }, { id: 'udseende', label: 'Udseende' }, { id: 'forbindelse', label: 'Forbindelse' }
+  { id: 'tv', label: 'DR TV' }, { id: 'somfy', label: 'Somfy' }, { id: 'udseende', label: 'Udseende' }, { id: 'forbindelse', label: 'Forbindelse' }
 ];
 function pageIndstillinger() {
   const s = settings;
@@ -793,6 +788,12 @@ function pageIndstillinger() {
     <section class="card wide"><b>Farvetema</b>${themePicker()}
       ${s.theme === 'auto' ? `<div class="form"><label class="f">Om dagen<select data-set="dayTheme">${Object.keys(THEMES).map((k) => `<option value="${k}" ${s.dayTheme === k ? 'selected' : ''}>${THEMES[k].label}</option>`).join('')}</select></label>
         <label class="f">Efter solnedgang<select data-set="nightTheme">${Object.keys(THEMES).map((k) => `<option value="${k}" ${s.nightTheme === k ? 'selected' : ''}>${THEMES[k].label}</option>`).join('')}</select></label></div>` : ''}</section>`,
+    somfy: () => { const l = settings.somfyPresets && settings.somfyPresets.length ? settings.somfyPresets : SF.DEFAULT_PRESETS; return `
+    <section class="card"><b>Knapper på Screens-kortet</b>
+      <div class="sprows">${l.map((p, i) => `<div class="sprow"><input type="text" data-sp="${i}" data-field="name" value="${esc(p.name)}" aria-label="Navn på knap"><select data-sp="${i}" data-field="v" aria-label="Stilling">${[['0', 'Helt op / inde'], ['25', '25 % nede'], ['50', 'Halvt nede'], ['75', '75 % nede'], ['90', '90 % nede'], ['100', 'Helt nede / ude'], ['my', 'My-stilling']].map(([v, t]) => `<option value="${v}" ${String(p.v) === v ? 'selected' : ''}>${t}</option>`).join('')}</select><button class="btn" data-act="spRm" data-i="${i}" aria-label="Fjern ${esc(p.name)}">Fjern</button></div>`).join('')}</div>
+      <div class="row"><button class="btn primary" data-act="spAdd">+ Tilføj knap</button>${settings.somfyPresets && settings.somfyPresets.length ? '<button class="btn line" data-act="spReset">Standard</button>' : ''}</div>
+      <details class="howto"><summary>Om mellemstillinger</summary><p class="note">Halvt, 25 % osv. virker kun med Somfy io-motorer. Ældre RTS-motorer kan kun køre helt op, helt ned eller til deres my-stilling.</p></details>
+    </section>`; },
     familie: () => `
     <section class="card"><b>Familien</b>
       <label class="f">Familienavn (står øverst på forsiden)<input type="text" data-set="family.name" value="${esc(s.family.name)}" placeholder="Fx Familien Riksted"></label>
@@ -958,6 +959,13 @@ const act = {
     renderAll(); if (svcOn(id)) loadAll();
   },
   wStepSet: (b) => { settings.weather.step = +b.dataset.v; save(); renderMain(); },
+  sfPreset: (b) => {
+    const urls = b.dataset.urls.split('|'); const v = b.dataset.v === 'my' ? 'my' : +b.dataset.v;
+    SF.preset(SF.state.devices.filter((d) => urls.includes(d.url)), v).then((skip) => { if (skip) toast(skip === 1 ? 'Én screen kan ikke stille sig på en mellemstilling' : skip + ' screens kan ikke stille sig på en mellemstilling'); }).catch((e) => toast('Somfy: ' + e.message));
+  },
+  spAdd: () => { settings.somfyPresets = (settings.somfyPresets && settings.somfyPresets.length ? settings.somfyPresets : SF.DEFAULT_PRESETS.map((p) => ({ ...p }))).concat([{ id: uid(), name: 'Ny', v: 75 }]); save(); renderMain(); },
+  spRm: (b) => { const l = (settings.somfyPresets && settings.somfyPresets.length ? settings.somfyPresets : SF.DEFAULT_PRESETS.map((p) => ({ ...p }))); l.splice(+b.dataset.i, 1); settings.somfyPresets = l; save(); renderMain(); },
+  spReset: () => { settings.somfyPresets = []; save(); renderMain(); },
   sfCmd: (b) => { SF.command(b.dataset.urls.split('|'), b.dataset.cmd).catch((e) => toast('Somfy: ' + e.message)); },
   sfTest: () => { ui.sfMsg = 'Tjekker …'; renderMain(); SF.refresh().then(() => { ui.sfMsg = SF.state.configured === false ? 'Somfy-login mangler i workeren.' : SF.state.error ? SF.state.error : `Forbundet ✓ ${SF.state.devices.length} enheder fundet.`; renderMain(); }); },
   mdRecipe: (b) => {
@@ -1133,6 +1141,10 @@ document.addEventListener('change', (e) => {
     const i = +t.dataset.i; ui.cdMsg = { err: false, text: 'Gemmer billedet …' }; renderMain();
     M.saveImage(t.files[0]).then((r) => { const c = settings.countdowns[i]; if (c) { if (c.imageId) M.removeImage(c.imageId); c.imageId = r.id; save(); } ui.cdMsg = { err: false, text: r.shared ? 'Billedet er gemt og deles med jeres andre skærme ✓' : 'Billedet er gemt på denne skærm.' }; renderMain(); })
       .catch((e) => { ui.cdMsg = { err: true, text: e.message }; renderMain(); });
+  }
+  else if (t.dataset.sp !== undefined) {
+    const l = (settings.somfyPresets && settings.somfyPresets.length ? settings.somfyPresets : SF.DEFAULT_PRESETS.map((p) => ({ ...p })));
+    const p = l[+t.dataset.sp]; if (p) { p[t.dataset.field] = t.dataset.field === 'v' ? (t.value === 'my' ? 'my' : +t.value) : t.value.trim(); settings.somfyPresets = l; save(); }
   }
   else if (t.dataset.mem !== undefined) { const m = settings.family.members[+t.dataset.mem]; if (m) { m[t.dataset.field] = t.value.trim(); save(); renderHeader(); renderMain(); } }
   else if (t.dataset.cdtop !== undefined) { settings.cdTop = t.dataset.cdtop; save(); renderHeader(); }

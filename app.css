@@ -737,3 +737,12 @@ span.avatar{opacity:1}
 .w7r svg{width:26px;height:26px}
 .w7r .rng{position:relative;height:8px;border-radius:99px;background:var(--bg)}
 .w7r .rng i{position:absolute;top:0;bottom:0;border-radius:99px;background:linear-gradient(90deg,#5aa9e6,#f2b33d)}
+
+/* Somfy: forudindstillede knapper */
+.sfp button{width:auto;min-width:44px;padding:0 12px;border-radius:12px;font-size:13px}
+.sfp button[aria-pressed=true]{background:var(--accent);color:var(--onAccent)}
+.sfp .sfstop{min-width:38px;width:38px;padding:0;border-radius:50%}
+.sfone .sfp button{font-size:15px}
+.sfone .sfp .sfstop{flex:0 0 auto;width:52px;border-radius:16px}
+.sprows{display:flex;flex-direction:column;gap:8px}
+.sprow{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr) auto;gap:8px;align-items:center}
