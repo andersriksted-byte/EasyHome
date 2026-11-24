@@ -1,5 +1,5 @@
 {
-  "version": "1.35.2",
+  "version": "1.36.0",
   "files": [
     "index.html",
     "app.js",
@@ -21,6 +21,14 @@
     "somfy.js"
   ],
   "notes": [
+    {
+      "version": "1.36.0",
+      "date": "24. november 2026",
+      "title": "Tre rækker kort uden scroll",
+      "items": [
+        "Forsiden tilpasser nu højden på kortene til skærmen, så der altid er plads til 3 hele rækker uden at scrolle – uanset om kortene er Store, Mellem eller Små."
+      ]
+    },
     {
       "version": "1.35.2",
       "date": "24. november 2026",

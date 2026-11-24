@@ -950,11 +950,17 @@ function scaleGrid() {
   const cols = settings.gridCols || 4;
   const narrow = window.matchMedia('(max-width:900px)').matches;
   wrap.style.zoom = ''; wrap.style.width = '';
-  if (cols <= 4 || narrow) return;
-  const k = 4 / cols;
-  const W = wrap.getBoundingClientRect().width;
-  wrap.style.width = (W / k) + 'px';
-  wrap.style.zoom = k;
+  const grid = document.getElementById('grid'); if (grid) grid.style.gridAutoRows = '';
+  if (narrow) return;
+  const k = cols > 4 ? 4 / cols : 1;
+  if (k < 1) { const W = wrap.getBoundingClientRect().width; wrap.style.width = (W / k) + 'px'; wrap.style.zoom = k; }
+  // Rækkehøjden tilpasses skærmen, så der altid er plads til 3 hele kort i højden uden at scrolle
+  const m = $('#main'); const cs = getComputedStyle(m);
+  let above = 0; [...m.children].forEach((el) => { if (el === wrap || el.classList.contains('editpanel') || el.offsetParent === null) return; if (el.compareDocumentPosition(wrap) & Node.DOCUMENT_POSITION_FOLLOWING) above += el.getBoundingClientRect().height + (parseFloat(getComputedStyle(m).rowGap) || 0); });
+  const avail = m.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom) - above;
+  const gap = (parseFloat(getComputedStyle(grid).rowGap) || 16) * k;
+  const row = (avail - 2 * gap) / 3;
+  if (grid && row > 120) grid.style.gridAutoRows = (row / k) + 'px';
 }
 function trimCards() {
   document.querySelectorAll('#grid .w [data-trim]').forEach((list) => {
