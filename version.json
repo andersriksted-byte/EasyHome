@@ -1,5 +1,5 @@
 {
-  "version": "1.21.2",
+  "version": "1.22.0",
   "files": [
     "index.html",
     "app.js",
@@ -20,6 +20,15 @@
     "madro.js"
   ],
   "notes": [
+    {
+      "version": "1.22.0",
+      "date": "24. november 2026",
+      "title": "Madplan: 1 dag eller 5 dage",
+      "items": [
+        "Madplan-kortet kan nu vise enten dagens ret i stort format eller de næste 5 dage.",
+        "Vælg under Tilpas forside (blyanten øverst) – knapperne står på madplan-kortet."
+      ]
+    },
     {
       "version": "1.21.2",
       "date": "24. november 2026",

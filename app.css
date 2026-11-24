@@ -585,3 +585,18 @@ span.avatar{opacity:1}
 .hdredit{width:44px;height:44px;flex:none;display:grid;place-items:center;border-radius:50%;border:0;background:var(--card);color:var(--text)}
 .hdredit.on{background:var(--accent);color:var(--onAccent)}
 .hdredit.on{background:var(--text);color:var(--bg)}
+
+/* Madplan: 1 dag (store billeder) eller 5 dage */
+.mdone{flex:1;min-height:0;display:grid;gap:8px}
+.mdbig{position:relative;overflow:hidden;min-height:0;border:0;border-radius:16px;background:var(--bg) center/cover no-repeat;color:var(--text);display:flex;flex-direction:column;justify-content:flex-end;align-items:flex-start;gap:2px;padding:14px;text-align:left;font:inherit}
+.mdbig.has-img::before{content:'';position:absolute;inset:0;background:linear-gradient(180deg,transparent 35%,rgba(0,0,0,.7))}
+.mdbig b{position:relative;font-size:clamp(16px,6cqmin,30px);line-height:1.15;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.mdbig span{position:relative;font-size:13px;opacity:.8}
+.mdbig.has-img b,.mdbig.has-img span{color:#fff}
+.mdbig.empty-day b{color:var(--muted)}
+.md-list .mdday{flex-direction:row;align-items:center;gap:10px}
+.md-list .mdlab{flex:0 0 72px}
+.md-list .mdmeal{flex-direction:row;align-items:center;min-height:0;height:100%}
+.wopt{display:inline-flex;gap:2px;background:var(--bg);border-radius:99px;padding:2px;flex:none}
+.wopt button{min-height:32px;padding:0 10px;border:0;border-radius:99px;background:transparent;font-size:12px;font-weight:800;color:var(--muted)}
+.wopt button[aria-pressed=true]{background:var(--card);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.12)}

@@ -316,17 +316,24 @@ function madroStatus(title) {
   const msg = st.status === 'nologin' ? 'Log ind i Madro for at se den her.' : st.status === 'nofamily' ? 'Opret eller vælg familie i Madro.' : st.status === 'error' ? 'Kunne ikke hente fra Madro.' : 'Henter fra Madro …';
   return `${cardHead(title)}<button class="empty mdmsg" data-act="mdOpen" data-sub="">${esc(msg)}${['nologin', 'nofamily'].includes(st.status) ? ' <b>Åbn Madro ›</b>' : ''}</button>`;
 }
-function wMadplan(size, h = 1, wd = 1) {
+function wMadplan(size, h = 1, wd = 1, x = {}) {
   const wait = madroStatus('Madplan'); if (wait) return wait;
   const kind = shapeKind(wd, h);
-  const n = kind === 'tiny' ? 2 : kind === 'wide' ? ({ 2: 3, 3: 5 }[wd] || 7) : kind === 'tall' ? Math.min(7, h * 2) : 4;
+  const n = x.days === 1 ? 1 : 5;
   const today = startOfDay(new Date());
   const days = Array.from({ length: n }, (_, i) => addDays(today, i));
   const dayLabel = (d, i) => (i === 0 ? 'I dag' : i === 1 ? 'I morgen' : cap(DAYS[d.getDay()]) + ' ' + d.getDate() + '.');
   const meal = (m) => `<span class="mdmeal ${m.image ? 'has-img' : ''} ${m.note ? 'note' : ''}" ${m.image ? `style="background-image:url('${esc(m.image)}')"` : ''}><b>${esc(m.title)}</b></span>`;
   const cells = days.map((d, i) => { const ms = MD.mealsOn(d); return `<button class="mdday ${i === 0 ? 'today' : ''}" data-act="mdOpen" data-sub="madplan"><span class="mdlab">${dayLabel(d, i)}</span>${ms.length ? ms.slice(0, 2).map(meal).join('') : '<span class="mdnone">–</span>'}</button>`; }).join('');
-  const layout = kind === 'wide' ? `style="grid-template-columns:repeat(${n},minmax(0,1fr))"` : kind === 'big' ? 'style="grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:repeat(2,minmax(0,1fr))"' : `style="grid-template-rows:repeat(${n},minmax(0,1fr))"`;
-  return `${cardHead('Madplan')}<div class="mdplan md-${kind}" ${layout}>${cells}</div>`;
+  if (n === 1) {
+    // Én dag: dagens retter fylder hele kortet med store billeder
+    const ms = MD.mealsOn(today);
+    const one = ms.length ? ms.map((m) => `<button class="mdbig ${m.image ? 'has-img' : ''}" data-act="mdOpen" data-sub="madplan" ${m.image ? `style="background-image:url('${esc(m.image)}')"` : ''}><b>${esc(m.title)}</b>${m.sub ? `<span>${esc(m.sub)}</span>` : ''}</button>`).join('') : '<button class="mdbig empty-day" data-act="mdOpen" data-sub="madplan"><b>Ingen ret planlagt</b><span>Tryk for at åbne madplanen</span></button>';
+    return `${cardHead('Madplan · i dag')}<div class="mdone" style="grid-template-${wd >= h ? 'columns' : 'rows'}:repeat(${Math.max(1, Math.min(ms.length, 2))},minmax(0,1fr))">${one}</div>`;
+  }
+  const cols = kind === 'wide';
+  const layout = cols ? `style="grid-template-columns:repeat(${n},minmax(0,1fr))"` : `style="grid-template-rows:repeat(${n},minmax(0,1fr))"`;
+  return `${cardHead('Madplan · 5 dage')}<div class="mdplan md-${cols ? 'wide' : kind === 'big' ? 'list' : kind}" ${layout}>${cells}</div>`;
 }
 function wIndkob(size, h = 1, wd = 1) {
   const wait = madroStatus('Indkøbsliste'); if (wait) return wait;
@@ -364,9 +371,10 @@ function pageForside() {
     return `
     <section class="card w" data-wid="${x.id}" ${FIT.includes(x.id) ? `data-fit data-h="${h}"` : ''} style="--w:${w};--h:${h}">
       ${ui.editing ? `<div class="wbar"><button class="handle" aria-label="Træk for at flytte ${esc(WIDGETS[x.id])}">${GRIP}Flyt</button><span class="nm">${esc(WIDGETS[x.id])}</span>
+        ${x.id === 'madplan' ? `<span class="wopt" role="group" aria-label="Antal dage">${[[1, '1 dag'], [5, '5 dage']].map(([v, l]) => `<button data-act="wOpt" data-id="madplan" data-k="days" data-v="${v}" aria-pressed="${(x.days || 5) === v}">${l}</button>`).join('')}</span>` : ''}
         <button class="sz" data-act="sizeFor" data-id="${x.id}" aria-expanded="${ui.sizeFor === x.id}" aria-label="Vælg størrelse (nu ${w} gange ${h})">${shapeIcon(w, h)}<span>${w}×${h}</span></button>
         <button class="x" data-act="toggleW" data-id="${x.id}" aria-label="Fjern ${esc(WIDGETS[x.id])}">×</button></div>${picker}` : ''}
-      ${WRENDER[x.id](sizeKey(w), h, w)}
+      ${WRENDER[x.id](sizeKey(w), h, w, x)}
     </section>`;
   }).join('');
   const me = meMember();
@@ -791,6 +799,7 @@ const act = {
     save(); renderMain();
   },
   sizeFor: (b) => { ui.sizeFor = ui.sizeFor === b.dataset.id ? null : b.dataset.id; renderMain(); },
+  wOpt: (b) => { const x = settings.layout.find((y) => y.id === b.dataset.id); if (x) { x[b.dataset.k] = +b.dataset.v; save(); renderMain(); } },
   shape: (b) => { const x = settings.layout.find((y) => y.id === b.dataset.id); if (x) { x.w = +b.dataset.w; x.h = +b.dataset.h; delete x.size; ui.sizeFor = null; save(); renderMain(); } },
   calPrev: () => { ui.calWeek--; renderMain(); }, calNext: () => { ui.calWeek++; renderMain(); }, calToday: () => { ui.calWeek = 0; renderMain(); },
   wModel: (b) => { settings.weather.model = b.dataset.model; save(); D.wx = {}; renderMain(); loadWeather(); },
