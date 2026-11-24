@@ -6,6 +6,7 @@ import * as C from './calendar.js';
 import * as S from './sonos.js';
 import { startUpdater } from './updater.js';
 import { startSync, syncNow, syncState } from './sync.js';
+import * as R from './reader.js';
 
 const $ = (s, r = document) => r.querySelector(s);
 
@@ -143,7 +144,7 @@ function renderFooter() {
     music = `<button class="pp" data-act="nav" data-page="musik" aria-label="Musik">${svg('musik', 20)}</button><button class="np" data-act="nav" data-page="musik" aria-label="Gå til Musik"><b>Sonos</b><span>Ikke forbundet endnu</span></button>`;
   }
   $('#ftr').innerHTML = `${music}<div class="sep"></div>
-    ${top ? `<a class="ticker" href="${esc(top.link)}" target="_blank" rel="noopener"><b>${esc(top.source)}</b><span>${esc(top.title)}</span></a>`
+    ${top ? `<a class="ticker" href="${esc(top.link)}" data-read="${esc(top.source)}" target="_blank" rel="noopener"><b>${esc(top.source)}</b><span>${esc(top.title)}</span></a>`
       : `<button class="ticker" style="border:0;background:none;text-align:left" data-act="nav" data-page="nyheder"><b>Nyheder</b><span>${hasProxy() || settings.news.publicProxyForTest ? 'Henter …' : 'Vælg kilder og opsæt forbindelse'}</span></button>`}`;
 }
 
@@ -211,7 +212,7 @@ function newsList(n, big = false) {
   if (!D.news) return '<div class="empty">Henter nyheder …</div>';
   const items = D.news.items.slice(0, n);
   if (!items.length) return `<div class="empty">Ingen nyheder lige nu.${D.news.errors.length ? ' ' + esc(D.news.errors.map((e) => e.source + ': ' + e.msg).join(' · ')) : ''}</div>`;
-  return `<div class="news ${big ? 'big-news' : ''}">${items.map((i) => `<a href="${esc(i.link)}" target="_blank" rel="noopener"><span class="meta"><span class="src">${esc(i.source)}</span>${i.date ? ' · ' + esc(relTime(i.date)) : ''}</span><b>${esc(i.title)}</b>${big && i.summary ? `<p>${esc(i.summary)}</p>` : ''}</a>`).join('')}</div>`;
+  return `<div class="news ${big ? 'big-news' : ''}">${items.map((i) => `<a href="${esc(i.link)}" data-read="${esc(i.source)}" target="_blank" rel="noopener"><span class="meta"><span class="src">${esc(i.source)}</span>${i.date ? ' · ' + esc(relTime(i.date)) : ''}</span><b>${esc(i.title)}</b>${big && i.summary ? `<p>${esc(i.summary)}</p>` : ''}</a>`).join('')}</div>`;
 }
 const NEWS_SECS = 20;
 const newsLeft = () => Math.max(0, Math.ceil(NEWS_SECS - (Date.now() - ui.newsAt) / 1000));
@@ -223,13 +224,13 @@ function wNyheder(size, h = 1) {
   if (!srcs.length) return '<div class="lab">Nyheder</div><div class="empty">Vælg nyhedskilder under Indstillinger → Nyheder.</div>';
   const n = srcs.length; const idx = ((ui.newsIdx % n) + n) % n; const src = srcs[idx];
   const left = n > 1 ? newsLeft() : 0;
-  const head = `<div class="row" style="justify-content:space-between;flex-wrap:nowrap"><span class="lab" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(src.name)}</span><span class="row" style="gap:8px;flex-wrap:nowrap">${n > 1 ? `<span class="ncount" id="newsCount" aria-label="Skifter om ${left} sekunder">${left}</span>` : ''}${pageArrows('news', idx, n, 'nyhedskilde')}</span></div>
+  const head = `<div class="row" style="justify-content:space-between;flex-wrap:nowrap"><span class="lab" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(src.name)}</span>${pageArrows('news', idx, n, 'nyhedskilde')}</div>
     ${n > 1 ? `<div class="nbar" aria-hidden="true"><i id="newsBar" style="width:${(left / NEWS_SECS) * 100}%"></i></div>` : ''}`;
   if (!D.news) return head + '<div class="empty">Henter nyheder …</div>';
   const items = D.news.items.filter((i) => i.sourceId === src.id).slice(0, count);
   const err = D.news.errors.find((e) => e.source === src.name);
   if (!items.length) return head + `<div class="empty">${err ? 'Kunne ikke hente lige nu: ' + esc(err.msg) : 'Ingen nyheder lige nu.'}</div>`;
-  return head + `<div class="news">${items.map((i) => `<a href="${esc(i.link)}" target="_blank" rel="noopener"><span class="meta">${i.date ? esc(relTime(i.date)) : ''}</span><b>${esc(i.title)}</b></a>`).join('')}</div>`;
+  return head + `<div class="news">${items.map((i) => `<a href="${esc(i.link)}" data-read="${esc(src.name)}" target="_blank" rel="noopener"><span class="meta">${i.date ? esc(relTime(i.date)) : ''}</span><b>${esc(i.title)}</b></a>`).join('')}</div>`;
 }
 function wSonos(size) {
   if (!S.state.connected) return `<div class="lab">Musik</div><div class="empty">Sonos er ikke forbundet endnu.</div><button class="btn line" data-act="nav" data-page="musik">Gå til Musik</button>`;
@@ -289,7 +290,7 @@ function pageKalender() {
       <div class="tools"><button class="btn" data-act="calPrev" aria-label="Forrige uge">‹</button><button class="btn" data-act="calToday">I dag</button><button class="btn" data-act="calNext" aria-label="Næste uge">›</button></div></div>
     ${D.cal && D.cal.demo ? '<div class="empty">Viser eksempler. Tilføj jeres kalendere under Indstillinger → Kalendere.</div>' : ''}
     ${D.cal && D.cal.errors.length ? `<div class="err">${esc(D.cal.errors.map((e) => e.cal + ': ' + e.msg).join(' · '))}</div>` : ''}
-    <div class="days calweek" style="grid-template-columns:repeat(7,minmax(0,1fr))">${days.map((d) => `
+    <div class="days calweek" data-swipe="cal" style="grid-template-columns:repeat(7,minmax(0,1fr))">${days.map((d) => `
       <div class="day ${sameDay(d, today) ? 'today' : ''}"><h3>${cap(DAYS[d.getDay()])} <span>${d.getDate()}.</span></h3>${eventsOn(d).map((e) => evHtml(e, d)).join('') || '<span class="small muted">–</span>'}</div>`).join('')}</div>
     ${cals.length ? `<div class="legend">${cals.map((c) => `<span style="background:${lighten(c.color)}">${esc(c.name)}</span>`).join('')}</div>` : ''}`;
 }
@@ -604,6 +605,7 @@ const act = {
   setTab: (b) => { ui.setTab = b.dataset.tab; ui.geo = null; renderMain(false); },
   wStep: (b) => {
     const n = settings.places.length; const dir = +b.dataset.dir;
+    if (b.dataset.scope === 'cal') { ui.calWeek += dir; renderMain(); return; }
     if (b.dataset.scope === 'news') { const m = Math.max(1, newsSources().length); ui.newsIdx = (((ui.newsIdx + dir) % m) + m) % m; ui.newsAt = Date.now(); renderMain(); return; }
     if (b.dataset.scope === 'fp') { ui.fpPlace = (((ui.fpPlace + dir) % n) + n) % n; ui.fpTouched = Date.now(); }
     else { const i = settings.places.indexOf(placeById(ui.wPlace)); ui.wPlace = settings.places[(((i + dir) % n) + n) % n].id; D.compare = null; }
@@ -642,6 +644,8 @@ function toggleNews(id) {
 async function sonosDo(fn) { try { await fn(); setTimeout(() => loadSonos(), 400); } catch (e) { toast('Sonos: ' + e.message); } }
 
 document.addEventListener('click', (e) => {
+  const link = e.target.closest('a[data-read]');
+  if (link) { e.preventDefault(); R.openReader(link.href, link.dataset.read); return; }
   const b = e.target.closest('[data-act]');
   if (b && act[b.dataset.act]) { e.preventDefault(); act[b.dataset.act](b, e); }
 });
@@ -736,12 +740,11 @@ function boot() {
   setInterval(loadWeather, 15 * 60000);
   // Nyhedskortet: tæl ned og skift til næste medie efter 20 sekunder
   setInterval(() => {
-    const el = document.getElementById('newsCount');
-    if (!el || ui.editing || ui.page !== 'forside' || drag) { ui.newsAt = Date.now(); return; }
+    const bar = document.getElementById('newsBar');
+    if (!bar || ui.editing || ui.page !== 'forside' || drag || R.isOpen()) { ui.newsAt = Date.now(); if (bar) bar.style.width = '100%'; return; }
     const left = newsLeft();
     if (left <= 0) { act.wStep({ dataset: { scope: 'news', dir: '1' } }); return; }
-    el.textContent = left; el.setAttribute('aria-label', 'Skifter om ' + left + ' sekunder');
-    const bar = document.getElementById('newsBar'); if (bar) bar.style.width = (left / NEWS_SECS) * 100 + '%';
+    bar.style.width = (left / NEWS_SECS) * 100 + '%';
   }, 1000);
   setInterval(() => { if (ui.fpPlace !== 0 && Date.now() - ui.fpTouched > 3 * 60000) { ui.fpPlace = 0; softRender(); } }, 30000);
   setInterval(loadNews, 5 * 60000);

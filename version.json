@@ -1,5 +1,5 @@
 {
-  "version": "1.8.0",
+  "version": "1.9.0",
   "files": [
     "index.html",
     "app.js",
@@ -12,9 +12,21 @@
     "sonos.js",
     "icon-180.png",
     "manifest.webmanifest",
-    "sync.js"
+    "sync.js",
+    "reader.js"
   ],
   "notes": [
+    {
+      "version": "1.9.0",
+      "date": "24. november 2026",
+      "title": "Læs nyheder inde i easyHome",
+      "items": [
+        "Tryk på en nyhed, så åbner den i et vindu inde i easyHome – du forlader ikke dashboardet. Tryk Luk for at komme tilbage.",
+        "Kræver en artikel abonnement, står der det, og du kan trykke Åbn på mediets side.",
+        "Nyhedskortet viser nu kun en tynd streg, der tæller ned, i stedet for tallet.",
+        "Swipe til siden i Kalender for at skifte uge."
+      ]
+    },
     {
       "version": "1.8.0",
       "date": "24. november 2026",
