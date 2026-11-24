@@ -130,7 +130,7 @@ function renderHeader() {
     ${w ? `<button class="chip" data-act="nav" data-page="vejr">${W.weatherIcon(w.now.code, w.now.isDay, 24)} ${fmtTemp(w.now.temp)} · ${esc(W.codeText(w.now.code).toLowerCase())}</button>` : ''}
     ${cd !== null && cd >= 0 ? `<span class="chip accent">${cd === 0 ? `I dag: ${esc(settings.countdown.name)}` : `${cd} ${cd === 1 ? 'dag' : 'dage'} til ${esc(settings.countdown.name.toLowerCase())}`}</span>` : ''}
     <div class="right">
-      <button class="chip" data-act="nextTheme" aria-label="Skift farvetema (nu: ${esc(themeLabel(settings.theme))})"><span style="width:22px;height:22px;border-radius:99px;background:var(--accent);border:3px solid var(--nav)"></span>${esc(themeLabel(settings.theme))}</button>
+      
     </div>`;
 }
 
@@ -284,7 +284,6 @@ function pageForside() {
   const edit = ui.editing ? `<section class="card editpanel">
       <div class="lab">Vælg hvad der skal være på forsiden. Træk i <b style="color:var(--text)">Flyt</b> for at ændre rækkefølgen, og tryk på <b style="color:var(--text)">størrelsen</b> (fx 2×1) for at vælge, hvor mange kvadrater kortet skal fylde – i bredden, i højden eller begge dele. For størrelsen.</div>
       <div class="choices">${Object.entries(WIDGETS).map(([id, name]) => `<button class="pill" data-act="toggleW" data-id="${id}" aria-pressed="${inLayout(id)}">${inLayout(id) ? '✓' : '+'} ${esc(name)}</button>`).join('')}</div>
-      <div class="lab" style="margin-top:6px">Farvetema</div>${themePicker()}
     </section>` : '';
   const cards = settings.layout.filter((x) => WIDGETS[x.id]).map((x) => {
     const [w, h] = shapeOf(x);
