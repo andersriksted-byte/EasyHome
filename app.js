@@ -66,6 +66,7 @@ const SHAPES = [[1, 1], [2, 1], [3, 1], [4, 1], [1, 2], [1, 3], [1, 4], [2, 2]];
 const DEFAULT_SHAPE = { uge: [4, 1], vejr: [2, 1], steder: [2, 1], nyheder: [2, 1], sonos: [1, 1], tv: [1, 1], nedtaelling: [1, 1] };
 const LEGACY = { S: [1, 1], M: [2, 1], L: [4, 1] };
 const shapeOf = (x) => (x.w && x.h ? [x.w, x.h] : LEGACY[x.size] || [1, 1]);
+const FIT = ['uge']; // kort der aldrig må skære indhold af – de bliver kompakte og vokser i højden ved behov
 const sizeKey = (w) => (w >= 4 ? 'L' : w >= 2 ? 'M' : 'S');
 const shapeIcon = (w, h) => `<svg aria-hidden="true" width="26" height="26" viewBox="0 0 26 26"><rect x="1" y="1" width="24" height="24" rx="3" fill="none" stroke="currentColor" stroke-opacity=".3"/><rect x="2" y="2" width="${w * 5.5}" height="${h * 5.5}" rx="1.5" fill="currentColor"/></svg>`;
 
@@ -155,19 +156,19 @@ function wUge(size, h = 1, w = 1) {
   if (!D.cal) return '<div class="lab">Familiens uge</div><div class="empty">Henter kalender …</div>';
   if (size === 'S' && h >= 2) {
     const n = h * 2;
-    return `<div class="lab">Familien · ${n} dage</div><div style="display:flex;flex-direction:column;gap:8px;overflow:hidden">${Array.from({ length: n }, (_, i) => addDays(today, i)).map((d) => `<div><div class="small" style="font-weight:800">${i0(d, today)}</div><div style="display:flex;flex-direction:column;gap:4px;margin-top:4px">${eventsOn(d).slice(0, 3).map((e) => evHtml(e, d, false)).join('') || '<span class="small muted">–</span>'}</div></div>`).join('')}</div>${demo}`;
+    return `<div class="lab">Familien · ${n} dage</div><div style="display:flex;flex-direction:column;gap:8px">${Array.from({ length: n }, (_, i) => addDays(today, i)).map((d) => `<div><div class="small" style="font-weight:800">${i0(d, today)}</div><div style="display:flex;flex-direction:column;gap:4px;margin-top:4px">${eventsOn(d).map((e) => evHtml(e, d, false)).join('') || '<span class="small muted">–</span>'}</div></div>`).join('')}</div>${demo}`;
   }
   if (size === 'S') {
     const t = eventsOn(today); const m = eventsOn(addDays(today, 1));
     return `<div class="lab">I dag</div><div class="evlist" style="display:flex;flex-direction:column;gap:6px">${t.length ? t.map((e) => evHtml(e, today)).join('') : '<div class="small muted">Ingen aftaler</div>'}</div>
-      <div style="margin-top:auto;border-top:2px dashed var(--line);padding-top:8px;display:flex;flex-direction:column;gap:6px"><div class="lab">I morgen</div>${m.slice(0, 3).map((e) => evHtml(e, addDays(today, 1), false)).join('') || '<div class="small muted">Ingen aftaler</div>'}</div>${demo}`;
+      <div style="margin-top:auto;border-top:2px dashed var(--line);padding-top:8px;display:flex;flex-direction:column;gap:6px"><div class="lab">I morgen</div>${m.map((e) => evHtml(e, addDays(today, 1), false)).join('') || '<div class="small muted">Ingen aftaler</div>'}</div>${demo}`;
   }
   const nd = size === 'L' ? 7 : w >= 3 ? 5 : 3;
   const days = nd === 7 ? [0, 1, 2, 3, 4, 5, 6].map((i) => addDays(weekStart(0), i)) : Array.from({ length: nd }, (_, i) => addDays(today, i));
   return `<div class="row" style="justify-content:space-between"><span class="lab">${nd === 7 ? 'Familiens uge' : 'Næste ' + nd + ' dage'}</span>${demo}</div>
     <div class="days" style="grid-template-columns:repeat(${days.length},minmax(0,1fr))">${days.map((d) => `
       <div class="day ${sameDay(d, today) ? 'today' : ''}"><h3>${cap(DAYS[d.getDay()])} <span>${d.getDate()}.</span></h3>
-      ${eventsOn(d).slice(0, 2 + h * 3).map((e) => evHtml(e, d, false)).join('')}</div>`).join('')}</div>`;
+      ${eventsOn(d).map((e) => evHtml(e, d, false)).join('')}</div>`).join('')}</div>`;
 }
 const i0 = (d, today) => (sameDay(d, today) ? 'I dag' : sameDay(d, addDays(today, 1)) ? 'I morgen' : cap(DAYS_LONG[d.getDay()]) + ' ' + d.getDate() + '.');
 function pageArrows(scope, idx, n, what) {
@@ -261,7 +262,7 @@ function pageForside() {
     const [w, h] = shapeOf(x);
     const picker = ui.editing && ui.sizeFor === x.id ? `<div class="shapes" role="group" aria-label="Størrelse på ${esc(WIDGETS[x.id])}">${SHAPES.map(([sw, sh]) => `<button class="shape" data-act="shape" data-id="${x.id}" data-w="${sw}" data-h="${sh}" aria-pressed="${sw === w && sh === h}" aria-label="${sw} gange ${sh} kvadrater">${shapeIcon(sw, sh)}<span>${sw}×${sh}</span></button>`).join('')}</div>` : '';
     return `
-    <section class="card w" data-wid="${x.id}" style="--w:${w};--h:${h}">
+    <section class="card w" data-wid="${x.id}" ${FIT.includes(x.id) ? `data-fit data-h="${h}"` : ''} style="--w:${w};--h:${h}">
       ${ui.editing ? `<div class="wbar"><button class="handle" aria-label="Træk for at flytte ${esc(WIDGETS[x.id])}">${GRIP}Flyt</button><span class="nm">${esc(WIDGETS[x.id])}</span>
         <button class="sz" data-act="sizeFor" data-id="${x.id}" aria-expanded="${ui.sizeFor === x.id}" aria-label="Vælg størrelse (nu ${w} gange ${h})">${shapeIcon(w, h)}<span>${w}×${h}</span></button>
         <button class="x" data-act="toggleW" data-id="${x.id}" aria-label="Fjern ${esc(WIDGETS[x.id])}">×</button></div>${picker}` : ''}
@@ -505,8 +506,27 @@ const PAGE_RENDER = { forside: pageForside, kalender: pageKalender, vejr: pageVe
 function renderMain(keepScroll = true) {
   const m = $('#main'); const y = m.scrollTop;
   m.innerHTML = PAGE_RENDER[ui.page]();
+  if (ui.page === 'forside') fitCards();
   if (keepScroll) m.scrollTop = y;
 }
+// Sørg for at kort som kalenderen altid viser alt: først kompakt visning, derefter flere kvadrater i højden
+function fitCards() {
+  const grid = document.getElementById('grid'); if (!grid) return;
+  const cell = parseFloat(getComputedStyle(grid).gridAutoRows) || 240;
+  const gap = parseFloat(getComputedStyle(grid).rowGap) || 16;
+  grid.querySelectorAll('.w[data-fit]').forEach((card) => {
+    const base = +card.dataset.h || 1;
+    card.style.setProperty('--h', base); card.classList.remove('compact', 'grown');
+    const over = () => card.scrollHeight > card.clientHeight + 2;
+    if (!over()) return;
+    card.classList.add('compact');
+    if (!over()) return;
+    const need = Math.ceil((card.scrollHeight + gap) / (cell + gap));
+    card.style.setProperty('--h', Math.max(base, need)); card.classList.add('grown');
+  });
+}
+let fitTimer = null;
+window.addEventListener('resize', () => { clearTimeout(fitTimer); fitTimer = setTimeout(fitCards, 150); });
 // Opdater kun hvis brugeren ikke er i gang med at skrive eller trække
 function softRender() {
   if (ui.page === 'indstillinger' || drag) return;

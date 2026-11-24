@@ -1,5 +1,5 @@
 {
-  "version": "1.9.1",
+  "version": "1.10.0",
   "files": [
     "index.html",
     "app.js",
@@ -16,6 +16,16 @@
     "reader.js"
   ],
   "notes": [
+    {
+      "version": "1.10.0",
+      "date": "24. november 2026",
+      "title": "Kalenderen viser altid hele dagen",
+      "items": [
+        "Kalenderkortet på forsiden viser nu alle aftaler – intet bliver skåret af.",
+        "Er der mange aftaler, bliver visningen mere kompakt, og er det stadig ikke nok, vokser kortet selv i højden.",
+        "Den størrelse, du har valgt, er mindstestørrelsen – på stille dage fylder kortet ikke mere end den."
+      ]
+    },
     {
       "version": "1.9.1",
       "date": "24. november 2026",

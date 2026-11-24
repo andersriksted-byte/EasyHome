@@ -60,6 +60,11 @@ a{color:var(--accent)}
 .grid{--cols:4;--gap:16px;display:grid;grid-template-columns:repeat(var(--cols),minmax(0,1fr));grid-auto-rows:240px;grid-auto-rows:calc((100cqw - (var(--cols) - 1) * var(--gap)) / var(--cols));grid-auto-flow:dense;gap:var(--gap)}
 .w{position:relative;grid-column:span min(var(--w,1),var(--cols));grid-row:span var(--h,1);overflow:hidden;min-height:0}
 .w .news,.w .days,.w .dlist{min-height:0;overflow:hidden}
+.w[data-fit] .days{flex:none;overflow:visible}
+.w.compact .ev{font-size:11px;padding:3px 6px;line-height:1.25}
+.w.compact .ev time{display:inline;margin-right:4px}
+.w.compact .day{gap:4px;padding:8px}
+.w.compact .day h3{font-size:14px}
 .w[data-wid=vejr],.w[data-wid=nyheder]{touch-action:pan-y}
 .w[data-wid=vejr] a,.w[data-wid=nyheder] a{-webkit-user-drag:none}
 .editing .w{outline:2px dashed var(--accent);outline-offset:-2px}
