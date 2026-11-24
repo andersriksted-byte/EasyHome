@@ -1,5 +1,5 @@
 {
-  "version": "1.15.1",
+  "version": "1.15.2",
   "files": [
     "index.html",
     "app.js",
@@ -19,6 +19,15 @@
     "login.js"
   ],
   "notes": [
+    {
+      "version": "1.15.2",
+      "date": "24. november 2026",
+      "title": "Overskrifter på én linje",
+      "items": [
+        "Overskrifterne på kortene står nu altid på én linje – er de for lange, forkortes de med …, så indholdet ikke flytter sig.",
+        "I små vejrkort står kun stedets navn, så der er plads til mere af det."
+      ]
+    },
     {
       "version": "1.15.1",
       "date": "24. november 2026",

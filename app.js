@@ -218,7 +218,7 @@ function wVejr(size, h = 1, wd = 1) {
   const idx = ((ui.fpPlace % n) + n) % n;
   const place = settings.places[idx];
   const w = D.wx[place.id];
-  const title = `<div class="whead"><span class="lab">Vejret · ${esc(placeLabel(place))}</span>${placeArrows('fp', idx)}</div>`;
+  const title = `<div class="whead"><span class="lab" title="${esc(placeLabel(place))}">${wd > 1 ? 'Vejret · ' : ''}${esc(placeLabel(place))}</span>${placeArrows('fp', idx)}</div>`;
   if (!w) return `${title}<div class="empty">${D.wxErr[place.id] ? esc(D.wxErr[place.id]) : 'Henter vejret …'}</div>`;
   const kind = shapeKind(wd, h);
   const t = w.days[0];
