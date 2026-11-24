@@ -5,6 +5,7 @@ import * as N from './news.js';
 import * as C from './calendar.js';
 import * as S from './sonos.js';
 import { startUpdater } from './updater.js';
+import { startSync, syncNow, syncState } from './sync.js';
 
 const $ = (s, r = document) => r.querySelector(s);
 
@@ -444,6 +445,7 @@ function pageIndstillinger() {
       <div class="form"><label class="f">Worker-adresse<input type="url" data-set="proxy.url" value="${esc(s.proxy.url)}" placeholder="https://easyhome.ditnavn.workers.dev" autocomplete="off"></label>
       <label class="f">Nøgle (DASH_KEY)<input type="password" data-set="proxy.key" value="${esc(s.proxy.key)}" autocomplete="off"></label></div>
       <div class="row"><button class="btn primary" data-act="testConn">Test forbindelse</button><span class="small" id="connMsg">${esc(ui.connMsg)}</span></div>
+      ${hasProxy() ? `<div class="small ${syncState.ok === false ? 'err' : 'muted'}"><b>Deling mellem skærme:</b> ${syncState.ok === false ? esc(syncState.msg) : syncState.last ? 'aktiv ✓ – senest ' + hhmm(syncState.last) : 'starter …'}</div>` : ''}
       ${s.proxy.url ? `<div class="empty" style="display:flex;flex-direction:column;gap:6px"><b>Redirect-adresse til Sonos</b><span class="small">Skal stå præcis sådan under Redirect URI i jeres Sonos-integration:</span>
         <code id="redir" style="user-select:all;font-size:15px;word-break:break-all">${esc(s.proxy.url.replace(/\/+$/, '') + '/sonos/callback')}</code>
         <div><button class="btn" data-act="copyRedir">Kopiér adressen</button></div></div>` : ''}</section>`,
@@ -541,7 +543,7 @@ const act = {
   sLogout: async () => { try { await S.logout(); toast('Sonos afbrudt'); renderAll(); } catch (e) { toast(e.message); } },
   testConn: async () => {
     ui.connMsg = 'Tester …'; const el = $('#connMsg'); if (el) el.textContent = ui.connMsg;
-    try { const r = await (await workerFetch('/health')).json(); ui.connMsg = r.ok ? `Forbindelsen virker ✓ (Sonos ${r.sonosConfigured ? 'klar' : 'ikke sat op i workeren'})` : 'Uventet svar'; loadAll(); }
+    try { const r = await (await workerFetch('/health')).json(); ui.connMsg = r.ok ? `Forbindelsen virker ✓ (Sonos ${r.sonosConfigured ? 'klar' : 'ikke sat op i workeren'})` : 'Uventet svar'; loadAll(); await syncNow(); }
     catch (e) { ui.connMsg = e.message === 'NO_PROXY' ? 'Udfyld adresse og nøgle først' : 'Fejl: ' + e.message + ' – tjek adresse og nøgle'; }
     renderMain();
   },
@@ -655,6 +657,7 @@ function boot() {
   renderAll();
   loadAll();
   startUpdater();
+  startSync(() => { C.clearCalCache(); N.clearNewsCache(); D.wx = {}; D.compare = null; renderAll(); loadAll(); });
   setInterval(() => { const c = $('#clk'); const n = new Date(); if (c) c.textContent = hhmm(n); if (n.getSeconds() === 0) { renderHeader(); applyTheme(); } }, 1000);
   setInterval(() => { ui.tick++; renderFooter(); }, 8000);
   setInterval(loadWeather, 15 * 60000);

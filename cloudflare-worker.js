@@ -147,8 +147,20 @@ export default {
     try {
       if (path.startsWith('/sonos/')) return await sonos(req, env, path);
       if (!keyOk(req, env)) return json(env, { error: 'Forkert nøgle' }, 401);
-      if (path === '/health') return json(env, { ok: true, sonosConfigured: sonosReady(env) });
+      if (path === '/health') return json(env, { ok: true, sonosConfigured: sonosReady(env), version: 2 });
       if (path === '/proxy') return await proxy(req, env, ctx);
+      if (path === '/settings') {
+        if (!env.DASH_KV) return json(env, { error: 'DASH_KV mangler' }, 501);
+        if (req.method === 'POST') {
+          const body = await req.text();
+          if (body.length > 200000) return json(env, { error: 'For stor' }, 413);
+          const parsed = JSON.parse(body);
+          await env.DASH_KV.put('shared_settings', JSON.stringify({ updatedAt: parsed.updatedAt || Date.now(), data: parsed.data || {} }));
+          return json(env, { ok: true });
+        }
+        const raw = await env.DASH_KV.get('shared_settings');
+        return json(env, raw ? JSON.parse(raw) : { updatedAt: 0, data: null });
+      }
       return json(env, { error: 'Ukendt' }, 404);
     } catch (e) {
       return json(env, { error: e.message }, 500);

@@ -1,5 +1,5 @@
 {
-  "version": "1.4.1",
+  "version": "1.5.0",
   "files": [
     "index.html",
     "app.js",
@@ -11,9 +11,21 @@
     "calendar.js",
     "sonos.js",
     "icon-180.png",
-    "manifest.webmanifest"
+    "manifest.webmanifest",
+    "sync.js"
   ],
   "notes": [
+    {
+      "version": "1.5.0",
+      "date": "24. november 2026",
+      "title": "Samme indstillinger på alle skærme",
+      "items": [
+        "Nyhedskilder, steder, kalendere, forside og tema deles nu automatisk mellem alle jeres skærme.",
+        "Ændrer du noget på én skærm, kommer det med på de andre inden for et minut.",
+        "En ny skærm henter de fælles indstillinger, så snart den er forbundet – du skal kun indtaste worker-adresse og nøgle.",
+        "Under Indstillinger → Forbindelse kan du se, om delingen er aktiv."
+      ]
+    },
     {
       "version": "1.4.1",
       "date": "24. november 2026",

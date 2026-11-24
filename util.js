@@ -69,12 +69,30 @@ function load() {
 }
 
 export const settings = load();
-export function save() { try { localStorage.setItem(KEY, JSON.stringify(settings)); } catch (e) { /* fx privat tilstand */ } }
+// Felter der kun gælder for den enkelte skærm – alt andet deles mellem skærmene via workeren
+export const LOCAL_ONLY = ['proxy', 'navOpen'];
+let savedHook = null;
+export function onSaved(fn) { savedHook = fn; }
+function write() { try { localStorage.setItem(KEY, JSON.stringify(settings)); } catch (e) { /* fx privat tilstand */ } }
+export function save() { settings.updatedAt = Date.now(); write(); if (savedHook) savedHook(); }
 export function replaceSettings(obj) {
   const next = merge(DEFAULTS, obj);
   for (const k of Object.keys(settings)) delete settings[k];
   Object.assign(settings, next);
   save();
+}
+// Brug indstillinger fra en anden skærm, men behold denne skærms egne felter
+export function applyShared(obj, updatedAt) {
+  const keep = {}; LOCAL_ONLY.forEach((k) => { keep[k] = settings[k]; });
+  const next = merge(DEFAULTS, obj);
+  for (const k of Object.keys(settings)) delete settings[k];
+  Object.assign(settings, next, keep, { updatedAt });
+  write();
+}
+export function sharedSettings() {
+  const out = {};
+  for (const k of Object.keys(settings)) if (!LOCAL_ONLY.includes(k) && k !== 'updatedAt') out[k] = settings[k];
+  return out;
 }
 
 export function setPath(path, value) {
