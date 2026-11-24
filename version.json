@@ -1,5 +1,5 @@
 {
-  "version": "1.15.0",
+  "version": "1.15.1",
   "files": [
     "index.html",
     "app.js",
@@ -19,6 +19,15 @@
     "login.js"
   ],
   "notes": [
+    {
+      "version": "1.15.1",
+      "date": "24. november 2026",
+      "title": "Nedtællingerne skifter selv",
+      "items": [
+        "Har I flere nedtællinger på forsiden, skifter kortet selv til den næste hvert 10. sekund.",
+        "Bladrer man selv med pilene eller swiper, starter de 10 sekunder forfra."
+      ]
+    },
     {
       "version": "1.15.0",
       "date": "24. november 2026",

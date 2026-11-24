@@ -96,7 +96,7 @@ const D = { weather: null, weatherErr: null, wx: {}, wxErr: {}, compare: null, n
 const home = () => settings.places[0];
 const placeLabel = (p) => p.label || p.name;
 const placeById = (id) => settings.places.find((p) => p.id === id) || home();
-const ui = { famMsg: null, cdIdx: 0, cdMsg: null, bgMsg: null, sizeFor: null, newsIdx: 0, newsAt: Date.now(), feedMsg: null, feedDraft: null, page: pageFromHash(), setTab: 'familie', wPlace: null, fpPlace: 0, fpTouched: 0, editing: false, calWeek: 0, geo: null, geoMsg: '', tick: 0, connMsg: '' };
+const ui = { famMsg: null, cdIdx: 0, cdAt: Date.now(), cdMsg: null, bgMsg: null, sizeFor: null, newsIdx: 0, newsAt: Date.now(), feedMsg: null, feedDraft: null, page: pageFromHash(), setTab: 'familie', wPlace: null, fpPlace: 0, fpTouched: 0, editing: false, calWeek: 0, geo: null, geoMsg: '', tick: 0, connMsg: '' };
 function pageFromHash() { const h = location.hash.slice(1); return [...PAGES.map((p) => p.id), 'indstillinger'].includes(h) && (h === 'indstillinger' || pageOn(h)) ? h : 'forside'; }
 
 function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), 2600); }
@@ -809,7 +809,7 @@ const act = {
   setTab: (b) => { ui.setTab = b.dataset.tab; ui.geo = null; renderMain(false); },
   wStep: (b) => {
     const n = settings.places.length; const dir = +b.dataset.dir;
-    if (b.dataset.scope === 'cd') { const m = Math.max(1, countdowns().length); ui.cdIdx = (((ui.cdIdx + dir) % m) + m) % m; renderMain(); return; }
+    if (b.dataset.scope === 'cd') { const m = Math.max(1, countdowns().length); ui.cdIdx = (((ui.cdIdx + dir) % m) + m) % m; ui.cdAt = Date.now(); renderMain(); return; }
     if (b.dataset.scope === 'cal') { ui.calWeek += dir; renderMain(); return; }
     if (b.dataset.scope === 'news') { const m = Math.max(1, newsSources().length); ui.newsIdx = (((ui.newsIdx + dir) % m) + m) % m; ui.newsAt = Date.now(); renderMain(); return; }
     if (b.dataset.scope === 'fp') { ui.fpPlace = (((ui.fpPlace + dir) % n) + n) % n; ui.fpTouched = Date.now(); }
@@ -973,6 +973,11 @@ function boot() {
     const left = newsLeft();
     if (left <= 0) { act.wStep({ dataset: { scope: 'news', dir: '1' } }); return; }
     bar.style.width = (left / newsSecs()) * 100 + '%';
+  }, 1000);
+  // Nedtællingskortet: skift til næste nedtælling hvert 10. sekund, når der er flere
+  setInterval(() => {
+    if (ui.page !== 'forside' || ui.editing || drag || R.isOpen() || !svcOn('nedtaelling') || !widgetOn('nedtaelling') || !settings.layout.some((x) => x.id === 'nedtaelling') || countdowns().length < 2) { ui.cdAt = Date.now(); return; }
+    if (Date.now() - ui.cdAt >= 10000) act.wStep({ dataset: { scope: 'cd', dir: '1' } });
   }, 1000);
   setInterval(() => { if (ui.fpPlace !== 0 && Date.now() - ui.fpTouched > 3 * 60000) { ui.fpPlace = 0; softRender(); } }, 30000);
   setInterval(loadNews, 5 * 60000);
