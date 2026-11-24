@@ -1,5 +1,5 @@
 {
-  "version": "1.14.0",
+  "version": "1.14.1",
   "files": [
     "index.html",
     "app.js",
@@ -19,6 +19,15 @@
     "login.js"
   ],
   "notes": [
+    {
+      "version": "1.14.1",
+      "date": "24. november 2026",
+      "title": "Mindre tekst",
+      "items": [
+        "Forklaringsteksterne er fjernet fra Tilpas forside og Indstillinger, så der er mere ro på skærmen.",
+        "Vejledningen til kalenderlinks ligger nu under \"Sådan finder du kalenderlinket\"."
+      ]
+    },
     {
       "version": "1.14.0",
       "date": "24. november 2026",

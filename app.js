@@ -301,7 +301,6 @@ const WRENDER = { uge: wUge, vejr: wVejr, steder: wSteder, nyheder: wNyheder, so
 function pageForside() {
   const inLayout = (id) => settings.layout.some((x) => x.id === id);
   const edit = ui.editing ? `<section class="card editpanel">
-      <div class="lab">Vælg hvad der skal være på forsiden. Træk i <b style="color:var(--text)">Flyt</b> for at ændre rækkefølgen, og tryk på <b style="color:var(--text)">størrelsen</b> (fx 2×1) for at vælge, hvor mange kvadrater kortet skal fylde – i bredden, i højden eller begge dele. For størrelsen.</div>
       <div class="choices">${Object.entries(WIDGETS).map(([id, name]) => `<button class="pill" data-act="toggleW" data-id="${id}" aria-pressed="${inLayout(id)}">${inLayout(id) ? '✓' : '+'} ${esc(name)}</button>`).join('')}</div>
     </section>` : '';
   const cards = settings.layout.filter((x) => WIDGETS[x.id]).map((x) => {
@@ -411,7 +410,6 @@ function sonosRooms() {
 function pageMusik() {
   if (!hasProxy()) return `<div class="ptitle"><h1>Musik</h1></div>${needProxyMsg('Sonos')}`;
   if (!S.state.connected) return `<div class="ptitle"><h1>Musik</h1></div><section class="card"><b style="font-size:18px">Forbind jeres Sonos</b>
-    <p class="note">Du logger ind hos Sonos én gang og giver dashboardet lov til at styre afspilning. Login-nøglerne gemmes i jeres egen worker, ikke på tabletten.</p>
     <div><button class="btn primary big" data-act="sConnect">Forbind Sonos</button></div>${S.state.error ? `<div class="err">${esc(S.state.error)}</div>` : ''}</section>`;
   const np = S.nowPlaying();
   const tile = (act, id, name, img) => `<button class="mtile" data-act="${act}" data-id="${esc(id)}"><i style="${img ? `background-image:url('${esc(img)}')` : ''}"></i><span>${esc(name)}</span></button>`;
@@ -429,7 +427,7 @@ function pageMusik() {
       <div class="mhead"><span class="lab">Favoritter</span><button class="chipbtn" data-act="sReload" aria-label="Opdater rum og favoritter">${svg('refresh', 16)}</button></div>
       <div class="mscroll"><div class="mtiles">${favs || '<span class="muted small">Ingen favoritter endnu.</span>'}</div>
         ${pls ? `<div class="lab" style="margin:12px 0 8px">Sonos-playlister</div><div class="mtiles">${pls}</div>` : ''}</div>
-      <div class="small muted">Apple Music m.m.: føj til Sonos-favoritter i Sonos-appen.</div>
+      
     </section>
     ${S.state.error ? `<div class="err" style="grid-column:1/-1">${esc(S.state.error)}</div>` : ''}
   </div>`;
@@ -438,8 +436,7 @@ function pageMusik() {
 /* ---------- DR TV ---------- */
 function pageTv() {
   return `<div class="ptitle"><h1>DR TV</h1></div>
-    <div class="tvgrid">${settings.tv.channels.map((c) => `<a class="tvtile" href="${esc(c.url)}" target="_blank" rel="noopener">${fillSvg('play', 36)}${esc(c.name)}<small>Åbner DRTV</small></a>`).join('')}</div>
-    <p class="note">DR tillader ikke, at deres afspiller vises inde i andre sider, så kanalerne åbner i DRTV. På en Android-tablet med Fully Kiosk kan du vælge, at links åbner i DRTV-appen, og komme tilbage til dashboardet med tilbage-knappen. Live-tv på DRTV kræver ikke login. Adresserne kan ændres under Indstillinger.</p>`;
+    <div class="tvgrid">${settings.tv.channels.map((c) => `<a class="tvtile" href="${esc(c.url)}" target="_blank" rel="noopener">${fillSvg('play', 36)}${esc(c.name)}<small>Åbner DRTV</small></a>`).join('')}</div>`;
 }
 
 /* ---------- Indstillinger ---------- */
@@ -489,7 +486,7 @@ function vejrSettings() {
   }).join('');
   return `
     <section class="card wide">
-      <div class="sechead"><div><h2>Steder</h2><p class="note">Skift mellem stederne med pilene i vejrkortet. Hjem vises også i toppen af skærmen. Tryk på et navn for at omdøbe det.</p></div></div>
+      <div class="sechead"><div><h2>Steder</h2></div></div>
       <ul class="plist">${rows}</ul>
       <div class="addbox">
         <label class="search">${ico('search', 20)}<input type="text" id="geoQ" placeholder="Tilføj sted – søg fx Skagen eller Spodsbjerg" aria-label="Søg efter et sted at tilføje" enterkeyhint="search"></label>
@@ -498,11 +495,11 @@ function vejrSettings() {
       ${results}${ui.geoMsg ? `<div class="err">${esc(ui.geoMsg)}</div>` : ''}
     </section>
     <section class="card wide">
-      <div class="sechead"><div><h2>Vejrkilde</h2><p class="note">Gælder for alle steder. Du kan altid sammenligne kilderne på siden Vejret.</p></div></div>
+      <div class="sechead"><div><h2>Vejrkilde</h2></div></div>
       <div class="srgrid">${sources}</div>
     </section>
     <section class="card wide">
-      <div class="sechead"><div><h2>Interval i vejrkortet</h2><p class="note">Hvor tæt prognosen vises på forsiden. Siden Vejret viser altid time for time.</p></div></div>
+      <div class="sechead"><div><h2>Interval i vejrkortet</h2></div></div>
       <div class="row">${[[15, '15 min'], [30, '30 min'], [60, '1 time']].map(([v, l]) => `<button class="pill" data-act="wStepSet" data-v="${v}" aria-pressed="${(+s.weather.step || 60) === v}">${l}</button>`).join('')}</div>
     </section>`;
 }
@@ -513,13 +510,13 @@ function lookSettings() {
     + `<button class="bgtile" data-act="bgFile" aria-pressed="${lk.bg === 'image'}"><span class="bgprev bgplus">${lk.bg === 'image' && L.hasLocalImage() ? '' : '+'}</span><span>Eget billede</span></button>`;
   const alpha = lk.alpha ?? 100;
   return `
-    <section class="card wide"><b>Baggrund</b><p class="note">Vælg en baggrund til dashboardet – eller brug jeres eget billede, fx et familiefoto. Baggrunden deles med jeres andre skærme.</p>
+    <section class="card wide"><b>Baggrund</b>
       <div class="bgtiles">${tiles}</div>
       <input type="file" id="bgFileInput" accept="image/*" hidden>
       <div class="row" style="flex-wrap:nowrap"><input type="url" id="bgUrl" placeholder="Eller indsæt adressen på et billede (https://…)" value="${esc(lk.bg === 'url' ? lk.url : '')}" aria-label="Billedadresse"><button class="btn primary" data-act="bgUrl">Brug</button></div>
       ${ui.bgMsg ? `<div class="small ${ui.bgMsg.err ? 'err' : 'muted'}">${esc(ui.bgMsg.text)}</div>` : ''}
     </section>
-    <section class="card wide"><b>Kortenes gennemsigtighed</b><p class="note">Hvor meget baggrunden skinner igennem kortene. 100 % er helt dækkende. Virker kun, når der er valgt en baggrund.</p>
+    <section class="card wide"><b>Kortenes gennemsigtighed</b>
       <label class="vol" style="max-width:520px"><span class="small" style="width:44px">${alpha} %</span><input type="range" min="40" max="100" step="5" value="${alpha}" data-look-alpha aria-label="Kortenes dækkevne i procent"></label>
       <label class="check"><input type="checkbox" data-look-blur ${lk.blur !== false ? 'checked' : ''}>Slør baggrunden bag kortene, så teksten er nem at læse</label>
     </section>`;
@@ -538,9 +535,9 @@ function pageIndstillinger() {
   const T = {
     vejr: () => vejrSettings(),
     nyheder: () => `
-    <section class="card wide"><b>Skift side i nyhedskortet</b><p class="note">Hvor længe nyhedskortet på forsiden viser hvert medie, før det selv skifter til det næste.</p>
+    <section class="card wide"><b>Skift side i nyhedskortet</b>
       <div class="row">${[10, 15, 20, 30, 45, 60, 0].map((v) => `<button class="pill" data-act="newsSecs" data-v="${v}" aria-pressed="${newsSecs() === v}">${v ? v + ' sek' : 'Aldrig'}</button>`).join('')}</div></section>
-    <section class="card wide"><b>Nyhedskilder</b><p class="note">Vælg en eller flere. Nyhederne blandes og sorteres efter tid. Kilder markeret "afprøves" er ikke bekræftet endnu.</p>
+    <section class="card wide"><b>Nyhedskilder</b>
       <div class="form">${Object.entries(groups).map(([g, list]) => `<div>${list.map((src) => `<label class="check"><input type="checkbox" data-news="${esc(src.id)}" ${s.news.sources.includes(src.id) ? 'checked' : ''}>${esc(src.name)}${src.unverified ? ' <span class="small muted">(afprøves)</span>' : ''}${src.custom ? ` <button class="btn" data-act="customRm" data-id="${esc(src.id)}" aria-label="Fjern ${esc(src.name)}">Fjern</button>` : ''}</label>`).join('')}</div>`).join('')}</div>
       <div class="lab" style="margin-top:6px">Tilføj egen kilde</div>
       <div class="row" style="flex-wrap:nowrap"><input type="text" id="cName" placeholder="Navn, fx Lokalavisen" aria-label="Navn på egen kilde" value="${esc(ui.feedDraft ? ui.feedDraft.name : '')}"><input type="url" id="cUrl" placeholder="RSS-adresse eller nyhedssidens adresse" aria-label="Adresse" value="${esc(ui.feedDraft ? ui.feedDraft.url : '')}"><button class="btn primary" data-act="customAdd">Tilføj</button></div>
@@ -549,11 +546,11 @@ function pageIndstillinger() {
       <label class="check"><input type="checkbox" data-set="news.publicProxyForTest" ${s.news.publicProxyForTest ? 'checked' : ''}>Brug en offentlig test-proxy til nyheder, indtil jeres worker er klar (kun til afprøvning)</label></section>`,
     kalender: () => `
     <section class="card wide"><b>Kalendere</b>
-      <p class="note">Indsæt et link for hver kalender (fx én pr. familiemedlem). <b>iPhone/iPad:</b> Kalender → Kalendere → tryk ⓘ ved kalenderen → slå <i>Offentlig kalender</i> til → <i>Del link</i> → Kopiér. <b>Mac:</b> Kalender → højreklik på kalenderen → Del kalender → <i>Offentlig kalender</i> → kopiér adressen. Linket starter med <code>webcal://</code> – det klarer dashboardet. Andre: Google ("Hemmelig adresse i iCal-format") og Outlook (ICS-link) virker også. Behandl linkene som adgangskoder.</p>
+      <details class="howto"><summary>Sådan finder du kalenderlinket</summary><p class="note">Indsæt et link for hver kalender (fx én pr. familiemedlem). <b>iPhone/iPad:</b> Kalender → Kalendere → tryk ⓘ ved kalenderen → slå <i>Offentlig kalender</i> til → <i>Del link</i> → Kopiér. <b>Mac:</b> Kalender → højreklik på kalenderen → Del kalender → <i>Offentlig kalender</i> → kopiér adressen. Linket starter med <code>webcal://</code> – det klarer dashboardet. Andre: Google ("Hemmelig adresse i iCal-format") og Outlook (ICS-link) virker også. Behandl linkene som adgangskoder.</p></details>
       ${s.calendars.map((c, i) => `<div class="calrow"><input type="text" data-cal="${i}" data-field="name" value="${esc(c.name)}" aria-label="Navn"><input type="color" data-cal="${i}" data-field="color" value="${esc(c.color)}" aria-label="Farve"><input type="url" data-cal="${i}" data-field="url" value="${esc(c.url)}" placeholder="https://… .ics" aria-label="iCal-link"><select data-cal="${i}" data-field="owner" aria-label="Hvis kalender"><option value="">Fælles</option>${members().map((m) => `<option value="${esc(m.id)}" ${c.owner === m.id ? 'selected' : ''}>${esc(m.name)}</option>`).join('')}</select><button class="btn" data-act="calRm" data-i="${i}">Fjern</button></div>`).join('')}
       <div><button class="btn primary" data-act="calAdd">+ Tilføj kalender</button></div>
       ${D.cal && D.cal.errors.length ? `<div class="err">${esc(D.cal.errors.map((e) => e.cal + ': ' + e.msg).join(' · '))}</div>` : ''}</section>
-    <section class="card wide"><b>Nedtællinger</b><p class="note">Opret så mange nedtællinger, I vil – fx juleaften, sommerferie og fødselsdage. Den nærmeste vises øverst på skærmen, og på forsiden kan man bladre mellem dem. Tryk på billedfeltet for at vælge et billede.</p>
+    <section class="card wide"><b>Nedtællinger</b>
       <div class="cdrows">${(s.countdowns || []).map((c, i) => { const img = M.getImage(c.imageId); return `<div class="cdrow">
         <button class="cdthumb" data-act="cdImg" data-i="${i}" aria-label="Vælg billede til ${esc(c.name || 'nedtælling')}" style="${img ? `background-image:url('${img}')` : ''}">${img ? '' : '+ billede'}</button>
         <label class="f">Navn<input type="text" data-cd="${i}" data-field="name" value="${esc(c.name)}" placeholder="Fx Sommerferie"></label>
@@ -578,7 +575,6 @@ function pageIndstillinger() {
     familie: () => `
     <section class="card wide"><b>Familien</b>
       <label class="f">Familienavn (står øverst på forsiden)<input type="text" data-set="family.name" value="${esc(s.family.name)}" placeholder="Fx Familien Riksted"></label>
-      <p class="note">Tilføj familiemedlemmerne. Øverst på skærmen kan man så trykke på sig selv for kun at se sine egne og de fælles aftaler. Under Kalender vælger I, hvis kalender hver kalender er.</p>
       <div class="memrows">${s.family.members.map((m, i) => `<div class="memrow"><span class="avatar" style="--c:${esc(m.color)}" aria-hidden="true">${esc(initials(m.name))}</span>
         <input type="text" data-mem="${i}" data-field="name" value="${esc(m.name)}" placeholder="Navn" aria-label="Navn">
         <input type="color" data-mem="${i}" data-field="color" value="${esc(m.color)}" aria-label="Farve">
@@ -586,16 +582,13 @@ function pageIndstillinger() {
       <div><button class="btn primary" data-act="memAdd">+ Tilføj familiemedlem</button></div>
     </section>
     <section class="card wide"><b>Familie-login</b>
-      <p class="note">Med familiekoden logger man ind på en ny skærm (iPad, Mac, telefon) med familienavnet og koden – uden den lange nøgle. Koden gemmes krypteret i jeres server og skal være mindst 6 tegn.</p>
       <div class="form"><label class="f">Ny familiekode<input type="password" id="famCode" autocomplete="new-password"></label>
       <label class="f">Gentag koden<input type="password" id="famCode2" autocomplete="new-password"></label></div>
       <div class="row"><button class="btn primary" data-act="famCodeSave">Gem familiekode</button>${ui.famMsg ? `<span class="small ${ui.famMsg.err ? 'err' : 'muted'}">${esc(ui.famMsg.text)}</span>` : ''}</div>
       <div class="row" style="border-top:1.5px solid var(--line);padding-top:12px"><button class="btn line" data-act="logoutHere">Log denne skærm ud</button><button class="btn line danger" data-act="logoutAll">Log alle skærme ud</button></div>
-      <p class="small muted">"Log alle skærme ud" bruges, hvis en skærm er blevet væk eller koden er delt med nogen. Denne skærm forbliver logget ind; de andre skal logge ind igen.</p>
     </section>`,
     forbindelse: () => `
     <section class="card wide"><b>Forbindelse til jeres server</b>
-      <p class="note">Nyheder, kalendere og Sonos går gennem en lille gratis Cloudflare Worker, som I selv ejer. Se README.md for opsætning. Vejret virker uden.</p>
       <div class="form"><label class="f">Worker-adresse<input type="url" data-set="proxy.url" value="${esc(s.proxy.url)}" placeholder="https://easyhome.ditnavn.workers.dev" autocomplete="off"></label>
       <label class="f">Nøgle (DASH_KEY)<input type="password" data-set="proxy.key" value="${esc(s.proxy.key)}" autocomplete="off"></label></div>
       <div class="row"><button class="btn primary" data-act="testConn">Test forbindelse</button><span class="small" id="connMsg">${esc(ui.connMsg)}</span></div>
@@ -604,7 +597,7 @@ function pageIndstillinger() {
         <code id="redir" style="user-select:all;font-size:15px;word-break:break-all">${esc(s.proxy.url.replace(/\/+$/, '') + '/sonos/callback')}</code>
         <div><button class="btn" data-act="copyRedir">Kopiér adressen</button></div></div>` : ''}</section>`,
     backup: () => `
-    <section class="card wide"><b>Sikkerhedskopi</b><p class="note">Kopiér indstillingerne til en anden skærm, eller gem dem. Teksten indeholder jeres nøgle og kalenderlinks – del den ikke.</p>
+    <section class="card wide"><b>Sikkerhedskopi</b><p class="note">Teksten indeholder jeres nøgle og kalenderlinks – del den ikke.</p>
       <textarea id="cfg" aria-label="Indstillinger som tekst">${esc(JSON.stringify(settings, null, 2))}</textarea>
       <div class="row"><button class="btn" data-act="copyCfg">Kopiér</button><button class="btn primary" data-act="importCfg">Indlæs fra feltet</button></div></section>`
   };

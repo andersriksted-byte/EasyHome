@@ -431,3 +431,4 @@ span.avatar{opacity:1}
 .loginbox details[open] .f{margin-top:10px}
 
 .npart{width:44px;height:44px;border-radius:10px;background:var(--bg) center/cover no-repeat;flex-shrink:0}
+.howto summary{cursor:pointer;font-weight:700;color:var(--muted);font-size:14px;min-height:32px}
