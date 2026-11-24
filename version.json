@@ -1,5 +1,5 @@
 {
-  "version": "1.2.1",
+  "version": "1.2.2",
   "files": [
     "index.html",
     "app.js",
@@ -10,9 +10,20 @@
     "news.js",
     "calendar.js",
     "sonos.js",
-    "icon-180.png"
+    "icon-180.png",
+    "manifest.webmanifest"
   ],
   "notes": [
+    {
+      "version": "1.2.2",
+      "date": "24. november 2026",
+      "title": "easyHome og Madro holdes adskilt",
+      "items": [
+        "easyHome og Madro ligger på samme webadresse, og derfor kunne Madro-ikonet komme til at åbne easyHome.",
+        "Nu ved begge apps, hvor de hører til, så de ikke blander sig med hinanden.",
+        "Har du lagt Madro eller easyHome i Dock'en eller på hjemmeskærmen før i dag, så fjern ikonet og læg det på igen."
+      ]
+    },
     {
       "version": "1.2.1",
       "date": "24. november 2026",
