@@ -140,6 +140,12 @@ function eventsOn(day) {
   return D.cal.events.filter((ev) => ev.start < e && ev.end > s && mineEvent(ev));
 }
 const evTime = (ev, day) => (ev.allDay ? 'Hele dagen' : (ev.start < startOfDay(day) ? 'Fortsat' : hhmm(ev.start)));
+// Dagens menu fra Madro nederst i hver dag i kalenderen
+function dayMenu(d) {
+  if (!svcOn('madro') || MD.state.status !== 'ok') return '';
+  const ms = MD.mealsOn(d); if (!ms.length) return '';
+  return `<button class="daymenu" data-act="mdOpen" data-sub="madplan" title="${esc(ms.map((m) => m.title).join(', '))}"><span aria-hidden="true">🍽️</span><span>${esc(ms.map((m) => m.title).join(' · '))}</span></button>`;
+}
 function evHtml(ev, day, withWho = true) {
   return `<div class="ev" style="${evStyle(ev)}"><time>${esc(evTime(ev, day))}</time>${esc(ev.title)}${withWho && ev.who ? ` <span style="font-weight:600">· ${esc(ev.who)}</span>` : ''}</div>`;
 }
@@ -242,7 +248,7 @@ function wUge(size, h = 1, w = 1) {
   return `${cardHead(nd === 7 ? 'Familiens uge' : 'Næste ' + nd + ' dage', demo)}
     <div class="days" style="grid-template-columns:repeat(${days.length},minmax(0,1fr))">${days.map((d) => `
       <div class="day ${sameDay(d, today) ? 'today' : ''}"><h3>${cap(DAYS[d.getDay()])} <span>${d.getDate()}.</span></h3>
-      ${eventsOn(d).map((e) => evHtml(e, d, false)).join('')}</div>`).join('')}</div>`;
+      ${eventsOn(d).map((e) => evHtml(e, d, false)).join('')}${dayMenu(d)}</div>`).join('')}</div>`;
 }
 const i0 = (d, today) => (sameDay(d, today) ? 'I dag' : sameDay(d, addDays(today, 1)) ? 'I morgen' : cap(DAYS_LONG[d.getDay()]) + ' ' + d.getDate() + '.');
 function pageArrows(scope, idx, n, what) {
@@ -480,7 +486,7 @@ function pageKalender() {
     ${D.cal && D.cal.demo ? '<div class="empty">Viser eksempler. Tilføj jeres kalendere under Indstillinger → Kalendere.</div>' : ''}
     ${D.cal && D.cal.errors.length ? `<div class="err">${esc(D.cal.errors.map((e) => e.cal + ': ' + e.msg).join(' · '))}</div>` : ''}
     <div class="days calweek" data-swipe="cal" style="grid-template-columns:repeat(7,minmax(0,1fr))">${days.map((d) => `
-      <div class="day ${sameDay(d, today) ? 'today' : ''}"><h3>${cap(DAYS[d.getDay()])} <span>${d.getDate()}.</span></h3>${eventsOn(d).map((e) => evHtml(e, d)).join('') || '<span class="small muted">–</span>'}</div>`).join('')}</div>
+      <div class="day ${sameDay(d, today) ? 'today' : ''}"><h3>${cap(DAYS[d.getDay()])} <span>${d.getDate()}.</span></h3>${eventsOn(d).map((e) => evHtml(e, d)).join('') || '<span class="small muted">–</span>'}${dayMenu(d)}</div>`).join('')}</div>
     ${cals.length ? `<div class="legend">${cals.map((c) => `<span style="background:${lighten(c.color)}">${esc(c.name)}</span>`).join('')}</div>` : ''}`;
 }
 function isoWeek(d) { const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())); const day = t.getUTCDay() || 7; t.setUTCDate(t.getUTCDate() + 4 - day); const y = new Date(Date.UTC(t.getUTCFullYear(), 0, 1)); return Math.ceil(((t - y) / 86400000 + 1) / 7); }
@@ -1207,7 +1213,7 @@ function boot() {
   if (settings.cdTop === undefined) { const n = countdowns('top').find((c) => c.days >= 0); settings.cdTop = n ? n.id : ''; save(); }
   if (!settings.weather.stepRev) { settings.weather.step = 60; settings.weather.stepRev = 1; save(); } // vejrkortet viser timer som standard
   M.onMediaLoaded(() => softRender());
-  MD.onMadroChange(() => { if (ui.page === 'forside') softRender(); });
+  MD.onMadroChange(() => { if (ui.page === 'forside' || ui.page === 'kalender') softRender(); });
   SF.onSomfyChange(() => { if (ui.page === 'forside' && curLayout().some((x) => x.id === 'screens')) softRender(); });
   setInterval(() => { if (svcOn('somfy') && !document.hidden && curLayout().some((x) => x.id === 'screens')) SF.refresh(); }, 60000);
   // Madplan og indkøbsliste på forsiden – brugeren bad selv om dem (én gang)

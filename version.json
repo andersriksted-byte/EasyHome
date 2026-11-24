@@ -1,5 +1,5 @@
 {
-  "version": "1.27.0",
+  "version": "1.28.0",
   "files": [
     "index.html",
     "app.js",
@@ -21,6 +21,15 @@
     "somfy.js"
   ],
   "notes": [
+    {
+      "version": "1.28.0",
+      "date": "24. november 2026",
+      "title": "Dagens menu i kalenderen",
+      "items": [
+        "Nederst i hver dag i kalenderen – både på forsiden og på siden Kalender – står nu dagens menu fra Madro.",
+        "Tryk på menuen for at åbne madplanen."
+      ]
+    },
     {
       "version": "1.27.0",
       "date": "24. november 2026",
