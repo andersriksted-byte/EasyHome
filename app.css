@@ -1155,3 +1155,8 @@ button.w7r.sel{background:color-mix(in srgb,var(--accent) 16%,transparent);box-s
 .today .cw-date span{color:var(--accent)}
 .cw-row .cw-evs{flex:1}
 .w.compact .cw-ev{padding:4px 7px}.w.compact .cw-ev span{font-size:12px}.w.compact .cw-day{padding:8px;gap:6px}.w.compact .cw-dh b{font-size:20px}
+
+/* Valgt profil: kun bogstavet markeres i headeren */
+.profiles.picked .avatar{opacity:.35;transform:scale(.88)}
+.profiles.picked .avatar[aria-pressed=true]{opacity:1;transform:scale(1.08);border-color:var(--card);box-shadow:0 0 0 3px var(--text)}
+.avatar{transition:opacity .2s,transform .2s}

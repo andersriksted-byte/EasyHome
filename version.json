@@ -1,5 +1,5 @@
 {
-  "version": "1.50.2",
+  "version": "1.51.1",
   "files": [
     "index.html",
     "app.js",
@@ -23,6 +23,15 @@
     "mcats.js"
   ],
   "notes": [
+    {
+      "version": "1.51.1",
+      "date": "24. november 2026",
+      "title": "Valgt person vises i toppen",
+      "items": [
+        "Hvis visning du ser, ses nu kun på det markerede bogstav øverst til højre",
+        "Teksten \"…s visning\" på forsiden er fjernet"
+      ]
+    },
     {
       "version": "1.50.2",
       "date": "24. november 2026",
