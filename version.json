@@ -1,5 +1,5 @@
 {
-  "version": "1.49.0",
+  "version": "1.49.1",
   "files": [
     "index.html",
     "app.js",
@@ -23,6 +23,15 @@
     "mcats.js"
   ],
   "notes": [
+    {
+      "version": "1.49.1",
+      "date": "24. november 2026",
+      "title": "Sonos-fejl rettet",
+      "items": [
+        "Fejlen \"HTTP 410\" på Musik-siden, når rum flyttes mellem grupper, er rettet",
+        "easyHome finder nu selv den nye gruppe og fortsætter"
+      ]
+    },
     {
       "version": "1.49.0",
       "date": "24. november 2026",

@@ -1,10 +1,25 @@
 // Sonos via Sonos' officielle Control API (cloud). Workeren holder login-nøglerne, så de aldrig ligger i browseren.
 import { workerFetch, hasProxy, settings, save } from './util.js';
 
-const api = async (path, method = 'GET', body) => {
+const rawApi = async (path, method = 'GET', body) => {
   const res = await workerFetch('/sonos/api' + path, { method, body: body ? JSON.stringify(body) : undefined });
   const t = await res.text();
   return t ? JSON.parse(t) : {};
+};
+// Når rum flyttes mellem grupper, får gruppen et nyt id, og det gamle svarer "væk" (HTTP 410/404).
+// Så hentes grupperne igen, og kaldet prøves én gang til med den nye gruppe.
+const api = async (path, method = 'GET', body) => {
+  try { return await rawApi(path, method, body); } catch (e) {
+    const m = /^\/groups\/([^/]+)(\/.*)?$/.exec(path);
+    if (!m || !/HTTP 4(04|10)/.test(e.message)) throw e;
+    const old = m[1]; const pids = ((state.groups.find((g) => g.id === old) || {}).playerIds) || [];
+    await loadHousehold();
+    // Find den gruppe, som rummene nu er i
+    const ng = state.groups.find((g) => (g.playerIds || []).some((p) => pids.includes(p)));
+    if (ng && settings.sonos.groupId !== ng.id) { settings.sonos.groupId = ng.id; save(); }
+    const nid = settings.sonos.groupId; if (!nid || nid === old) throw e;
+    return rawApi('/groups/' + nid + (m[2] || ''), method, body);
+  }
 };
 
 // Coverbilleder: Sonos giver enten en almindelig https-adresse, en http-adresse eller en adresse på selve
@@ -88,8 +103,8 @@ export async function refresh() {
       state.playerVol = Object.fromEntries(vols);
     }
   } catch (e) {
-    state.error = e.message;
-    if (/HTTP 4(04|10)/.test(e.message)) state.household = null; // grupper ændret: hent igen
+    if (/HTTP 4(04|10)/.test(e.message)) { state.household = null; state.error = null; } // grupper ændret: hentes igen næste gang
+    else state.error = e.message;
   }
   return state;
 }
