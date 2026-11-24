@@ -1,5 +1,5 @@
 {
-  "version": "1.44.0",
+  "version": "1.44.1",
   "files": [
     "index.html",
     "app.js",
@@ -22,6 +22,15 @@
     "timer.js"
   ],
   "notes": [
+    {
+      "version": "1.44.1",
+      "date": "24. november 2026",
+      "title": "Enklere valg af rum",
+      "items": [
+        "Rum vælges nu kun med flueben på Musik-siden",
+        "Knapperne og rum-rækken øverst er fjernet"
+      ]
+    },
     {
       "version": "1.44.0",
       "date": "24. november 2026",

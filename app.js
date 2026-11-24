@@ -816,9 +816,7 @@ function sonosRooms() {
   const cg = S.currentGroup();
   const members = cg ? cg.playerIds || [] : [];
   const coord = cg ? cg.coordinatorId : null;
-  const coordName = (S.state.players.find((x) => x.id === coord) || {}).name || 'dette rum';
   const players = [...S.state.players].sort((x, y) => x.name.localeCompare(y.name, 'da'));
-  const groups = S.state.groups.length > 1 ? `<div class="mgroups">${S.state.groups.map((g) => `<button class="chipbtn" data-act="sGroup" data-id="${esc(g.id)}" aria-pressed="${g.id === settings.sonos.groupId}" title="${esc(g.name)}"><span class="cbt">${esc(g.name)}</span>${g.playbackState === 'PLAYBACK_STATE_PLAYING' ? ' ♪' : ''}</button>`).join('')}</div>` : '';
   const rows = players.map((pl) => {
     const inG = members.includes(pl.id);
     const isCoord = pl.id === coord;
@@ -831,8 +829,7 @@ function sonosRooms() {
     </div>`;
   }).join('');
   return `<section class="card mcol">
-      <div class="mhead"><span class="lab">Rum</span><span class="row" style="gap:6px"><button class="chipbtn" data-act="sAll">Alle sammen</button><button class="chipbtn" data-act="sOnly" title="Kun ${esc(coordName)}"><span class="cbt">Kun ${esc(coordName)}</span></button></span></div>
-      ${groups}
+      <div class="mhead"><span class="lab">Rum</span></div>
       <div class="rooms mscroll">${rows || '<span class="muted">Ingen rum fundet</span>'}</div>
     </section>`;
 }
