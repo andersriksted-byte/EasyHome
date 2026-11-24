@@ -1,5 +1,5 @@
 {
-  "version": "1.19.0",
+  "version": "1.20.0",
   "files": [
     "index.html",
     "app.js",
@@ -20,6 +20,16 @@
     "madro.js"
   ],
   "notes": [
+    {
+      "version": "1.20.0",
+      "date": "24. november 2026",
+      "title": "Tilføj varer fra skærmen",
+      "items": [
+        "På indkøbslisten på forsiden kan I nu skrive en vare og trykke + – fx \"2 l mælk\". Den kommer med det samme på listen i Madro.",
+        "Står varen der allerede, lægges mængden sammen.",
+        "Varer krydses af i Madro, ikke på forsiden."
+      ]
+    },
     {
       "version": "1.19.0",
       "date": "24. november 2026",

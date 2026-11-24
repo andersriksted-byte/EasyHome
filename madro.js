@@ -105,3 +105,22 @@ export async function toggleItem(id) {
     });
   } catch (e) { /* onSnapshot retter visningen igen */ }
 }
+
+// Tilføj en vare fra skærmen. "2 l mælk" bliver til 2 l + mælk. Samme vare lægges sammen med den, der står på listen.
+export async function addItem(text) {
+  if (!fs || !state.fid) throw new Error('Madro er ikke forbundet');
+  const t = String(text || '').trim(); if (!t) return;
+  const m = /^(\d+(?:[.,]\d+)?)\s*(g|kg|l|dl|cl|ml|stk\.?|pk\.?|ds\.?|bdt\.?)?\s+(.+)$/i.exec(t);
+  const amount = m ? parseFloat(m[1].replace(',', '.')) : null;
+  const unit = m && m[2] ? m[2].toLowerCase().replace(/\.$/, '') : '';
+  const name = (m ? m[3] : t).replace(/^./, (c) => c.toUpperCase());
+  const norm = (x) => String(x || '').trim().toLowerCase();
+  const ref = fs.doc('families/' + state.fid + '/lists/shopping');
+  await fs.runTransaction(async (tx) => {
+    const d = await tx.get(ref); const items = ((d.exists && d.data().items) || []).map((x) => ({ ...x }));
+    const ex = items.find((x) => !x.checked && norm(x.name) === norm(name) && (x.unit || '') === unit);
+    if (ex) { if (ex.amount != null && amount != null) ex.amount = Math.round((ex.amount + amount) * 100) / 100; else ex.amount = ex.amount ?? amount; }
+    else items.push({ id: Math.random().toString(36).slice(2, 8) + Date.now().toString(36).slice(-5), name, unit, amount, from: [], parts: {}, checked: false, createdAt: Date.now() });
+    tx.set(ref, { items, updatedAt: Date.now() }, { merge: true });
+  });
+}

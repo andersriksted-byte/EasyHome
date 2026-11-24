@@ -520,8 +520,8 @@ span.avatar{opacity:1}
 .md-tiny .mdmeal::before,.md-tall .mdmeal::before{display:none}
 .md-tiny .mdmeal b,.md-tall .mdmeal b{color:var(--text);-webkit-line-clamp:1}
 .shoplist{flex:1;min-height:0;overflow:hidden;display:grid;grid-template-columns:repeat(var(--cols),minmax(0,1fr));grid-auto-rows:44px;align-content:start;gap:4px 12px}
-.shopitem{display:flex;align-items:center;gap:10px;min-width:0;border:0;background:none;padding:0 4px;border-radius:10px;font:inherit;color:var(--text);text-align:left}
-.shopitem i{flex:none;width:22px;height:22px;border-radius:50%;border:2px solid var(--line);transition:background .2s}
+.shopitem{display:flex;align-items:center;gap:10px;min-width:0;padding:0 4px;color:var(--text)}
+.shopitem i{flex:none;width:8px;height:8px;border-radius:50%;background:var(--accent)}
 .shopitem.done i{background:var(--accent);border-color:var(--accent)}
 .shopitem.done .si-name{text-decoration:line-through;color:var(--muted)}
 .si-name{flex:1;min-width:0;font-weight:700;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -564,3 +564,7 @@ span.avatar{opacity:1}
 .nfilter{display:flex;gap:6px;overflow-x:auto;min-width:0;flex:1;scrollbar-width:none}
 .nfilter::-webkit-scrollbar{display:none}
 @media (max-width:800px){.newspage{grid-template-columns:1fr}.npane{min-height:60vh}}
+.shopadd{flex:none;display:flex;gap:8px;margin-top:8px}
+.shopadd input{min-height:44px;flex:1;min-width:0}
+.shopadd .btn{width:44px;padding:0;font-size:22px}
+.shoplist{grid-auto-rows:36px}

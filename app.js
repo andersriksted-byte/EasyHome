@@ -331,10 +331,11 @@ function wIndkob(size, h = 1, wd = 1) {
   const wait = madroStatus('Indkøbsliste'); if (wait) return wait;
   const items = MD.openItems();
   const head = cardHead('Indkøbsliste', `<span class="small muted">${items.length ? items.length + (items.length === 1 ? ' vare' : ' varer') : ''}</span>`);
-  if (!items.length) return head + '<div class="empty">Alt er handlet ✓</div>';
+  const add = `<form class="shopadd" data-shopadd><input type="text" name="v" placeholder="Tilføj vare, fx 2 l mælk" aria-label="Tilføj vare til indkøbslisten" enterkeyhint="done" autocomplete="off"><button class="btn primary" aria-label="Tilføj">+</button></form>`;
+  if (!items.length) return head + '<div class="empty">Listen er tom.</div>' + add;
   const cols = Math.min(3, wd, shapeKind(wd, h) === 'big' ? 2 : 3);
   const amt = (x) => [x.amount != null && x.amount !== '' ? String(x.amount).replace('.', ',') : '', x.unit || ''].join(' ').trim();
-  return head + `<div class="shoplist" data-trim style="--cols:${cols}">${items.map((x) => `<button class="shopitem" data-act="mdToggle" data-id="${esc(x.id)}"><i aria-hidden="true"></i><span class="si-name">${esc(x.name)}</span>${amt(x) ? `<span class="si-amt">${esc(amt(x))}</span>` : ''}</button>`).join('')}</div>`;
+  return head + `<div class="shoplist" data-trim style="--cols:${cols}">${items.map((x) => `<div class="shopitem"><i aria-hidden="true"></i><span class="si-name">${esc(x.name)}</span>${amt(x) ? `<span class="si-amt">${esc(amt(x))}</span>` : ''}</div>`).join('')}</div>` + add;
 }
 
 function wNed(size, h = 1, wd = 1) {
@@ -733,6 +734,8 @@ window.addEventListener('resize', () => { clearTimeout(fitTimer); fitTimer = set
 // Opdater kun hvis brugeren ikke er i gang med at skrive eller trække
 function softRender() {
   if (ui.page === 'indstillinger' || drag) return;
+  const ae = document.activeElement; if (ae && ae.closest && ae.closest('#main') && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)) return; // man skriver
+
   renderMain();
 }
 function renderAll() { applyTheme(); renderNav(); renderHeader(); renderMain(false); renderFooter(); }
@@ -797,7 +800,6 @@ const act = {
   },
   wStepSet: (b) => { settings.weather.step = +b.dataset.v; save(); renderMain(); },
   mdOpen: (b) => { madroSub = b.dataset.sub || ''; act.nav({ dataset: { page: 'madro' } }); },
-  mdToggle: (b) => { b.classList.add('done'); setTimeout(() => MD.toggleItem(b.dataset.id), 350); },
   sShuffle: () => { const m = S.nowPlaying().modes; S.setPlayModes({ shuffle: !m.shuffle }).catch(() => toast('Sonos kunne ikke skifte')); renderMain(); },
   sRepeat: () => { const m = S.nowPlaying().modes; const nx = m.repeatOne ? { repeat: false, repeatOne: false } : m.repeat ? { repeat: false, repeatOne: true } : { repeat: true, repeatOne: false }; S.setPlayModes(nx).catch(() => toast('Sonos kunne ikke skifte')); renderMain(); },
   newsPick: (b) => { ui.newsSel = b.dataset.url; renderMain(); },
@@ -926,6 +928,13 @@ document.addEventListener('input', (e) => {
   if (t.hasAttribute && t.hasAttribute('data-look-alpha')) { L.setLook({ alpha: +t.value }); const lab = t.previousElementSibling; if (lab) lab.textContent = t.value + ' %'; }
 });
 document.addEventListener('keydown', (e) => { if (e.key !== 'Enter') return; if (e.target.id === 'geoQ') act.geoSearch(); else if (e.target.dataset && e.target.dataset.place !== undefined) e.target.blur(); });
+document.addEventListener('submit', (e) => {
+  const f = e.target.closest('[data-shopadd]'); if (!f) return;
+  e.preventDefault();
+  const inp = f.querySelector('input'); const v = inp.value.trim(); if (!v) return;
+  inp.value = '';
+  MD.addItem(v).then(() => { toast(v + ' er sat på listen'); const typing = document.querySelector('.shopadd input'); const keep = typing && typing.value; if (!keep) { renderMain(); const n = document.querySelector('.shopadd input'); if (n) n.focus(); } }).catch(() => { inp.value = v; toast('Kunne ikke gemme i Madro'); });
+});
 document.addEventListener('change', (e) => {
   const t = e.target;
   if (t.dataset.set) {
