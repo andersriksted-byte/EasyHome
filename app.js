@@ -658,7 +658,7 @@ const CAL_HH = 52; // højde pr. time i px
 let calRefs = [];
 const evRef = (e) => { if (calRefs.length > 2000) calRefs = []; calRefs.push(e); return `data-act="calEv" data-i="${calRefs.length - 1}" role="button" tabindex="0"`; };
 function calTimeGrid(days, today) {
-  const evs = days.map((d) => eventsOn(d, true));
+  const now0 = Date.now(); const evs = days.map((d) => eventsOn(d, true).filter((e) => !sameDay(d, today) || e.allDay || e.end.getTime() > now0)); // i dag: overståede aftaler vises ikke
   const allDay = evs.map((l, i) => l.filter((e) => e.allDay || (e.start <= startOfDay(days[i]) && e.end >= addDays(startOfDay(days[i]), 1))));
   const timed = evs.map((l, i) => l.filter((e) => !allDay[i].includes(e)));
   const cols = 'grid-template-columns:52px repeat(7,minmax(0,1fr))';
@@ -1669,7 +1669,7 @@ function boot() {
     bar.style.width = (left / newsSecs()) * 100 + '%';
   }, 1000);
   // "Næste i kalenderen" tæller ned i minutter
-  setInterval(() => { if (ui.page === 'forside' && !ui.editing && curLayout().some((x) => x.id === 'naeste' || x.id === 'uge')) softRender(); }, 60000);
+  setInterval(() => { if ((ui.page === 'forside' && !ui.editing && curLayout().some((x) => x.id === 'naeste' || x.id === 'uge')) || (ui.page === 'kalender' && !document.querySelector('.upd-modal'))) softRender(); }, 60000);
   // "Én nyhed ad gangen": skift efter samme tid som nyhedskortet
   setInterval(() => {
     const on = ui.page === 'forside' && !ui.editing && !drag && !R.isOpen() && curLayout().some((x) => x.id === 'nyhed1') && widgetOn('nyhed1') && mixedNews().length > 1;

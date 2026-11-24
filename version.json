@@ -1,5 +1,5 @@
 {
-  "version": "1.50.1",
+  "version": "1.50.2",
   "files": [
     "index.html",
     "app.js",
@@ -23,6 +23,15 @@
     "mcats.js"
   ],
   "notes": [
+    {
+      "version": "1.50.2",
+      "date": "24. november 2026",
+      "title": "Kun det, der kommer",
+      "items": [
+        "Kalender-siden viser heller ikke længere dagens overståede aftaler",
+        "Den røde nu-streg flytter sig hvert minut"
+      ]
+    },
     {
       "version": "1.50.1",
       "date": "24. november 2026",
