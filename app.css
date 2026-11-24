@@ -634,3 +634,9 @@ span.avatar{opacity:1}
 .mdst.wait{background:#e8a317;color:#fff}
 .mdst.none{background:var(--card);color:var(--text);font-size:11px}
 .mdbig .mdst{width:32px;height:32px;padding:0;font-size:15px}
+
+/* Vejret i toppen */
+.wxchip{max-width:46ch;min-width:0;gap:6px;white-space:nowrap;overflow:hidden}
+.wxc-place{font-weight:600;color:var(--muted)}
+.wxc-trend{font-weight:700}
+.wxc-msg{font-weight:600;color:var(--muted);overflow:hidden;text-overflow:ellipsis;min-width:0}

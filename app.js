@@ -155,13 +155,34 @@ function renderNav() {
 }
 
 /* ---------- Header ---------- */
+// Vejret i toppen: sted, nu, og hvordan det udvikler sig de næste timer
+function wxTrend(w) {
+  const now = Date.now();
+  const next = w.hours.filter((h) => h.time.getTime() > now).slice(0, 6);
+  if (!next.length) return null;
+  const in3 = next[Math.min(2, next.length - 1)];
+  const d = in3.temp - w.now.temp;
+  const arrow = d >= 1 ? '↗' : d <= -1 ? '↘' : '→';
+  const wet = (h) => h.rain >= 0.2 || [51, 53, 55, 61, 63, 65, 71, 73, 75, 80, 81, 82, 85, 86, 95, 96, 99].includes(h.code);
+  const nowWet = w.now.rain > 0 || wet(next[0]);
+  let msg = '';
+  if (!nowWet) { const r = next.find(wet); if (r) msg = (r.code >= 71 && r.code <= 86 && r.code !== 80 && r.code !== 81 && r.code !== 82 ? 'sne' : 'regn') + ' fra kl. ' + pad(r.time.getHours()); }
+  else { const dry = next.find((h) => !wet(h)); msg = dry ? 'tørt fra kl. ' + pad(dry.time.getHours()) : 'regn de næste timer'; }
+  if (!msg) { const c = next.find((h) => W.codeText(h.code) !== W.codeText(w.now.code)); if (c) msg = W.codeText(c.code).toLowerCase() + ' fra kl. ' + pad(c.time.getHours()); }
+  return { arrow, temp: in3.temp, at: in3.time, msg };
+}
+function wxChip(w) {
+  const t = wxTrend(w);
+  return `<button class="chip wxchip" data-act="nav" data-page="vejr" aria-label="Vejret">${W.weatherIcon(w.now.code, w.now.isDay, 24)}<span class="wxc-place">${esc(placeLabel(home()))}</span><b>${fmtTemp(w.now.temp)}</b>${t ? `<span class="wxc-trend" title="Om 3 timer">${t.arrow} ${fmtTemp(t.temp)}</span>${t.msg ? `<span class="wxc-msg">· ${esc(t.msg)}</span>` : ''}` : `<span class="wxc-msg">· ${esc(W.codeText(w.now.code).toLowerCase())}</span>`}</button>`;
+}
+
 function renderHeader() {
   const now = new Date();
   const w = D.weather;
   const next = svcOn('nedtaelling') && settings.cdTop ? countdowns('all').find((c) => c.id === settings.cdTop && c.days >= 0) : null;
   $('#hdr').innerHTML = `
     <div class="clock"><b id="clk">${hhmm(now)}</b><span>${esc(longDate(now))}</span></div>
-    ${w && svcOn('vejr') ? `<button class="chip" data-act="nav" data-page="vejr">${W.weatherIcon(w.now.code, w.now.isDay, 24)} ${fmtTemp(w.now.temp)} · ${esc(W.codeText(w.now.code).toLowerCase())}</button>` : ''}
+    ${w && svcOn('vejr') ? wxChip(w) : ''}
     ${next ? `<span class="chip accent">${next.days === 0 ? `I dag: ${esc(next.name)}` : `${next.days} ${next.days === 1 ? 'dag' : 'dage'} til ${esc(next.name.toLowerCase())}`}</span>` : ''}
     <div class="right">${ui.page === 'forside' ? `<button class="hdredit ${ui.editing ? 'on' : ''}" data-act="edit" aria-pressed="${ui.editing}" aria-label="${ui.editing ? 'Færdig med at tilpasse forsiden' : 'Tilpas forside'}" title="${ui.editing ? 'Færdig' : 'Tilpas forside'}">${ui.editing ? ico('check', 20) : ico('edit', 20)}</button>` : ''}${members().length ? `<div class="profiles" role="group" aria-label="Hvem bruger skærmen?">${members().map((m) => `<button class="avatar" data-act="pickMe" data-id="${esc(m.id)}" aria-pressed="${settings.me === m.id}" aria-label="${esc(m.name)}${settings.me === m.id ? ' (valgt – tryk for alle)' : ''}" style="--c:${esc(m.color)}">${esc(initials(m.name))}</button>`).join('')}</div>` : ''}</div>`;
 }

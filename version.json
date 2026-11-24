@@ -1,5 +1,5 @@
 {
-  "version": "1.23.2",
+  "version": "1.24.0",
   "files": [
     "index.html",
     "app.js",
@@ -20,6 +20,15 @@
     "madro.js"
   ],
   "notes": [
+    {
+      "version": "1.24.0",
+      "date": "24. november 2026",
+      "title": "Vejret i toppen viser udviklingen",
+      "items": [
+        "Vejret øverst viser nu stedet, temperaturen nu og om 3 timer (↗ varmere, ↘ koldere, → det samme).",
+        "Det står også, hvornår det begynder at regne – eller bliver tørt igen."
+      ]
+    },
     {
       "version": "1.23.2",
       "date": "24. november 2026",
