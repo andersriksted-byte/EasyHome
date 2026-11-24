@@ -460,3 +460,34 @@ span.avatar{opacity:1}
 .tvw .tvname{display:block;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .chip.accent{display:inline-block;max-width:34ch;line-height:28px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cdl{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+
+/* Nyhedskilder som kompakte valg-chips */
+.srcgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:8px}
+.srcchip{position:relative;display:flex;align-items:center;gap:8px;height:44px;padding:0 10px 0 14px;border-radius:12px;border:1.5px solid var(--line);background:var(--bg);font-size:14px;font-weight:700;cursor:pointer;min-width:0}
+.srcchip input{position:absolute;opacity:0;pointer-events:none}
+.srcchip:has(input:checked){background:var(--accent);border-color:var(--accent);color:var(--onAccent)}
+.srcchip:has(input:focus-visible){outline:3px solid var(--accent);outline-offset:2px}
+.srcname{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.srcq{font-size:12px;opacity:.7}
+.srcx{flex:none;width:28px;height:28px;border-radius:8px;border:0;background:rgba(0,0,0,.1);color:inherit;font-size:18px;line-height:1}
+
+/* Kalendere som kompakte fliser – linket skjules, indtil man trykker på blyanten */
+.calgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:8px}
+.caltile{display:grid;grid-template-columns:28px minmax(0,1fr) auto auto 36px 36px;align-items:center;gap:6px;padding:6px 6px 6px 10px;border-radius:14px;background:var(--bg);border:1.5px solid var(--line);border-left:6px solid var(--c)}
+.caltile.bad{border-color:#C9462F}
+.caldot{width:24px;height:24px;border-radius:50%;background:var(--c);position:relative;overflow:hidden;cursor:pointer}
+.caldot input{position:absolute;inset:-8px;opacity:0;cursor:pointer}
+.caltile .calname{min-height:36px;border:0;background:transparent;padding:0 4px;font-weight:700;font-size:15px}
+.caltile .calname:focus{background:var(--card)}
+.caltile .calown{min-height:32px;width:auto;max-width:110px;padding:0 8px;font-size:13px;font-weight:700;border-radius:99px;border:0;background:var(--card)}
+.caltile .calown[style*="--o"]{background:var(--o);color:#fff}
+.calbtn{width:36px;height:36px;border-radius:10px;border:0;background:transparent;color:var(--muted);font-size:20px;display:grid;place-items:center}
+.calbtn:hover{background:var(--card)}
+.calwarn{width:22px;height:22px;border-radius:50%;background:#C9462F;color:#fff;font-size:13px;font-weight:800;display:grid;place-items:center}
+.caltile .calurl{grid-column:1/-1;min-height:40px;font-size:14px}
+.caladd{min-height:52px;border-radius:14px;border:1.5px dashed var(--line);background:transparent;color:var(--muted);font-weight:800;font-size:14px}
+.caladd:hover{color:var(--text);border-color:var(--text)}
+
+.sechead2{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.inl{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;color:var(--muted)}
+.inl select{width:auto;min-height:36px;padding:0 10px;font-size:14px;font-weight:700}

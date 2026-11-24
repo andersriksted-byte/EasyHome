@@ -96,7 +96,7 @@ const D = { weather: null, weatherErr: null, wx: {}, wxErr: {}, compare: null, n
 const home = () => settings.places[0];
 const placeLabel = (p) => p.label || p.name;
 const placeById = (id) => settings.places.find((p) => p.id === id) || home();
-const ui = { famMsg: null, cdIdx: 0, cdAt: Date.now(), cdMsg: null, bgMsg: null, sizeFor: null, newsIdx: 0, newsAt: Date.now(), feedMsg: null, feedDraft: null, page: pageFromHash(), setTab: 'familie', wPlace: null, fpPlace: 0, fpTouched: 0, editing: false, calWeek: 0, geo: null, geoMsg: '', tick: 0, connMsg: '' };
+const ui = { calEdit: null, famMsg: null, cdIdx: 0, cdAt: Date.now(), cdMsg: null, bgMsg: null, sizeFor: null, newsIdx: 0, newsAt: Date.now(), feedMsg: null, feedDraft: null, page: pageFromHash(), setTab: 'familie', wPlace: null, fpPlace: 0, fpTouched: 0, editing: false, calWeek: 0, geo: null, geoMsg: '', tick: 0, connMsg: '' };
 function pageFromHash() { const h = location.hash.slice(1); return [...PAGES.map((p) => p.id), 'indstillinger'].includes(h) && (h === 'indstillinger' || pageOn(h)) ? h : 'forside'; }
 
 function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), 2600); }
@@ -493,9 +493,17 @@ function sonosConnSection() {
 function calSection(s) {
   return `<section class="card wide"><b>Kalendere</b>
       <details class="howto"><summary>Sådan finder du kalenderlinket</summary><p class="note">Indsæt et link for hver kalender (fx én pr. familiemedlem). <b>iPhone/iPad:</b> Kalender → Kalendere → tryk ⓘ ved kalenderen → slå <i>Offentlig kalender</i> til → <i>Del link</i> → Kopiér. <b>Mac:</b> Kalender → højreklik på kalenderen → Del kalender → <i>Offentlig kalender</i> → kopiér adressen. Linket starter med <code>webcal://</code> – det klarer dashboardet. Andre: Google ("Hemmelig adresse i iCal-format") og Outlook (ICS-link) virker også. Behandl linkene som adgangskoder.</p></details>
-      ${s.calendars.map((c, i) => `<div class="calrow"><input type="text" data-cal="${i}" data-field="name" value="${esc(c.name)}" aria-label="Navn"><input type="color" data-cal="${i}" data-field="color" value="${esc(c.color)}" aria-label="Farve"><input type="url" data-cal="${i}" data-field="url" value="${esc(c.url)}" placeholder="https://… .ics" aria-label="iCal-link"><select data-cal="${i}" data-field="owner" aria-label="Hvis kalender"><option value="">Fælles</option>${members().map((m) => `<option value="${esc(m.id)}" ${c.owner === m.id ? 'selected' : ''}>${esc(m.name)}</option>`).join('')}</select><button class="btn" data-act="calRm" data-i="${i}">Fjern</button></div>`).join('')}
-      <div><button class="btn primary" data-act="calAdd">+ Tilføj kalender</button></div>
-      ${D.cal && D.cal.errors.length ? `<div class="err">${esc(D.cal.errors.map((e) => e.cal + ': ' + e.msg).join(' · '))}</div>` : ''}</section>`;
+      <div class="calgrid">${s.calendars.map((c, i) => { const err = D.cal && D.cal.errors.find((e) => e.cal === c.name); const open = ui.calEdit === c.id || !c.url; const own = members().find((m) => m.id === c.owner); return `<div class="caltile ${open ? 'open' : ''} ${err ? 'bad' : ''}" style="--c:${esc(c.color)}">
+        <label class="caldot" title="Farve"><input type="color" data-cal="${i}" data-field="color" value="${esc(c.color)}" aria-label="Farve for ${esc(c.name)}"></label>
+        <input class="calname" type="text" data-cal="${i}" data-field="name" value="${esc(c.name)}" aria-label="Navn">
+        ${err ? `<span class="calwarn" title="${esc(err.msg)}">!</span>` : ''}
+        <select class="calown" data-cal="${i}" data-field="owner" aria-label="Hvis kalender" style="${own ? `--o:${esc(own.color)}` : ''}"><option value="">Fælles</option>${members().map((m) => `<option value="${esc(m.id)}" ${c.owner === m.id ? 'selected' : ''}>${esc(m.name)}</option>`).join('')}</select>
+        <button class="calbtn" data-act="calEdit" data-id="${esc(c.id)}" aria-label="Rediger link for ${esc(c.name)}" aria-expanded="${open}">${ico('edit', 16)}</button>
+        <button class="calbtn" data-act="calRm" data-i="${i}" aria-label="Fjern ${esc(c.name)}">×</button>
+        ${open ? `<input class="calurl" type="url" data-cal="${i}" data-field="url" value="${esc(c.url)}" placeholder="Indsæt kalenderlink (webcal:// eller https://)" aria-label="Kalenderlink">` : ''}
+      </div>`; }).join('')}
+      <button class="caladd" data-act="calAdd">+ Tilføj kalender</button></div>
+      </section>`;
 }
 function cdSection(s) {
   return `<section class="card wide"><b>Nedtællinger</b>
@@ -587,15 +595,11 @@ function pageIndstillinger() {
       <span class="appico">${svg(x.icon, 30)}</span><span class="appmain"><b>${esc(x.name)}</b><span>${esc(x.desc)}</span></span><span class="tgl" aria-hidden="true"><i></i></span></button>`; }).join('')}</div></section>`,
     vejr: () => vejrSettings(),
     nyheder: () => `
-    <section class="card"><b>Skift side i nyhedskortet</b>
-      <div class="row">${[10, 15, 20, 30, 45, 60, 0].map((v) => `<button class="pill" data-act="newsSecs" data-v="${v}" aria-pressed="${newsSecs() === v}">${v ? v + ' sek' : 'Aldrig'}</button>`).join('')}</div></section>
-    <section class="card wide"><b>Nyhedskilder</b>
-      <div class="form">${Object.entries(groups).map(([g, list]) => `<div>${list.map((src) => `<label class="check"><input type="checkbox" data-news="${esc(src.id)}" ${s.news.sources.includes(src.id) ? 'checked' : ''}>${esc(src.name)}${src.unverified ? ' <span class="small muted">(afprøves)</span>' : ''}${src.custom ? ` <button class="btn" data-act="customRm" data-id="${esc(src.id)}" aria-label="Fjern ${esc(src.name)}">Fjern</button>` : ''}</label>`).join('')}</div>`).join('')}</div>
-      <div class="lab" style="margin-top:6px">Tilføj egen kilde</div>
-      <div class="row" style="flex-wrap:nowrap"><input type="text" id="cName" placeholder="Navn, fx Lokalavisen" aria-label="Navn på egen kilde" value="${esc(ui.feedDraft ? ui.feedDraft.name : '')}"><input type="url" id="cUrl" placeholder="RSS-adresse eller nyhedssidens adresse" aria-label="Adresse" value="${esc(ui.feedDraft ? ui.feedDraft.url : '')}"><button class="btn primary" data-act="customAdd">Tilføj</button></div>
+    <section class="card wide"><div class="sechead2"><b>Nyhedskilder</b><label class="inl">Skift kilde i kortet<select data-set="news.rotateSecs" aria-label="Skift kilde i nyhedskortet">${[10, 15, 20, 30, 45, 60, 0].map((v) => `<option value="${v}" ${newsSecs() === v ? 'selected' : ''}>${v ? 'hvert ' + v + '. sek' : 'aldrig'}</option>`).join('')}</select></label></div>
+      <div class="srcgrid">${Object.values(groups).flat().map((src) => `<label class="srcchip"><input type="checkbox" data-news="${esc(src.id)}" ${s.news.sources.includes(src.id) ? 'checked' : ''}><span class="srcname" title="${esc(src.name)}">${esc(src.name)}</span>${src.unverified ? '<span class="srcq" title="Afprøves">?</span>' : ''}${src.custom ? `<button class="srcx" data-act="customRm" data-id="${esc(src.id)}" aria-label="Fjern ${esc(src.name)}">×</button>` : ''}</label>`).join('')}</div>
+      <div class="row" style="flex-wrap:nowrap"><input type="text" id="cName" placeholder="Egen kilde: navn" aria-label="Navn på egen kilde" value="${esc(ui.feedDraft ? ui.feedDraft.name : '')}"><input type="url" id="cUrl" placeholder="RSS- eller nyhedsside-adresse" aria-label="Adresse" value="${esc(ui.feedDraft ? ui.feedDraft.url : '')}"><button class="btn primary" data-act="customAdd">Tilføj</button></div>
       ${ui.feedMsg ? `<div class="small ${ui.feedMsg.err ? 'err' : 'muted'}">${esc(ui.feedMsg.text)}</div>` : ''}
-      ${D.news && D.news.errors.length ? `<div class="err small">Virker ikke lige nu: ${esc(D.news.errors.map((e) => e.source + ' (' + e.msg + ')').join(' · '))}</div>` : ''}
-      <label class="check"><input type="checkbox" data-set="news.publicProxyForTest" ${s.news.publicProxyForTest ? 'checked' : ''}>Brug en offentlig test-proxy til nyheder, indtil jeres worker er klar (kun til afprøvning)</label></section>`,
+      ${D.news && D.news.errors.length ? `<div class="err small">Virker ikke lige nu: ${esc(D.news.errors.map((e) => e.source + ' (' + e.msg + ')').join(' · '))}</div>` : ''}</section>`,
     kalender: () => `
     ${svcOn('kalender') ? calSection(s) : ''}
     ${svcOn('nedtaelling') ? cdSection(s) : ''}`,
@@ -835,7 +839,8 @@ const act = {
     renderMain();
   },
   customRm: (b) => { settings.news.custom = settings.news.custom.filter((c) => c.id !== b.dataset.id); settings.news.sources = settings.news.sources.filter((x) => x !== b.dataset.id); save(); N.clearNewsCache(); renderMain(); loadNews(); },
-  calAdd: () => { const colors = ['#D0563C', '#4C78D0', '#D9A400', '#2E9D5B', '#7A5AC8']; settings.calendars.push({ id: uid(), name: 'Ny kalender', color: colors[settings.calendars.length % colors.length], url: '' }); save(); renderMain(); },
+  calAdd: () => { const colors = ['#D0563C', '#4C78D0', '#D9A400', '#2E9D5B', '#7A5AC8']; const c = { id: uid(), name: 'Ny kalender', color: colors[settings.calendars.length % colors.length], url: '' }; settings.calendars.push(c); ui.calEdit = c.id; save(); renderMain(); setTimeout(() => { const el = document.querySelectorAll('.calname'); if (el.length) { el[el.length - 1].focus(); el[el.length - 1].select(); } }, 50); },
+  calEdit: (b) => { ui.calEdit = ui.calEdit === b.dataset.id ? null : b.dataset.id; renderMain(); },
   calRm: (b) => { settings.calendars.splice(+b.dataset.i, 1); save(); C.clearCalCache(); renderMain(); loadCal(); },
   tvAdd: () => { settings.tv.channels.push({ name: 'Ny knap', url: 'https://www.dr.dk/drtv' }); save(); renderMain(); },
   tvRm: (b) => { settings.tv.channels.splice(+b.dataset.i, 1); save(); renderMain(); },
@@ -871,7 +876,7 @@ document.addEventListener('change', (e) => {
     if (t.dataset.set === 'news.publicProxyForTest') { N.clearNewsCache(); loadNews(); }
     if (t.dataset.set.endsWith('Theme')) { applyTheme(); renderHeader(); }
   } else if (t.dataset.news) { toggleNews(t.dataset.news); }
-  else if (t.dataset.cal !== undefined) { settings.calendars[+t.dataset.cal][t.dataset.field] = t.value.trim(); save(); C.clearCalCache(); loadCal(); }
+  else if (t.dataset.cal !== undefined) { settings.calendars[+t.dataset.cal][t.dataset.field] = t.value.trim(); if (t.dataset.field === 'url' && t.value.trim()) ui.calEdit = null; save(); C.clearCalCache(); loadCal(); if (t.dataset.field !== 'name') renderMain(); }
   else if (t.id === 'bgFileInput' && t.files && t.files[0]) {
     ui.bgMsg = { err: false, text: 'Gemmer billedet …' }; renderMain();
     L.uploadImage(t.files[0]).then((r) => { ui.bgMsg = { err: false, text: r.shared ? 'Billedet er gemt og deles med jeres andre skærme ✓' : 'Billedet er gemt på denne skærm.' }; renderMain(); })

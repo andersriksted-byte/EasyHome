@@ -1,5 +1,5 @@
 {
-  "version": "1.15.3",
+  "version": "1.16.0",
   "files": [
     "index.html",
     "app.js",
@@ -19,6 +19,16 @@
     "login.js"
   ],
   "notes": [
+    {
+      "version": "1.16.0",
+      "date": "24. november 2026",
+      "title": "Smartere indstillinger",
+      "items": [
+        "Kalendere vises som små fliser med farve, navn og ejer – linket gemmes væk og vises kun, når man trykker på blyanten.",
+        "En kalender, der ikke kan hentes, får et rødt udråbstegn.",
+        "Nyhedskilder slås til og fra med et tryk på små knapper, og 'skift kilde i kortet' ligger lige ved siden af."
+      ]
+    },
     {
       "version": "1.15.3",
       "date": "24. november 2026",
