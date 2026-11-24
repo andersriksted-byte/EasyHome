@@ -460,7 +460,7 @@ function wScreens(size, h = 1, wd = 1, x = {}) {
   const mode = x.mode || 3; // 1 = kun alle samlet, 2 = kun hver for sig, 3 = begge
   if (mode === 1) {
     const sts = st.devices.map(SF.stateText).filter(Boolean); const same = sts.length && sts.every((t) => t === sts[0]);
-    return cardHead('Screens', `<span class="small muted">${st.devices.length} stk.</span>`) + `<div class="sfone ${wd >= 2 * h ? 'one-row' : 'grid2'}" style="--cols:${wd >= 2 * h ? presets.length : Math.min(3, Math.max(2, Math.ceil(presets.length / 2)))};--prow:${wd >= 2 * h ? 1 : Math.ceil(presets.length / Math.min(3, Math.max(2, Math.ceil(presets.length / 2))))}"><span class="sfname"><b>Alle screens</b>${same ? `<small>${esc(sts[0])}</small>` : ''}</span>${btns(st.devices.map((d) => d.url), null, true)}</div>`;
+    return cardHead('Screens', `<span class="small muted">${st.devices.length} stk.</span>`) + `<div class="sfone ${wd >= 2 * h ? 'one-row' : 'grid2'}" style="--cols:${wd >= 2 * h ? presets.length : Math.min(3, Math.max(2, Math.ceil(presets.length / 2)))};--prow:${wd >= 2 * h ? 1 : Math.ceil(presets.length / Math.min(3, Math.max(2, Math.ceil(presets.length / 2))))}"><span class="sfname"><b>Alle screens</b>${same ? `<small>${esc(sts[0])}</small>` : ''}</span>${st.devices.some((d) => !d.rts && d.commands.includes('setClosure')) ? `<input class="sfslider sfh sfw" type="range" min="0" max="100" step="5" value="${(() => { const p = st.devices.filter((d) => d.closure != null); return p.length ? Math.round(p.reduce((a, d) => a + +d.closure, 0) / p.length / 5) * 5 : 0; })()}" data-sfposall="1" aria-label="Hvor langt nede – alle screens">` : ''}${btns(st.devices.map((d) => d.url), null, true)}</div>`;
   }
   const all = mode === 3 && st.devices.length > 1 ? `<div class="sfrow sfall"><span class="sfname"><b>Alle</b></span>${btns(st.devices.map((d) => d.url), null, true)}</div>` : '';
   return cardHead('Screens') + `<div class="sflist">${all}${rows}</div>`;
@@ -675,7 +675,13 @@ function pageSomfy() {
       <div class="sfc-btns sfp">${pbtns([d])}</div>
     </section>`;
   };
-  const all = st.devices.length > 1 ? `<section class="card sfallcard"><b>Alle screens</b><div class="sfp">${pbtns(st.devices)}</div></section>` : '';
+  // Alle screens på én gang – også med skyder, ligesom den enkelte screen
+  const pos = st.devices.filter((d) => d.closure !== null && d.closure !== undefined && !awn(d));
+  const avg = pos.length ? Math.round(pos.reduce((a, d) => a + +d.closure, 0) / pos.length / 5) * 5 : null;
+  const canSlide = st.devices.some((d) => !d.rts && d.commands.some((c) => c === 'setClosure' || c === 'setDeployment'));
+  const all = st.devices.length > 1 ? `<section class="card sfallcard"><div class="sfall-l"><b>Alle screens</b><span>${avg === null ? '' : avg <= 2 ? 'Oppe' : avg >= 98 ? 'Nede' : `I gennemsnit ${avg} % nede`}</span></div>
+    ${canSlide ? `<div class="sfall-win"><div class="sfwin" aria-hidden="true"><i style="height:${avg === null ? 50 : Math.max(4, avg)}%"></i></div><input class="sfslider sfh" type="range" min="0" max="100" step="5" value="${avg ?? 0}" data-sfposall="1" aria-label="Hvor langt nede – alle screens"></div>` : ''}
+    <div class="sfp">${pbtns(st.devices)}</div></section>` : '';
   return head + all + `<div class="sfgrid" style="--n:${st.devices.length}">${st.devices.map(card).join('')}</div>`;
 }
 
@@ -1287,6 +1293,11 @@ document.addEventListener('change', (e) => {
     const i = +t.dataset.i; ui.cdMsg = { err: false, text: 'Gemmer billedet …' }; renderMain();
     M.saveImage(t.files[0]).then((r) => { const c = settings.countdowns[i]; if (c) { if (c.imageId) M.removeImage(c.imageId); c.imageId = r.id; save(); } ui.cdMsg = { err: false, text: r.shared ? 'Billedet er gemt og deles med jeres andre skærme ✓' : 'Billedet er gemt på denne skærm.' }; renderMain(); })
       .catch((e) => { ui.cdMsg = { err: true, text: e.message }; renderMain(); });
+  }
+  else if (t.dataset.sfposall !== undefined) {
+    const v = +t.value; const devs = SF.state.devices;
+    devs.forEach((d) => { if (!d.rts && d.closure !== null && d.closure !== undefined) d.closure = v; });
+    SF.preset(devs, v).then((skip) => { if (skip) toast(skip === 1 ? 'Én screen kan ikke stille sig på en mellemstilling' : skip + ' screens kan ikke stille sig på en mellemstilling'); }).catch((e) => toast('Somfy: ' + e.message));
   }
   else if (t.dataset.sfpos !== undefined) {
     const d = SF.state.devices.find((x) => x.url === t.dataset.sfpos);

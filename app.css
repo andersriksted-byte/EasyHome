@@ -939,3 +939,15 @@ button.w7r.sel{background:color-mix(in srgb,var(--accent) 16%,transparent);box-s
 /* Hold skærmen tændt (over tandhjulet) */
 .nav .awake{opacity:.7}
 .nav .awake[aria-pressed=true]{opacity:1;color:#FFD36B}
+
+/* Alle screens: vindue + vandret skyder */
+.sfallcard{align-items:center}
+.sfall-l{display:flex;flex-direction:column;gap:2px;margin-right:auto;min-width:0}
+.sfall-l b{font-size:17px;white-space:nowrap}
+.sfall-l span{font-size:13px;font-weight:700;color:var(--muted)}
+.sfall-win{display:flex;align-items:center;gap:14px;flex:1;max-width:420px;min-width:200px}
+.sfall-win .sfwin{flex:none;width:64px;height:52px;border-width:2px;border-radius:10px}
+.sfslider.sfh{writing-mode:horizontal-tb;width:100%;height:44px}
+.sfallcard{flex-direction:row;gap:20px}.sfall-win{max-width:none}
+.sfone .sfw{flex:none;height:36px}
+@container (max-height:320px){.sfone .sfw{display:none}}

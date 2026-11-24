@@ -1,5 +1,5 @@
 {
-  "version": "1.38.0",
+  "version": "1.38.1",
   "files": [
     "index.html",
     "app.js",
@@ -22,6 +22,15 @@
     "timer.js"
   ],
   "notes": [
+    {
+      "version": "1.38.1",
+      "date": "24. november 2026",
+      "title": "Skyder til alle screens",
+      "items": [
+        "På siden Screens har \"Alle screens\" nu en skyder, så alle screens kan trækkes ned på én gang – præcis som den enkelte screen.",
+        "Skyderen findes også på Screens-kortet på forsiden, når kortet er højt nok."
+      ]
+    },
     {
       "version": "1.38.0",
       "date": "24. november 2026",
