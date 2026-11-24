@@ -70,7 +70,7 @@ const D = { weather: null, weatherErr: null, wx: {}, wxErr: {}, compare: null, n
 const home = () => settings.places[0];
 const placeLabel = (p) => p.label || p.name;
 const placeById = (id) => settings.places.find((p) => p.id === id) || home();
-const ui = { page: pageFromHash(), setTab: 'vejr', wPlace: null, fpPlace: 0, fpTouched: 0, editing: false, calWeek: 0, geo: null, geoMsg: '', tick: 0, connMsg: '' };
+const ui = { feedMsg: null, feedDraft: null, page: pageFromHash(), setTab: 'vejr', wPlace: null, fpPlace: 0, fpTouched: 0, editing: false, calWeek: 0, geo: null, geoMsg: '', tick: 0, connMsg: '' };
 function pageFromHash() { const h = location.hash.slice(1); return [...PAGES.map((p) => p.id), 'indstillinger'].includes(h) ? h : 'forside'; }
 
 function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), 2600); }
@@ -104,6 +104,9 @@ const needProxyMsg = (what) => `<div class="empty">${esc(what)} kræver forbinde
 function renderNav() {
   const nav = $('#nav');
   nav.classList.toggle('open', settings.navOpen);
+  let shade = document.getElementById('navShade');
+  if (!shade) { shade = document.createElement('div'); shade.id = 'navShade'; shade.className = 'navshade'; shade.dataset.act = 'toggleNav'; document.body.appendChild(shade); }
+  shade.classList.toggle('show', settings.navOpen);
   const item = (p) => `<button data-act="nav" data-page="${p.id}" aria-label="${esc(p.label)}" ${ui.page === p.id ? 'aria-current="page"' : ''}>${svg(p.id)}<span class="lbl">${esc(p.label)}</span></button>`;
   nav.innerHTML = `<button class="toggle" data-act="toggleNav" aria-expanded="${settings.navOpen}" aria-label="${settings.navOpen ? 'Luk menu' : 'Åbn menu'}">${svg(settings.navOpen ? 'back' : 'menu', 22)}<span class="lbl">Luk menu</span></button>
     ${PAGES.map(item).join('')}<div class="sp"></div>${item({ id: 'indstillinger', label: 'Indstillinger' })}`;
@@ -420,7 +423,10 @@ function pageIndstillinger() {
     nyheder: () => `
     <section class="card wide"><b>Nyhedskilder</b><p class="note">Vælg en eller flere. Nyhederne blandes og sorteres efter tid. Kilder markeret "afprøves" er ikke bekræftet endnu.</p>
       <div class="form">${Object.entries(groups).map(([g, list]) => `<div>${list.map((src) => `<label class="check"><input type="checkbox" data-news="${esc(src.id)}" ${s.news.sources.includes(src.id) ? 'checked' : ''}>${esc(src.name)}${src.unverified ? ' <span class="small muted">(afprøves)</span>' : ''}${src.custom ? ` <button class="btn" data-act="customRm" data-id="${esc(src.id)}" aria-label="Fjern ${esc(src.name)}">Fjern</button>` : ''}</label>`).join('')}</div>`).join('')}</div>
-      <div class="row" style="flex-wrap:nowrap"><input type="text" id="cName" placeholder="Navn, fx Lokalavisen" aria-label="Navn på egen kilde"><input type="url" id="cUrl" placeholder="RSS-adresse" aria-label="RSS-adresse"><button class="btn primary" data-act="customAdd">Tilføj</button></div>
+      <div class="lab" style="margin-top:6px">Tilføj egen kilde</div>
+      <div class="row" style="flex-wrap:nowrap"><input type="text" id="cName" placeholder="Navn, fx Lokalavisen" aria-label="Navn på egen kilde" value="${esc(ui.feedDraft ? ui.feedDraft.name : '')}"><input type="url" id="cUrl" placeholder="RSS-adresse eller nyhedssidens adresse" aria-label="Adresse" value="${esc(ui.feedDraft ? ui.feedDraft.url : '')}"><button class="btn primary" data-act="customAdd">Tilføj</button></div>
+      ${ui.feedMsg ? `<div class="small ${ui.feedMsg.err ? 'err' : 'muted'}">${esc(ui.feedMsg.text)}</div>` : ''}
+      ${D.news && D.news.errors.length ? `<div class="err small">Virker ikke lige nu: ${esc(D.news.errors.map((e) => e.source + ' (' + e.msg + ')').join(' · '))}</div>` : ''}
       <label class="check"><input type="checkbox" data-set="news.publicProxyForTest" ${s.news.publicProxyForTest ? 'checked' : ''}>Brug en offentlig test-proxy til nyheder, indtil jeres worker er klar (kun til afprøvning)</label></section>`,
     kalender: () => `
     <section class="card wide"><b>Kalendere</b>
@@ -509,7 +515,7 @@ function loadAll() { loadWeather(); loadNews(); loadCal(); loadSonos(true); }
 
 /* ---------- Handlinger ---------- */
 const act = {
-  nav: (b) => { ui.page = b.dataset.page; ui.editing = false; history.replaceState(null, '', '#' + ui.page); renderNav(); renderMain(false); $('#main').focus({ preventScroll: true }); if (ui.page === 'musik') loadSonos(); },
+  nav: (b) => { if (settings.navOpen) { settings.navOpen = false; save(); } ui.page = b.dataset.page; ui.editing = false; history.replaceState(null, '', '#' + ui.page); renderNav(); renderMain(false); $('#main').focus({ preventScroll: true }); if (ui.page === 'musik') loadSonos(); },
   toggleNav: () => { settings.navOpen = !settings.navOpen; save(); renderNav(); },
   nextTheme: () => { const i = THEME_ORDER.indexOf(settings.theme); settings.theme = THEME_ORDER[(i + 1) % THEME_ORDER.length]; save(); applyTheme(); renderHeader(); if (ui.editing || ui.page === 'indstillinger') renderMain(); },
   setTheme: (b) => { settings.theme = b.dataset.theme; save(); applyTheme(); renderHeader(); renderMain(); },
@@ -569,10 +575,20 @@ const act = {
     renderMain();
   },
   wPlace: (b) => { ui.wPlace = b.dataset.id; D.compare = null; if (ui.page !== 'vejr') { ui.page = 'vejr'; history.replaceState(null, '', '#vejr'); renderNav(); } renderMain(false); },
-  customAdd: () => {
-    const name = $('#cName').value.trim(); const url = $('#cUrl').value.trim();
-    if (!name || !/^https?:\/\//.test(url)) { toast('Skriv et navn og en adresse der starter med https://'); return; }
-    const id = 'c-' + uid(); settings.news.custom.push({ id, name, url }); settings.news.sources.push(id); save(); N.clearNewsCache(); renderMain(); loadNews();
+  customAdd: async () => {
+    const name = $('#cName').value.trim(); let url = $('#cUrl').value.trim();
+    if (url && !/^https?:\/\//i.test(url)) url = 'https://' + url;
+    if (!name || !url) { ui.feedMsg = { err: true, text: 'Skriv både et navn og en adresse.' }; renderMain(); return; }
+    ui.feedMsg = { err: false, text: 'Tester feedet …' }; ui.feedDraft = { name, url }; renderMain();
+    try {
+      const r = await N.checkFeed(url);
+      const id = 'c-' + uid(); settings.news.custom.push({ id, name, url: r.url }); settings.news.sources.push(id); save();
+      ui.feedMsg = { err: false, text: `${name} er tilføjet ✓ (${r.count} nyheder${r.found ? ', feedet blev fundet på siden' : ''}). Seneste: ${r.first}` }; ui.feedDraft = null;
+      N.clearNewsCache(); loadNews();
+    } catch (e) {
+      ui.feedMsg = { err: true, text: e.message === 'NO_PROXY' ? 'Opsæt forbindelsen først.' : /415|403/.test(e.message) ? 'Workeren afviste adressen – opdatér workeren i Cloudflare (se chatten) eller prøv sidens RSS-adresse.' : /HTTP 502/.test(e.message) ? 'Siden svarede ikke. Tjek adressen.' : e.message };
+    }
+    renderMain();
   },
   customRm: (b) => { settings.news.custom = settings.news.custom.filter((c) => c.id !== b.dataset.id); settings.news.sources = settings.news.sources.filter((x) => x !== b.dataset.id); save(); N.clearNewsCache(); renderMain(); loadNews(); },
   calAdd: () => { const colors = ['#D0563C', '#4C78D0', '#D9A400', '#2E9D5B', '#7A5AC8']; settings.calendars.push({ id: uid(), name: 'Ny kalender', color: colors[settings.calendars.length % colors.length], url: '' }); save(); renderMain(); },
@@ -648,6 +664,7 @@ document.addEventListener('pointercancel', endDrag);
 
 /* ---------- Start ---------- */
 function boot() {
+  if (settings.navOpen) { settings.navOpen = false; }
   // Engangsoprydning: 'Vejret andre steder' blev sat på forsiden automatisk i 1.1.0 – fjern det igen
   if ((settings.layoutRev || 1) < 2) { settings.layout = settings.layout.filter((x) => x.id !== 'steder'); settings.layoutRev = 2; save(); }
   if (!settings.places.length) { const l = settings.location; settings.places = [{ id: 'hjem', label: 'Hjem', name: l.name, lat: l.lat, lon: l.lon }]; save(); }

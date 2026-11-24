@@ -54,3 +54,20 @@ export async function getNews() {
   return data;
 }
 export const clearNewsCache = () => { cache = { key: '', t: 0, data: null }; };
+
+// Tjek en adresse, før den gemmes. Er det en almindelig webside, finder vi sidens RSS-link.
+export async function checkFeed(url) {
+  const text = await fetchText(url, { allowPublic: settings.news.publicProxyForTest });
+  try {
+    const items = parseFeed(text, { group: '', id: '' });
+    if (items.length) return { url, count: items.length, first: items[0].title };
+  } catch (e) { /* ikke et feed – prøv at finde et i siden */ }
+  const m = /<link[^>]+type=["']application\/(?:rss|atom)\+xml["'][^>]*>/i.exec(text);
+  const href = m && /href=["']([^"']+)["']/i.exec(m[0]);
+  if (href) {
+    const feedUrl = new URL(href[1].replace(/&amp;/g, '&'), url).toString();
+    const items = parseFeed(await fetchText(feedUrl, { allowPublic: settings.news.publicProxyForTest }), { group: '', id: '' });
+    if (items.length) return { url: feedUrl, count: items.length, first: items[0].title, found: true };
+  }
+  throw new Error('Kunne ikke finde et nyhedsfeed på den adresse');
+}

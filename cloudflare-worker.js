@@ -47,14 +47,20 @@ async function proxy(req, env, ctx) {
   const target = new URL(req.url).searchParams.get('url');
   let u;
   try { u = new URL(target); } catch (e) { return json(env, { error: 'Ugyldig adresse' }, 400); }
-  if (!/^https?:$/.test(u.protocol) || !hostAllowed(u.hostname, env)) return json(env, { error: 'Domænet er ikke godkendt: ' + u.hostname }, 403);
+  if (!/^https?:$/.test(u.protocol)) return json(env, { error: 'Kun http og https' }, 400);
+  // Kendte kilder hentes altid. Andre adresser (egne feeds) hentes også, men kun feeds, kalendere og
+  // almindelige websider (så easyHome kan finde sidens RSS-link) – og kun for den, der har nøglen.
+  const known = hostAllowed(u.hostname, env);
   const cache = caches.default;
   const cacheKey = new Request('https://cache.easyhome/' + encodeURIComponent(u.toString()));
   let res = await cache.match(cacheKey);
   if (!res) {
     const up = await fetch(u.toString(), { headers: { 'User-Agent': 'easyHome/1.0 (privat familie-dashboard)', Accept: 'application/rss+xml, application/xml, text/calendar, text/xml, */*' }, redirect: 'follow' });
     if (!up.ok) return json(env, { error: 'Kilden svarede ' + up.status }, 502);
+    const ctype = (up.headers.get('Content-Type') || '').toLowerCase();
+    if (!known && ctype && !/xml|rss|atom|calendar|html|text\/plain/.test(ctype)) return json(env, { error: 'Adressen er ikke et nyhedsfeed eller en kalender' }, 415);
     const body = await up.text();
+    if (body.length > 3000000) return json(env, { error: 'Kilden er for stor' }, 413);
     res = new Response(body, { headers: { 'Content-Type': up.headers.get('Content-Type') || 'text/plain; charset=utf-8', 'Cache-Control': 'max-age=300' } });
     ctx.waitUntil(cache.put(cacheKey, res.clone()));
   }
@@ -147,7 +153,7 @@ export default {
     try {
       if (path.startsWith('/sonos/')) return await sonos(req, env, path);
       if (!keyOk(req, env)) return json(env, { error: 'Forkert nøgle' }, 401);
-      if (path === '/health') return json(env, { ok: true, sonosConfigured: sonosReady(env), version: 2 });
+      if (path === '/health') return json(env, { ok: true, sonosConfigured: sonosReady(env), version: 3 });
       if (path === '/proxy') return await proxy(req, env, ctx);
       if (path === '/settings') {
         if (!env.DASH_KV) return json(env, { error: 'DASH_KV mangler' }, 501);
