@@ -546,8 +546,11 @@ function wStilling(size, h = 1, wd = 1) {
   const favIds = ((settings.football || {}).teams || []).map((t) => t.id);
   const wide = wd >= 2; const num = (v) => (v === null || v === undefined ? '' : v);
   const hdr = `<div class="st-row st-h${wide ? ' wide' : ''}"><span>#</span><span></span>${wide ? '<span>K</span><span>V</span><span>U</span><span>T</span>' : '<span>K</span>'}<span>+/-</span><span>P</span></div>`;
-  const row = (t) => `<div class="st-row${wide ? ' wide' : ''}${favIds.includes(t.id) ? ' st-fav' : ''}"><span class="st-rk">${num(t.rank)}</span><span class="st-tm">${t.logo ? `<img src="${esc(t.logo)}" alt="" loading="lazy">` : ''}<b data-abbr="${esc(t.abbr)}">${esc(wide ? t.name : t.abbr || t.name)}</b></span>${wide ? `<span>${num(t.gp)}</span><span>${num(t.w)}</span><span>${num(t.d)}</span><span>${num(t.l)}</span>` : `<span>${num(t.gp)}</span>`}<span>${t.gd > 0 ? '+' : ''}${num(t.gd)}</span><span class="st-p">${num(t.pts)}</span></div>`;
-  return head + `<div class="st-wrap">${T.groups.map((g) => `${T.groups.length > 1 && g.name ? `<div class="fb-sub">${esc(g.name)}</div>` : ''}${hdr}${g.rows.map(row).join('')}`).join('')}</div>`;
+  const row = (t) => `<div class="st-row${wide ? ' wide' : ''}${favIds.includes(t.id) ? ' st-fav' : ''}${t.note ? ' noted' : ''}"${t.note ? ` style="--nc:${esc(t.note.color)}" title="${esc(t.note.text)}"` : ''}><span class="st-rk">${num(t.rank)}</span><span class="st-tm">${t.logo ? `<img src="${esc(t.logo)}" alt="" loading="lazy">` : ''}<b data-abbr="${esc(t.abbr)}">${esc(wide ? t.name : t.abbr || t.name)}</b></span>${wide ? `<span>${num(t.gp)}</span><span>${num(t.w)}</span><span>${num(t.d)}</span><span>${num(t.l)}</span>` : `<span>${num(t.gp)}</span>`}<span>${t.gd > 0 ? '+' : ''}${num(t.gd)}</span><span class="st-p">${num(t.pts)}</span></div>`;
+  // Forklaring på farverne (mesterskab, Europa, op- og nedrykning)
+  const notes = new Map(); T.groups.forEach((g) => g.rows.forEach((t) => { if (t.note && !notes.has(t.note.text)) notes.set(t.note.text, t.note.color); }));
+  const legend = notes.size ? `<div class="st-legend">${[...notes].map(([t, c]) => `<span style="--nc:${esc(c)}"><i></i>${esc(t)}</span>`).join('')}</div>` : '';
+  return head + `<div class="st-wrap">${T.groups.map((g) => `${T.groups.length > 1 && g.name ? `<div class="fb-sub">${esc(g.name)}</div>` : ''}${hdr}${g.rows.map(row).join('')}`).join('')}${legend}</div>`;
 }
 function fodboldSettings() {
   const fb = settings.football || { leagues: [], teams: [] };

@@ -114,6 +114,13 @@ export function leagueView() {
   });
 }
 
+// Hvad placeringen giver (mesterskab, Europa, op- og nedrykning) – ESPN's tekster på dansk
+const NOTE_DA = [[/championship round/i, 'Mesterskabsspil'], [/relegation round/i, 'Nedrykningsspil'], [/relegation play-?off/i, 'Nedrykningskval.'], [/promotion play-?off/i, 'Oprykningskval.'],
+  [/champions league qual/i, 'CL-kvalifikation'], [/europa league qual/i, 'EL-kvalifikation'], [/conference league qual/i, 'ECL-kvalifikation'], [/champions league/i, 'Champions League'], [/europa league/i, 'Europa League'],
+  [/conference league/i, 'Conference League'], [/relegation/i, 'Nedrykning'], [/promotion/i, 'Oprykning'], [/champion/i, 'Mester'], [/round of 16|knockout/i, 'Slutspil'], [/play-?off/i, 'Playoff']];
+const noteDa = (d) => { for (const [re, t] of NOTE_DA) if (re.test(d)) return t; return d; };
+// Ligaer uden noter fra ESPN: Superligaen deles efter grundspillet i top 6 og bund 6
+const FALLBACK_NOTES = { 'den.1': (rank, n) => (n === 12 ? (rank <= 6 ? { color: '#81D6AC', text: 'Mesterskabsspil' } : { color: '#FFB86B', text: 'Nedrykningsspil' }) : null) };
 // Stillinger pr. liga (hentes højst hvert 10. minut)
 export const tables = {};
 export async function loadTable(lg) {
@@ -125,8 +132,11 @@ export async function loadTable(lg) {
     const groups = (j.children || [{ standings: j.standings, name: '' }]).filter((c) => c.standings);
     const stat = (e, n) => { const x = (e.stats || []).find((y) => y.name === n); return x ? x.value ?? Number(x.displayValue) : null; };
     const rows = (g) => (g.standings.entries || []).map((e) => { const t = e.team || {}; return { id: String(t.id), name: dk(t.shortDisplayName || t.displayName || ''), abbr: t.abbreviation || '', logo: (t.logos && t.logos[0] && t.logos[0].href) || '',
+      note: e.note && e.note.description ? { color: '#' + String(e.note.color || '#999').replace(/^#+/, ''), text: noteDa(e.note.description) } : null,
       rank: stat(e, 'rank'), gp: stat(e, 'gamesPlayed'), w: stat(e, 'wins'), d: stat(e, 'ties'), l: stat(e, 'losses'), gd: stat(e, 'pointDifferential'), pts: stat(e, 'points') }; })
       .sort((a, b) => (a.rank || 99) - (b.rank || 99) || b.pts - a.pts);
-    tables[lg] = { at: Date.now(), groups: groups.map((g) => ({ name: g.name || '', rows: rows(g) })), error: '' };
+    const gs = groups.map((g) => ({ name: g.name || '', rows: rows(g) }));
+    gs.forEach((g) => { if (FALLBACK_NOTES[lg] && !g.rows.some((x) => x.note)) g.rows.forEach((x, i) => { x.note = FALLBACK_NOTES[lg](x.rank || i + 1, g.rows.length); }); });
+    tables[lg] = { at: Date.now(), groups: gs, error: '' };
   } catch (e) { tables[lg] = { at: Date.now(), groups: (t && t.groups) || [], error: e.message }; }
 }

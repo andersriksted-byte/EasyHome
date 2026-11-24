@@ -1233,3 +1233,10 @@ button.w7r.sel{background:color-mix(in srgb,var(--accent) 16%,transparent);box-s
 .st-p{font-weight:800}
 .st-row.st-fav{box-shadow:inset 0 0 0 2px var(--accent)}
 .st-row.st-fav b{font-weight:800}
+
+.st-row.noted{box-shadow:inset 4px 0 0 var(--nc)}
+.st-row.noted.st-fav{box-shadow:inset 4px 0 0 var(--nc),inset 0 0 0 2px var(--accent)}
+.st-row.noted .st-rk{color:var(--text)}
+.st-legend{display:flex;flex-wrap:wrap;gap:4px 12px;padding:8px 4px 2px;font-size:12px;font-weight:700;color:var(--muted);flex:none}
+.st-legend span{display:inline-flex;align-items:center;gap:6px}
+.st-legend i{width:10px;height:10px;border-radius:3px;background:var(--nc)}

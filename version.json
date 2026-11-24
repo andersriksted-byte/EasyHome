@@ -1,5 +1,5 @@
 {
-  "version": "1.59.1",
+  "version": "1.60.0",
   "files": [
     "index.html",
     "app.js",
@@ -24,6 +24,15 @@
     "football.js"
   ],
   "notes": [
+    {
+      "version": "1.60.0",
+      "date": "25. november 2026",
+      "title": "Stilling med farver",
+      "items": [
+        "Fodbold-stilling viser nu med farver, hvad placeringerne giver: mesterskab, Europa, op- og nedrykning",
+        "En forklaring på farverne står under tabellen"
+      ]
+    },
     {
       "version": "1.59.1",
       "date": "25. november 2026",
