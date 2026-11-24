@@ -156,6 +156,19 @@ export default {
       if (!keyOk(req, env)) return json(env, { error: 'Forkert nøgle' }, 401);
       if (path === '/health') return json(env, { ok: true, sonosConfigured: sonosReady(env), version: 3 });
       if (path === '/proxy') return await proxy(req, env, ctx);
+      if (path === '/bg') {
+        if (!env.DASH_KV) return json(env, { error: 'DASH_KV mangler' }, 501);
+        if (req.method === 'POST') {
+          const body = await req.text();
+          if (body.length > 4000000) return json(env, { error: 'Billedet er for stort' }, 413);
+          const parsed = JSON.parse(body);
+          if (!/^data:image\/(jpeg|png|webp);base64,/.test(parsed.data || '')) return json(env, { error: 'Ugyldigt billede' }, 400);
+          await env.DASH_KV.put('bg_image', JSON.stringify({ id: String(parsed.id || ''), data: parsed.data }));
+          return json(env, { ok: true });
+        }
+        const raw = await env.DASH_KV.get('bg_image');
+        return json(env, raw ? JSON.parse(raw) : { id: '', data: '' });
+      }
       if (path === '/settings') {
         if (!env.DASH_KV) return json(env, { error: 'DASH_KV mangler' }, 501);
         if (req.method === 'POST') {

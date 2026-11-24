@@ -37,6 +37,7 @@ export const DEFAULTS = {
   calendars: [],
   countdown: { name: 'Juleaften', date: '2026-12-24' },
   sonos: { groupId: null },
+  look: { bg: 'theme', url: '', imageId: '', alpha: 100, blur: true },
   tv: {
     channels: [
       { name: 'DR1', url: 'https://www.dr.dk/drtv/kanal/dr1_20875' },

@@ -7,6 +7,7 @@ import * as S from './sonos.js';
 import { startUpdater } from './updater.js';
 import { startSync, syncNow, syncState } from './sync.js';
 import * as R from './reader.js';
+import * as L from './look.js';
 
 const $ = (s, r = document) => r.querySelector(s);
 
@@ -36,6 +37,7 @@ function applyTheme() {
   for (const [k, v] of Object.entries(T)) if (k !== 'label') r.setProperty('--' + k, v);
   document.documentElement.style.colorScheme = currentThemeId() === 'aften' ? 'dark' : 'light';
   const m = document.querySelector('meta[name=theme-color]'); if (m) m.content = T.nav;
+  L.applyLook();
 }
 const themeLabel = (id) => (id === 'auto' ? 'Automatisk' : THEMES[id].label);
 
@@ -76,7 +78,7 @@ const D = { weather: null, weatherErr: null, wx: {}, wxErr: {}, compare: null, n
 const home = () => settings.places[0];
 const placeLabel = (p) => p.label || p.name;
 const placeById = (id) => settings.places.find((p) => p.id === id) || home();
-const ui = { sizeFor: null, newsIdx: 0, newsAt: Date.now(), feedMsg: null, feedDraft: null, page: pageFromHash(), setTab: 'vejr', wPlace: null, fpPlace: 0, fpTouched: 0, editing: false, calWeek: 0, geo: null, geoMsg: '', tick: 0, connMsg: '' };
+const ui = { bgMsg: null, sizeFor: null, newsIdx: 0, newsAt: Date.now(), feedMsg: null, feedDraft: null, page: pageFromHash(), setTab: 'vejr', wPlace: null, fpPlace: 0, fpTouched: 0, editing: false, calWeek: 0, geo: null, geoMsg: '', tick: 0, connMsg: '' };
 function pageFromHash() { const h = location.hash.slice(1); return [...PAGES.map((p) => p.id), 'indstillinger'].includes(h) ? h : 'forside'; }
 
 function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), 2600); }
@@ -469,6 +471,23 @@ function vejrSettings() {
     </section>`;
 }
 
+function lookSettings() {
+  const lk = L.getLook();
+  const tiles = L.BACKGROUNDS.map((b) => `<button class="bgtile" data-act="bgPick" data-id="${b.id}" aria-pressed="${lk.bg === b.id}"><span class="bgprev" style="background:${b.css || 'var(--bg)'}"></span><span>${esc(b.name)}</span></button>`).join('')
+    + `<button class="bgtile" data-act="bgFile" aria-pressed="${lk.bg === 'image'}"><span class="bgprev bgplus">${lk.bg === 'image' && L.hasLocalImage() ? '' : '+'}</span><span>Eget billede</span></button>`;
+  const alpha = lk.alpha ?? 100;
+  return `
+    <section class="card wide"><b>Baggrund</b><p class="note">Vælg en baggrund til dashboardet – eller brug jeres eget billede, fx et familiefoto. Baggrunden deles med jeres andre skærme.</p>
+      <div class="bgtiles">${tiles}</div>
+      <input type="file" id="bgFileInput" accept="image/*" hidden>
+      <div class="row" style="flex-wrap:nowrap"><input type="url" id="bgUrl" placeholder="Eller indsæt adressen på et billede (https://…)" value="${esc(lk.bg === 'url' ? lk.url : '')}" aria-label="Billedadresse"><button class="btn primary" data-act="bgUrl">Brug</button></div>
+      ${ui.bgMsg ? `<div class="small ${ui.bgMsg.err ? 'err' : 'muted'}">${esc(ui.bgMsg.text)}</div>` : ''}
+    </section>
+    <section class="card wide"><b>Kortenes gennemsigtighed</b><p class="note">Hvor meget baggrunden skinner igennem kortene. 100 % er helt dækkende. Virker kun, når der er valgt en baggrund.</p>
+      <label class="vol" style="max-width:520px"><span class="small" style="width:44px">${alpha} %</span><input type="range" min="40" max="100" step="5" value="${alpha}" data-look-alpha aria-label="Kortenes dækkevne i procent"></label>
+      <label class="check"><input type="checkbox" data-look-blur ${lk.blur !== false ? 'checked' : ''}>Slør baggrunden bag kortene, så teksten er nem at læse</label>
+    </section>`;
+}
 const SET_TABS = [
   { id: 'vejr', label: 'Vejret' }, { id: 'nyheder', label: 'Nyheder' }, { id: 'kalender', label: 'Kalender' }, { id: 'musik', label: 'Musik' },
   { id: 'tv', label: 'DR TV' }, { id: 'udseende', label: 'Udseende' }, { id: 'forbindelse', label: 'Forbindelse' }, { id: 'backup', label: 'Sikkerhedskopi' }
@@ -504,7 +523,7 @@ function pageIndstillinger() {
     tv: () => `
     <section class="card wide"><b>DR TV-knapper</b>${s.tv.channels.map((c, i) => `<div class="calrow" style="grid-template-columns:1fr 2fr auto"><input type="text" data-tv="${i}" data-field="name" value="${esc(c.name)}" aria-label="Navn"><input type="url" data-tv="${i}" data-field="url" value="${esc(c.url)}" aria-label="Adresse"><button class="btn" data-act="tvRm" data-i="${i}">Fjern</button></div>`).join('')}
       <div><button class="btn" data-act="tvAdd">+ Tilføj knap</button></div></section>`,
-    udseende: () => `
+    udseende: () => lookSettings() + `
     <section class="card wide"><b>Farvetema</b>${themePicker()}
       ${s.theme === 'auto' ? `<div class="form"><label class="f">Om dagen<select data-set="dayTheme">${Object.keys(THEMES).map((k) => `<option value="${k}" ${s.dayTheme === k ? 'selected' : ''}>${THEMES[k].label}</option>`).join('')}</select></label>
         <label class="f">Efter solnedgang<select data-set="nightTheme">${Object.keys(THEMES).map((k) => `<option value="${k}" ${s.nightTheme === k ? 'selected' : ''}>${THEMES[k].label}</option>`).join('')}</select></label></div>` : ''}</section>`,
@@ -537,20 +556,22 @@ function renderMain(keepScroll = true) {
   if (ui.page === 'forside') { fitCards(); trimCards(); }
   if (keepScroll) m.scrollTop = y;
 }
-// Sørg for at kort som kalenderen altid viser alt: først kompakt visning, derefter flere kvadrater i højden
+// Sørg for at kort som kalenderen altid viser alt: først kompakt visning, derefter scroll inde i kortet (størrelsen ændres aldrig)
 function fitCards() {
   const grid = document.getElementById('grid'); if (!grid) return;
   const cell = parseFloat(getComputedStyle(grid).gridAutoRows) || 240;
   const gap = parseFloat(getComputedStyle(grid).rowGap) || 16;
   grid.querySelectorAll('.w[data-fit]').forEach((card) => {
     const base = +card.dataset.h || 1;
-    card.style.setProperty('--h', base); card.classList.remove('compact', 'grown');
+    card.style.setProperty('--h', base); card.classList.remove('compact', 'grown', 'scrolly', 'at-end');
     const over = () => card.scrollHeight > card.clientHeight + 2;
     if (!over()) return;
     card.classList.add('compact');
     if (!over()) return;
-    const need = Math.ceil((card.scrollHeight + gap) / (cell + gap));
-    card.style.setProperty('--h', Math.max(base, need)); card.classList.add('grown');
+    // Størrelsen er brugerens valg: i stedet for at vokse kan man scrolle inde i kortet
+    card.classList.add('scrolly');
+    const edge = () => card.classList.toggle('at-end', card.scrollTop + card.clientHeight >= card.scrollHeight - 4);
+    card.addEventListener('scroll', edge, { passive: true }); edge();
   });
 }
 // Lister (nyheder, dage, favoritter) viser kun hele elementer – det sidste, der ikke kan være der, fjernes
@@ -619,6 +640,13 @@ const act = {
   calPrev: () => { ui.calWeek--; renderMain(); }, calNext: () => { ui.calWeek++; renderMain(); }, calToday: () => { ui.calWeek = 0; renderMain(); },
   wModel: (b) => { settings.weather.model = b.dataset.model; save(); D.wx = {}; renderMain(); loadWeather(); },
   compare: () => { D.compare = D.compare || []; renderMain(); loadCompare(); },
+  bgPick: (b) => { ui.bgMsg = null; L.setLook({ bg: b.dataset.id }); renderMain(); },
+  bgFile: () => { const f = $('#bgFileInput'); if (f) f.click(); },
+  bgUrl: () => {
+    const u = ($('#bgUrl') || {}).value || '';
+    if (!/^https:\/\//i.test(u.trim())) { ui.bgMsg = { err: true, text: 'Adressen skal starte med https://' }; renderMain(); return; }
+    ui.bgMsg = null; L.setLook({ bg: 'url', url: u.trim() }); renderMain();
+  },
   newsSecs: (b) => { settings.news.rotateSecs = +b.dataset.v; ui.newsAt = Date.now(); save(); renderMain(); },
   newsToggle: (b) => { toggleNews(b.dataset.id); renderMain(); },
   newsRefresh: () => { N.clearNewsCache(); D.news = null; renderMain(); loadNews(); },
@@ -705,6 +733,10 @@ document.addEventListener('click', (e) => {
   const b = e.target.closest('[data-act]');
   if (b && act[b.dataset.act]) { e.preventDefault(); act[b.dataset.act](b, e); }
 });
+document.addEventListener('input', (e) => {
+  const t = e.target;
+  if (t.hasAttribute && t.hasAttribute('data-look-alpha')) { L.setLook({ alpha: +t.value }); const lab = t.previousElementSibling; if (lab) lab.textContent = t.value + ' %'; }
+});
 document.addEventListener('keydown', (e) => { if (e.key !== 'Enter') return; if (e.target.id === 'geoQ') act.geoSearch(); else if (e.target.dataset && e.target.dataset.place !== undefined) e.target.blur(); });
 document.addEventListener('change', (e) => {
   const t = e.target;
@@ -717,6 +749,12 @@ document.addEventListener('change', (e) => {
     if (t.dataset.set.startsWith('countdown') || t.dataset.set.endsWith('Theme')) { applyTheme(); renderHeader(); }
   } else if (t.dataset.news) { toggleNews(t.dataset.news); }
   else if (t.dataset.cal !== undefined) { settings.calendars[+t.dataset.cal][t.dataset.field] = t.value.trim(); save(); C.clearCalCache(); loadCal(); }
+  else if (t.id === 'bgFileInput' && t.files && t.files[0]) {
+    ui.bgMsg = { err: false, text: 'Gemmer billedet …' }; renderMain();
+    L.uploadImage(t.files[0]).then((r) => { ui.bgMsg = { err: false, text: r.shared ? 'Billedet er gemt og deles med jeres andre skærme ✓' : 'Billedet er gemt på denne skærm.' }; renderMain(); })
+      .catch((e) => { ui.bgMsg = { err: true, text: e.message }; renderMain(); });
+  }
+  else if (t.hasAttribute('data-look-blur')) { L.setLook({ blur: t.checked }); }
   else if (t.dataset.place !== undefined) { settings.places[+t.dataset.place].label = t.value.trim(); save(); renderHeader(); }
   else if (t.dataset.tv !== undefined) { settings.tv.channels[+t.dataset.tv][t.dataset.field] = t.value.trim(); save(); }
   else if (t.hasAttribute('data-vol')) { sonosDo(() => S.setVolume(+t.value)); }
