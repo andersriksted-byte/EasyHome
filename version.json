@@ -1,5 +1,5 @@
 {
-  "version": "1.16.0",
+  "version": "1.16.1",
   "files": [
     "index.html",
     "app.js",
@@ -19,6 +19,14 @@
     "login.js"
   ],
   "notes": [
+    {
+      "version": "1.16.1",
+      "date": "24. november 2026",
+      "title": "Én nedtælling øverst",
+      "items": [
+        "Under Indstillinger → Kalender vælger I nu præcis én nedtælling, der vises øverst på skærmen – eller ingen."
+      ]
+    },
     {
       "version": "1.16.0",
       "date": "24. november 2026",

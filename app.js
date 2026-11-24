@@ -154,7 +154,7 @@ function renderNav() {
 function renderHeader() {
   const now = new Date();
   const w = D.weather;
-  const next = svcOn('nedtaelling') ? countdowns('top').find((c) => c.days >= 0) : null;
+  const next = svcOn('nedtaelling') && settings.cdTop ? countdowns('all').find((c) => c.id === settings.cdTop && c.days >= 0) : null;
   $('#hdr').innerHTML = `
     <div class="clock"><b id="clk">${hhmm(now)}</b><span>${esc(longDate(now))}</span></div>
     ${w && svcOn('vejr') ? `<button class="chip" data-act="nav" data-page="vejr">${W.weatherIcon(w.now.code, w.now.isDay, 24)} ${fmtTemp(w.now.temp)} · ${esc(W.codeText(w.now.code).toLowerCase())}</button>` : ''}
@@ -511,9 +511,10 @@ function cdSection(s) {
         <button class="cdthumb" data-act="cdImg" data-i="${i}" aria-label="Vælg billede til ${esc(c.name || 'nedtælling')}" style="${img ? `background-image:url('${img}')` : ''}">${img ? '' : '+ billede'}</button>
         <label class="f">Navn<input type="text" data-cd="${i}" data-field="name" value="${esc(c.name)}" placeholder="Fx Sommerferie"></label>
         <label class="f">Dato<input type="date" data-cd="${i}" data-field="date" value="${esc(c.date)}"></label>
-        <span class="cdshow"><label class="check small"><input type="checkbox" data-cdshow="${i}" data-k="showCard" ${c.showCard !== false ? 'checked' : ''}>Vis i kortet på forsiden</label><label class="check small"><input type="checkbox" data-cdshow="${i}" data-k="showTop" ${c.showTop !== false ? 'checked' : ''}>Vis øverst på skærmen</label></span>
+        <span class="cdshow"><label class="check small"><input type="checkbox" data-cdshow="${i}" data-k="showCard" ${c.showCard !== false ? 'checked' : ''}>Vis i kortet på forsiden</label><label class="check small"><input type="radio" name="cdtop" data-cdtop="${esc(c.id)}" ${settings.cdTop === c.id ? 'checked' : ''}>Vis øverst på skærmen</label></span>
         <span class="row" style="gap:6px">${c.imageId ? `<button class="ibtn" data-act="cdImgRm" data-i="${i}">Fjern billede</button>` : ''}<button class="ibtn danger" data-act="cdRm" data-i="${i}" aria-label="Slet nedtællingen ${esc(c.name)}">Slet</button></span>
       </div>`; }).join('')}</div>
+      <label class="check small"><input type="radio" name="cdtop" data-cdtop="" ${!settings.cdTop ? 'checked' : ''}>Ingen nedtælling øverst på skærmen</label>
       <input type="file" id="cdFile" accept="image/*" hidden>
       <div><button class="btn primary" data-act="cdAdd">+ Tilføj nedtælling</button></div>
       ${ui.cdMsg ? `<div class="small ${ui.cdMsg.err ? 'err' : 'muted'}">${esc(ui.cdMsg.text)}</div>` : ''}
@@ -763,7 +764,7 @@ const act = {
     renderMain();
   },
   cdAdd: () => { settings.countdowns = (settings.countdowns || []).concat([{ id: uid(), name: '', date: '', imageId: '' }]); save(); renderMain(); setTimeout(() => { const el = document.querySelectorAll('[data-cd][data-field=name]'); if (el.length) el[el.length - 1].focus(); }, 50); },
-  cdRm: (b) => { const [c] = settings.countdowns.splice(+b.dataset.i, 1); if (c && c.imageId) M.removeImage(c.imageId); ui.cdIdx = 0; save(); renderHeader(); renderMain(); },
+  cdRm: (b) => { const [c] = settings.countdowns.splice(+b.dataset.i, 1); if (c && settings.cdTop === c.id) settings.cdTop = ''; if (c && c.imageId) M.removeImage(c.imageId); ui.cdIdx = 0; save(); renderHeader(); renderMain(); },
   cdImg: (b) => { const f = $('#cdFile'); if (f) { f.dataset.i = b.dataset.i; f.value = ''; f.click(); } },
   cdImgRm: (b) => { const c = settings.countdowns[+b.dataset.i]; if (c) { M.removeImage(c.imageId); c.imageId = ''; save(); renderMain(); } },
   bgPick: (b) => { ui.bgMsg = null; L.setLook({ bg: b.dataset.id }); renderMain(); },
@@ -888,6 +889,7 @@ document.addEventListener('change', (e) => {
       .catch((e) => { ui.cdMsg = { err: true, text: e.message }; renderMain(); });
   }
   else if (t.dataset.mem !== undefined) { const m = settings.family.members[+t.dataset.mem]; if (m) { m[t.dataset.field] = t.value.trim(); save(); renderHeader(); renderMain(); } }
+  else if (t.dataset.cdtop !== undefined) { settings.cdTop = t.dataset.cdtop; save(); renderHeader(); }
   else if (t.dataset.cdshow !== undefined) { const c = settings.countdowns[+t.dataset.cdshow]; if (c) { c[t.dataset.k] = t.checked; ui.cdIdx = 0; save(); renderHeader(); } }
   else if (t.dataset.cd !== undefined) { const c = settings.countdowns[+t.dataset.cd]; if (c) { c[t.dataset.field] = t.value.trim(); save(); renderHeader(); } }
   else if (t.hasAttribute('data-look-blur')) { L.setLook({ blur: t.checked }); }
@@ -956,6 +958,8 @@ function boot() {
   if (A.needsLogin()) { applyTheme(); A.showLogin(); return; }
   onAuthLost(() => A.logout('Skærmen er logget ud. Log ind igen.'));
   if (!Array.isArray(settings.countdowns)) { const c = settings.countdown || {}; settings.countdowns = c.name || c.date ? [{ id: uid(), name: c.name || '', date: c.date || '', imageId: '' }] : []; save(); }
+  // Kun én nedtælling øverst: vælg den nærmeste, første gang
+  if (settings.cdTop === undefined) { const n = countdowns('top').find((c) => c.days >= 0); settings.cdTop = n ? n.id : ''; save(); }
   M.onMediaLoaded(() => softRender());
   S.onArtLoaded(() => { renderFooter(); if (['forside', 'musik'].includes(ui.page)) softRender(); });
   if (settings.layout.some((x) => !x.w)) { settings.layout = settings.layout.map((x) => { const [w, h] = shapeOf(x); return { id: x.id, w, h }; }); save(); }
