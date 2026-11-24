@@ -1,5 +1,5 @@
 {
-  "version": "1.40.0",
+  "version": "1.41.0",
   "files": [
     "index.html",
     "app.js",
@@ -22,6 +22,16 @@
     "timer.js"
   ],
   "notes": [
+    {
+      "version": "1.41.0",
+      "date": "24. november 2026",
+      "title": "Næste i kalenderen",
+      "items": [
+        "Nyt kort: Næste i kalenderen viser den næste aftale stort – fx \"Om 20 min\" eller \"I gang\" – med tid, hvem og sted.",
+        "I større kort vises også de følgende aftaler. Er en person valgt øverst, vises kun deres og de fælles aftaler.",
+        "Tilføj kortet under Tilpas forside."
+      ]
+    },
     {
       "version": "1.40.0",
       "date": "24. november 2026",

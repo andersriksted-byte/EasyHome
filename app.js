@@ -81,7 +81,7 @@ const PAGES = [
 const SERVICES = [
   { id: 'madro', name: 'Madro', icon: 'madro', desc: 'Madplan, indkøbsliste og opskrifter.', pages: ['madro'], widgets: ['madplan', 'dagensret', 'indkob', 'inspiration'], tabs: [] },
   { id: 'somfy', name: 'Somfy', icon: 'blinds', desc: 'Styr screens, markiser og gardiner.', pages: ['somfy'], widgets: ['screens'], tabs: [] },
-  { id: 'kalender', name: 'Kalender', icon: 'kalender', desc: 'Familiens aftaler fra iCloud m.fl.', pages: ['kalender'], widgets: ['uge'], tabs: [] },
+  { id: 'kalender', name: 'Kalender', icon: 'kalender', desc: 'Familiens aftaler fra iCloud m.fl.', pages: ['kalender'], widgets: ['uge', 'naeste'], tabs: [] },
   { id: 'vejr', name: 'Vejret', icon: 'vejr', desc: 'Prognoser fra DMI og andre kilder for jeres steder.', pages: ['vejr'], widgets: ['vejr', 'steder'], tabs: ['vejr'] },
   { id: 'nyheder', name: 'Nyheder', icon: 'nyheder', desc: 'Overskrifter fra DR, TV 2, JP og egne kilder.', pages: ['nyheder'], widgets: ['nyheder', 'nyhed1'], tabs: ['nyheder'] },
   { id: 'musik', name: 'Musik (Sonos)', icon: 'musik', desc: 'Styr Sonos: afspil, rum og lydstyrke.', pages: ['musik'], widgets: ['sonos'], tabs: [] },
@@ -93,10 +93,10 @@ const svcOn = (id) => !settings.services || settings.services[id] !== false;
 const pageOn = (p) => SERVICES.every((x) => !x.pages.includes(p) || svcOn(x.id));
 const widgetOn = (w) => SERVICES.every((x) => !x.widgets.includes(w) || svcOn(x.id));
 const tabOn = (t) => (t === 'somfy' ? svcOn('somfy') : t === 'kalender' ? svcOn('kalender') || svcOn('nedtaelling') : SERVICES.every((x) => !x.tabs.includes(t) || svcOn(x.id)));
-const WIDGETS = { dagensret: 'Dagens ret', nyhed1: 'Én nyhed ad gangen', timer: 'Timer', screens: 'Screens (Somfy)', madplan: 'Madplan', indkob: 'Indkøbsliste', inspiration: 'Opskrift-inspiration', uge: 'Familiens uge', vejr: 'Vejret', steder: 'Vejret andre steder', nyheder: 'Nyheder', sonos: 'Musik (Sonos)', tv: 'DR TV', nedtaelling: 'Nedtælling' };
+const WIDGETS = { naeste: 'Næste i kalenderen', dagensret: 'Dagens ret', nyhed1: 'Én nyhed ad gangen', timer: 'Timer', screens: 'Screens (Somfy)', madplan: 'Madplan', indkob: 'Indkøbsliste', inspiration: 'Opskrift-inspiration', uge: 'Familiens uge', vejr: 'Vejret', steder: 'Vejret andre steder', nyheder: 'Nyheder', sonos: 'Musik (Sonos)', tv: 'DR TV', nedtaelling: 'Nedtælling' };
 // Forsiden er et gitter af ens kvadrater. Et kort fylder w kvadrater i bredden og h i højden.
 const SHAPES = [[1, 1], [2, 1], [3, 1], [4, 1], [1, 2], [1, 3], [1, 4], [2, 2]];
-const DEFAULT_SHAPE = { dagensret: [2, 1], nyhed1: [2, 1], timer: [1, 1], screens: [2, 1], madplan: [4, 1], indkob: [2, 1], inspiration: [2, 1], uge: [4, 1], vejr: [2, 1], steder: [2, 1], nyheder: [2, 1], sonos: [1, 1], tv: [1, 1], nedtaelling: [1, 1] };
+const DEFAULT_SHAPE = { naeste: [1, 1], dagensret: [2, 1], nyhed1: [2, 1], timer: [1, 1], screens: [2, 1], madplan: [4, 1], indkob: [2, 1], inspiration: [2, 1], uge: [4, 1], vejr: [2, 1], steder: [2, 1], nyheder: [2, 1], sonos: [1, 1], tv: [1, 1], nedtaelling: [1, 1] };
 const LEGACY = { S: [1, 1], M: [2, 1], L: [4, 1] };
 const shapeOf = (x) => (x.w && x.h ? [x.w, x.h] : LEGACY[x.size] || [1, 1]);
 const FIT = ['uge']; // kort der aldrig må skære indhold af – de bliver kompakte og vokser i højden ved behov
@@ -418,6 +418,26 @@ function wMadplan(size, h = 1, wd = 1, x = {}) {
   const layout = cols ? `style="grid-template-columns:repeat(${n},minmax(0,1fr))"` : `style="grid-template-rows:repeat(${n},minmax(0,1fr))"`;
   return `${cardHead('Madplan · 5 dage')}<div class="mdplan md-${cols ? 'wide' : kind === 'big' ? 'list' : kind}" ${layout}>${cells}</div>`;
 }
+// Næste i kalenderen: den næste aftale stort med "om 25 min", derefter de følgende
+function wNaeste(size, h = 1, wd = 1) {
+  if (!D.cal) return cardHead('Næste') + '<div class="empty">Henter kalender …</div>';
+  const now = Date.now();
+  const evs = D.cal.events.filter((e) => !e.allDay && e.end.getTime() > now && mineEvent(e)).sort((a, b) => a.start - b.start);
+  if (!evs.length) return cardHead('Næste') + '<div class="empty">Ingen kommende aftaler.</div>';
+  const e = evs[0]; const running = e.start.getTime() <= now;
+  const mins = Math.round((e.start.getTime() - now) / 60000);
+  const when = running ? `I gang · slutter ${hhmm(e.end)}` : mins < 60 ? `Om ${Math.max(1, mins)} min` : sameDay(e.start, new Date()) ? `I dag kl. ${hhmm(e.start)}` : sameDay(e.start, addDays(new Date(), 1)) ? `I morgen kl. ${hhmm(e.start)}` : `${cap(DAYS_LONG[e.start.getDay()])} kl. ${hhmm(e.start)}`;
+  const kind = shapeKind(wd, h); const more = kind === 'tiny' ? 2 : kind === 'wide' ? 2 : 5;
+  const day = (d) => (sameDay(d, new Date()) ? '' : sameDay(d, addDays(new Date(), 1)) ? 'I morgen ' : cap(DAYS[d.getDay()]) + ' ');
+  return cardHead('Næste', `<span class="small muted">${running ? 'nu' : hhmm(e.start)}</span>`) + `<div class="nx ${kind === 'wide' ? 'nx-wide' : ''}">
+    <button class="nx-main" data-act="nav" data-page="kalender" style="--c:${esc(e.color || 'var(--accent)')}">
+      <span class="nx-when ${running ? 'now' : mins < 60 ? 'soon' : ''}">${esc(when)}</span>
+      <b>${esc(e.title)}</b>
+      <span class="nx-sub">${hhmm(e.start)}–${hhmm(e.end)}${e.who ? ' · ' + esc(e.who) : ''}${e.location ? ' · ' + esc(e.location) : ''}</span>
+    </button>
+    <div class="nx-list">${evs.slice(1, 1 + more).map((x) => `<div class="nx-row" style="--c:${esc(x.color || 'var(--accent)')}"><span class="nx-t">${day(x.start)}${hhmm(x.start)}</span><span class="nx-n">${esc(x.title)}</span></div>`).join('')}</div>
+  </div>`;
+}
 // Dagens ret: stort billede, navn, tid og om der er handlet ind. Efter kl. 20 vises morgendagens ret.
 function wDagensRet(size, h = 1, wd = 1) {
   const wait = madroStatus('Dagens ret'); if (wait) return wait;
@@ -529,7 +549,7 @@ function wNed(size, h = 1, wd = 1) {
     <div class="cdw"><div class="cdn">${c.days < 0 ? '✓' : c.days}</div><div class="cdl">${label}</div><div class="cdd">${cap(DAYS_LONG[d.getDay()])} ${d.getDate()}. ${MONTHS[d.getMonth()]} ${d.getFullYear()}</div></div></div></div>`;
 }
 
-const WRENDER = { dagensret: wDagensRet, nyhed1: wNyhed1, timer: wTimer, screens: wScreens, madplan: wMadplan, indkob: wIndkob, inspiration: wInspiration, uge: wUge, vejr: wVejr, steder: wSteder, nyheder: wNyheder, sonos: wSonos, tv: wTv, nedtaelling: wNed };
+const WRENDER = { naeste: wNaeste, dagensret: wDagensRet, nyhed1: wNyhed1, timer: wTimer, screens: wScreens, madplan: wMadplan, indkob: wIndkob, inspiration: wInspiration, uge: wUge, vejr: wVejr, steder: wSteder, nyheder: wNyheder, sonos: wSonos, tv: wTv, nedtaelling: wNed };
 
 function pageForside() {
   const inLayout = (id) => curLayout().some((x) => x.id === id);
@@ -1499,6 +1519,8 @@ function boot() {
     if (left <= 0) { act.wStep({ dataset: { scope: 'news', dir: '1' } }); return; }
     bar.style.width = (left / newsSecs()) * 100 + '%';
   }, 1000);
+  // "Næste i kalenderen" tæller ned i minutter
+  setInterval(() => { if (ui.page === 'forside' && !ui.editing && curLayout().some((x) => x.id === 'naeste')) softRender(); }, 60000);
   // "Én nyhed ad gangen": skift efter samme tid som nyhedskortet
   setInterval(() => {
     const on = ui.page === 'forside' && !ui.editing && !drag && !R.isOpen() && curLayout().some((x) => x.id === 'nyhed1') && widgetOn('nyhed1') && mixedNews().length > 1;
