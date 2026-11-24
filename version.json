@@ -1,5 +1,5 @@
 {
-  "version": "1.6.0",
+  "version": "1.7.0",
   "files": [
     "index.html",
     "app.js",
@@ -15,6 +15,16 @@
     "sync.js"
   ],
   "notes": [
+    {
+      "version": "1.7.0",
+      "date": "24. november 2026",
+      "title": "Bladr i nyhederne",
+      "items": [
+        "Nyhedskortet på forsiden har nu én side pr. nyhedsmedie – fx DR, TV 2 og Jyllands-Posten.",
+        "Skift side med pilene ‹ › eller ved at swipe til siden med fingeren.",
+        "Du kan også swipe mellem stederne i vejrkortet."
+      ]
+    },
     {
       "version": "1.6.0",
       "date": "24. november 2026",

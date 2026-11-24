@@ -70,7 +70,7 @@ const D = { weather: null, weatherErr: null, wx: {}, wxErr: {}, compare: null, n
 const home = () => settings.places[0];
 const placeLabel = (p) => p.label || p.name;
 const placeById = (id) => settings.places.find((p) => p.id === id) || home();
-const ui = { feedMsg: null, feedDraft: null, page: pageFromHash(), setTab: 'vejr', wPlace: null, fpPlace: 0, fpTouched: 0, editing: false, calWeek: 0, geo: null, geoMsg: '', tick: 0, connMsg: '' };
+const ui = { newsIdx: 0, feedMsg: null, feedDraft: null, page: pageFromHash(), setTab: 'vejr', wPlace: null, fpPlace: 0, fpTouched: 0, editing: false, calWeek: 0, geo: null, geoMsg: '', tick: 0, connMsg: '' };
 function pageFromHash() { const h = location.hash.slice(1); return [...PAGES.map((p) => p.id), 'indstillinger'].includes(h) ? h : 'forside'; }
 
 function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), 2600); }
@@ -159,13 +159,13 @@ function wUge(size) {
       <div class="day ${sameDay(d, today) ? 'today' : ''}"><h3>${cap(DAYS[d.getDay()])} <span>${d.getDate()}.</span></h3>
       ${eventsOn(d).slice(0, size === 'M' ? 5 : 4).map((e) => evHtml(e, d, false)).join('')}</div>`).join('')}</div>`;
 }
-function placeArrows(scope, idx) {
-  const n = settings.places.length;
+function pageArrows(scope, idx, n, what) {
   if (n < 2) return '';
-  return `<span class="parrows"><button class="arr" data-act="wStep" data-scope="${scope}" data-dir="-1" aria-label="Forrige sted">‹</button>
-    <span class="dots" aria-hidden="true">${settings.places.map((_, i) => `<i class="${i === idx ? 'on' : ''}"></i>`).join('')}</span>
-    <button class="arr" data-act="wStep" data-scope="${scope}" data-dir="1" aria-label="Næste sted">›</button></span>`;
+  return `<span class="parrows"><button class="arr" data-act="wStep" data-scope="${scope}" data-dir="-1" aria-label="Forrige ${what}">‹</button>
+    <span class="dots" aria-hidden="true">${Array.from({ length: n }, (_, i) => `<i class="${i === idx ? 'on' : ''}"></i>`).join('')}</span>
+    <button class="arr" data-act="wStep" data-scope="${scope}" data-dir="1" aria-label="Næste ${what}">›</button></span>`;
 }
+const placeArrows = (scope, idx) => pageArrows(scope, idx, settings.places.length, 'sted');
 function wVejr(size) {
   const n = settings.places.length;
   const idx = ((ui.fpPlace % n) + n) % n;
@@ -201,7 +201,20 @@ function newsList(n, big = false) {
   if (!items.length) return `<div class="empty">Ingen nyheder lige nu.${D.news.errors.length ? ' ' + esc(D.news.errors.map((e) => e.source + ': ' + e.msg).join(' · ')) : ''}</div>`;
   return `<div class="news ${big ? 'big-news' : ''}">${items.map((i) => `<a href="${esc(i.link)}" target="_blank" rel="noopener"><span class="meta"><span class="src">${esc(i.source)}</span>${i.date ? ' · ' + esc(relTime(i.date)) : ''}</span><b>${esc(i.title)}</b>${big && i.summary ? `<p>${esc(i.summary)}</p>` : ''}</a>`).join('')}</div>`;
 }
-function wNyheder(size) { return `<div class="lab">Nyheder</div>${newsList({ S: 3, M: 5, L: 8 }[size])}`; }
+function newsSources() { return N.allSources().filter((src) => settings.news.sources.includes(src.id)); }
+function wNyheder(size) {
+  const count = { S: 3, M: 5, L: 8 }[size];
+  const srcs = newsSources();
+  if (!hasProxy() && !settings.news.publicProxyForTest) return `<div class="lab">Nyheder</div>${needProxyMsg('Nyheder')}`;
+  if (!srcs.length) return '<div class="lab">Nyheder</div><div class="empty">Vælg nyhedskilder under Indstillinger → Nyheder.</div>';
+  const n = srcs.length; const idx = ((ui.newsIdx % n) + n) % n; const src = srcs[idx];
+  const head = `<div class="row" style="justify-content:space-between;flex-wrap:nowrap"><span class="lab" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(src.name)}</span>${pageArrows('news', idx, n, 'nyhedskilde')}</div>`;
+  if (!D.news) return head + '<div class="empty">Henter nyheder …</div>';
+  const items = D.news.items.filter((i) => i.sourceId === src.id).slice(0, count);
+  const err = D.news.errors.find((e) => e.source === src.name);
+  if (!items.length) return head + `<div class="empty">${err ? 'Kunne ikke hente lige nu: ' + esc(err.msg) : 'Ingen nyheder lige nu.'}</div>`;
+  return head + `<div class="news">${items.map((i) => `<a href="${esc(i.link)}" target="_blank" rel="noopener"><span class="meta">${i.date ? esc(relTime(i.date)) : ''}</span><b>${esc(i.title)}</b></a>`).join('')}</div>`;
+}
 function wSonos(size) {
   if (!S.state.connected) return `<div class="lab">Musik</div><div class="empty">Sonos er ikke forbundet endnu.</div><button class="btn line" data-act="nav" data-page="musik">Gå til Musik</button>`;
   const np = S.nowPlaying();
@@ -570,6 +583,7 @@ const act = {
   setTab: (b) => { ui.setTab = b.dataset.tab; ui.geo = null; renderMain(false); },
   wStep: (b) => {
     const n = settings.places.length; const dir = +b.dataset.dir;
+    if (b.dataset.scope === 'news') { const m = Math.max(1, newsSources().length); ui.newsIdx = (((ui.newsIdx + dir) % m) + m) % m; renderMain(); return; }
     if (b.dataset.scope === 'fp') { ui.fpPlace = (((ui.fpPlace + dir) % n) + n) % n; ui.fpTouched = Date.now(); }
     else { const i = settings.places.indexOf(placeById(ui.wPlace)); ui.wPlace = settings.places[(((i + dir) % n) + n) % n].id; D.compare = null; }
     renderMain();
@@ -628,6 +642,26 @@ document.addEventListener('change', (e) => {
   else if (t.dataset.pvol) { sonosDo(() => S.setPlayerVolume(t.dataset.pvol, +t.value)); }
 });
 window.addEventListener('hashchange', () => { const p = pageFromHash(); if (p !== ui.page) { ui.page = p; renderNav(); renderMain(false); } });
+
+/* ---------- Swipe i kort med flere sider (vejr, nyheder) ---------- */
+const SWIPE_SCOPE = { vejr: 'fp', nyheder: 'news' };
+let swipe = null; let swipedAt = 0;
+document.addEventListener('pointerdown', (e) => {
+  if (ui.editing || e.target.closest('.hours, input, .handle')) return; // timeoversigten scroller selv vandret
+  const card = e.target.closest('.w'); const scope = card && SWIPE_SCOPE[card.dataset.wid];
+  if (!scope) { const pg = e.target.closest('[data-swipe]'); if (!pg) return; swipe = { x: e.clientX, y: e.clientY, scope: pg.dataset.swipe }; return; }
+  swipe = { x: e.clientX, y: e.clientY, scope };
+}, true);
+document.addEventListener('pointerup', (e) => {
+  if (!swipe) return;
+  const dx = e.clientX - swipe.x; const dy = e.clientY - swipe.y; const sc = swipe.scope; swipe = null;
+  if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+  swipedAt = Date.now();
+  act.wStep({ dataset: { scope: sc, dir: dx < 0 ? '1' : '-1' } });
+}, true);
+document.addEventListener('pointercancel', () => { swipe = null; }, true);
+// Et swipe må ikke samtidig åbne en nyhed
+document.addEventListener('click', (e) => { if (Date.now() - swipedAt < 400) { e.preventDefault(); e.stopPropagation(); } }, true);
 
 /* ---------- Træk og slip på forsiden (virker med finger og mus) ---------- */
 let drag = null;

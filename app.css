@@ -58,6 +58,8 @@ a{color:var(--accent)}
 /* Forside-gitter */
 .grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-auto-rows:minmax(200px,auto);gap:16px}
 .w{position:relative;grid-column:span var(--span,1)}
+.w[data-wid=vejr],.w[data-wid=nyheder]{touch-action:pan-y}
+.w[data-wid=vejr] a,.w[data-wid=nyheder] a{-webkit-user-drag:none}
 .editing .w{outline:2px dashed var(--accent);outline-offset:-2px}
 .w.dragging{opacity:.55;box-shadow:0 12px 30px rgba(0,0,0,.2);outline:3px solid var(--accent)}
 .wbar{display:flex;align-items:center;gap:6px;margin:-8px -10px 2px;padding:6px;border-radius:14px;background:var(--bg)}
@@ -97,7 +99,7 @@ a{color:var(--accent)}
 .parrows .dots i.on{background:var(--text)}
 .wnow{display:flex;align-items:center;gap:14px}
 .wnow .t{font-size:44px;font-weight:800;line-height:1}
-.hours{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(56px,1fr);gap:6px;overflow-x:auto;padding-bottom:4px}
+.hours{touch-action:pan-x;display:grid;grid-auto-flow:column;grid-auto-columns:minmax(56px,1fr);gap:6px;overflow-x:auto;padding-bottom:4px}
 .hour{display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 4px;border-radius:12px;background:var(--bg);font-size:13px;font-weight:700}
 .hour .r{color:var(--accent);font-size:12px}
 .dlist{display:flex;flex-direction:column;gap:2px}
