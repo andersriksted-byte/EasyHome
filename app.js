@@ -258,18 +258,21 @@ function wUge(size, h = 1, w = 1, x = null) {
   if (!D.cal) return cardHead('Kalender') + '<div class="empty">Henter kalender …</div>';
   const auto = w === 1 ? (h >= 2 ? h * 2 : 2) : Math.min(7, w * 2 - (w >= 3 ? 1 : 0));
   const n = Math.max(1, Math.min(7, +(x && x.days) || auto));
-  const days = Array.from({ length: n }, (_, i) => addDays(today, i));
-  const title = n === 1 ? 'I dag' : n === 2 ? 'I dag og i morgen' : 'Næste ' + n + ' dage';
+  
   const tag = (d) => (sameDay(d, today) ? 'I dag' : sameDay(d, addDays(today, 1)) ? 'I morgen' : cap(DAYS[d.getDay()]));
   const evRow = (e, d) => e.allDay ? `<div class="cw-ad" ${evRef(e)} style="--c:${esc(e.color || '#888')};--l:${lighten(e.color)}">${esc(e.title)}</div>`
     : `<div class="cw-ev" ${evRef(e)} style="--c:${esc(e.color || '#888')};--l:${lighten(e.color)}"><time>${esc(evTime(e, d))}</time><span>${esc(e.title)}</span></div>`;
   const sorted = (d) => { const now = Date.now(); const l = eventsOn(d).filter((e) => e.allDay || e.end.getTime() > now); /* overståede aftaler forsvinder */ return l.filter((e) => e.allDay).concat(l.filter((e) => !e.allDay)); };
   const list = (d) => { const l = sorted(d); return l.length ? l.map((e) => evRow(e, d)).join('') : '<span class="cw-none">Ingen aftaler</span>'; };
+  // Når dagens sidste aftale er overstået, starter kortet med i morgen
+  const start = sorted(today).length ? today : addDays(today, 1);
+  const days = Array.from({ length: n }, (_, i) => addDays(start, i));
+  const title = n === 1 ? (start === today ? 'I dag' : 'I morgen') : n === 2 && start === today ? 'I dag og i morgen' : 'Næste ' + n + ' dage';
   const cols = w >= 2 && n > 1 ? Math.min(n, w * 2) : 1;
   if (cols === 1) {
-    return `${cardHead(title, demo)}<div class="cw-list">${days.map((d) => `<div class="cw-row${sameDay(d, today) ? ' today' : ''}"><div class="cw-date"><b>${d.getDate()}</b><span>${esc(tag(d))}</span></div><div class="cw-evs">${list(d)}${dayMenu(d)}</div></div>`).join('')}</div>`;
+    return `${cardHead(title, demo)}<div class="cw-list">${days.map((d) => `<div class="cw-row${sameDay(d, today) ? ' today' : ''}"><div class="cw-date"><b>${d.getDate()}</b><span>${esc(tag(d))}</span></div><div class="cw-evs">${list(d)}</div></div>`).join('')}</div>`;
   }
-  return `${cardHead(title, demo)}<div class="cw-cols days" style="grid-template-columns:repeat(${cols},minmax(0,1fr))">${days.map((d) => `<div class="cw-day${sameDay(d, today) ? ' today' : ''}"><div class="cw-dh"><span>${esc(tag(d))}</span><b>${d.getDate()}.</b></div><div class="cw-evs">${list(d)}</div>${dayMenu(d)}</div>`).join('')}</div>`;
+  return `${cardHead(title, demo)}<div class="cw-cols days" style="grid-template-columns:repeat(${cols},minmax(0,1fr))">${days.map((d) => `<div class="cw-day${sameDay(d, today) ? ' today' : ''}"><div class="cw-dh"><span>${esc(tag(d))}</span><b>${d.getDate()}.</b></div><div class="cw-evs">${list(d)}</div></div>`).join('')}</div>`;
 }
 const i0 = (d, today) => (sameDay(d, today) ? 'I dag' : sameDay(d, addDays(today, 1)) ? 'I morgen' : cap(DAYS_LONG[d.getDay()]) + ' ' + d.getDate() + '.');
 function pageArrows(scope, idx, n, what) {

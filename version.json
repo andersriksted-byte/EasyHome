@@ -1,5 +1,5 @@
 {
-  "version": "1.51.1",
+  "version": "1.51.2",
   "files": [
     "index.html",
     "app.js",
@@ -23,6 +23,15 @@
     "mcats.js"
   ],
   "notes": [
+    {
+      "version": "1.51.2",
+      "date": "24. november 2026",
+      "title": "Kalenderkortet viser i morgen",
+      "items": [
+        "Når dagens sidste aftale er overstået, starter kalenderkortet med i morgen",
+        "Madplanen står ikke længere i kalenderkortet på forsiden"
+      ]
+    },
     {
       "version": "1.51.1",
       "date": "24. november 2026",
