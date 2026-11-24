@@ -216,25 +216,12 @@ function wxChip(w) {
   return `<button class="chip wxchip" data-act="nav" data-page="vejr" aria-label="Vejret">${W.weatherIcon(w.now.code, w.now.isDay, 24)}<span class="wxc-place">${esc(placeLabel(home()))}</span><b>${fmtTemp(w.now.temp)}</b>${t ? `<span class="wxc-trend" title="Om 3 timer">${t.arrow} ${fmtTemp(t.temp)}</span>${t.msg ? `<span class="wxc-msg">· ${esc(t.msg)}</span>` : ''}` : `<span class="wxc-msg">· ${esc(W.codeText(w.now.code).toLowerCase())}</span>`}</button>`;
 }
 
-// Hvilken visning man ser – vises i headeren i stedet for en overskrift på hver side
-function viewInfo() {
-  const p = ui.page; const me = meMember();
-  const name = p === 'indstillinger' ? 'Indstillinger' : (PAGES.find((x) => x.id === p) || {}).label || '';
-  let sub = '';
-  if (p === 'kalender') { const ws = weekStart(ui.calWeek); const we = addDays(ws, 6); sub = `Uge ${isoWeek(ws)} · ${ws.getDate()}. ${MONTHS[ws.getMonth()].slice(0, 3)} – ${we.getDate()}. ${MONTHS[we.getMonth()].slice(0, 3)}`; }
-  if (me && (p === 'forside' || p === 'kalender')) sub = esc(me.name) + (sub ? ' · ' + sub : '');
-  else sub = esc(sub);
-  return name ? `<div class="hview"><b>${esc(name)}</b>${sub ? `<span>${sub}</span>` : ''}</div>` : '';
-}
-const hdrKey = () => [ui.page, ui.calWeek, settings.me].join('|');
 function renderHeader() {
-  ui.hdrKey = hdrKey();
   const now = new Date();
   const w = D.weather;
   const next = svcOn('nedtaelling') && settings.cdTop ? countdowns('all').find((c) => c.id === settings.cdTop && c.days >= 0) : null;
   $('#hdr').innerHTML = `
     <div class="clock"><b id="clk">${hhmm(now)}</b><span>${esc(longDate(now))}</span></div>
-    ${viewInfo()}
     ${w && svcOn('vejr') ? wxChip(w) : ''}
     ${next ? `<span class="chip accent">${next.days === 0 ? `I dag: ${esc(next.name)}` : `${next.days} ${next.days === 1 ? 'dag' : 'dage'} til ${esc(next.name.toLowerCase())}`}</span>` : ''}
     <div class="right">${svcOn('timer') && TM.timers().some((t) => !t.done && !t.paused) ? `<button class="chip tmchip" id="tmChip" data-act="nav" data-page="forside" aria-label="Timer">${svg('timer', 18)}<b>${TM.fmt(Math.min(...TM.timers().filter((t) => !t.done && !t.paused).map(TM.left)))}</b></button>` : ''}${ui.page === 'forside' ? `<button class="hdredit ${ui.editing ? 'on' : ''}" data-act="edit" aria-pressed="${ui.editing}" aria-label="${ui.editing ? 'Færdig med at tilpasse forsiden' : 'Tilpas forside'}" title="${ui.editing ? 'Færdig' : 'Tilpas forside'}">${ui.editing ? ico('check', 20) : ico('edit', 20)}</button>` : ''}${members().length ? `<div class="profiles" role="group" aria-label="Hvem bruger skærmen?">${members().map((m) => `<button class="avatar" data-act="pickMe" data-id="${esc(m.id)}" aria-pressed="${settings.me === m.id}" aria-label="${esc(m.name)}${settings.me === m.id ? ' (valgt – tryk for alle)' : ''}" style="--c:${esc(m.color)}">${esc(initials(m.name))}</button>`).join('')}</div>` : ''}</div>`;
@@ -659,7 +646,7 @@ function pageKalender() {
   const title = `Uge ${isoWeek(ws)} · ${ws.getDate()}. ${MONTHS[ws.getMonth()].slice(0, 3)} – ${we.getDate()}. ${MONTHS[we.getMonth()].slice(0, 3)}`;
   const meK0 = meMember(); const cals = settings.calendars.filter((c) => c.url && (!meK0 || !c.owner || c.owner === meK0.id));
   const meK = meMember();
-  return `<div class="ptitle"><h1>Kalender${meK ? ' · ' + esc(meK.name) : ''}</h1>
+  return `<div class="ptitle"><h1>Kalender${meK ? ' · ' + esc(meK.name) : ''}</h1><span class="muted" style="font-weight:700">${esc(title)}</span>
       <div class="tools"><button class="btn" data-act="calPrev" aria-label="Forrige uge">‹</button><button class="btn" data-act="calToday">I dag</button><button class="btn" data-act="calNext" aria-label="Næste uge">›</button></div></div>
     ${D.cal && D.cal.demo ? '<div class="empty">Viser eksempler. Tilføj jeres kalendere under Indstillinger → Kalendere.</div>' : ''}
     ${D.cal && D.cal.errors.length ? `<div class="err">${esc(D.cal.errors.map((e) => e.cal + ': ' + e.msg).join(' · '))}</div>` : ''}
@@ -1171,7 +1158,7 @@ function showMadroFrame(on) {
 }
 function renderMain(keepScroll = true) {
   const m = $('#main'); const y = m.scrollTop;
-  if (ui.hdrKey !== hdrKey()) renderHeader();
+  if (ui.hdrPage !== ui.page) { ui.hdrPage = ui.page; renderHeader(); }
   showMadroFrame(ui.page === 'madro');
   m.innerHTML = PAGE_RENDER[ui.page]();
   if (ui.page === 'forside') { scaleGrid(); fitCards(); trimCards(); }

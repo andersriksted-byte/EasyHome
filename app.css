@@ -1155,10 +1155,3 @@ button.w7r.sel{background:color-mix(in srgb,var(--accent) 16%,transparent);box-s
 .today .cw-date span{color:var(--accent)}
 .cw-row .cw-evs{flex:1}
 .w.compact .cw-ev{padding:4px 7px}.w.compact .cw-ev span{font-size:12px}.w.compact .cw-day{padding:8px;gap:6px}.w.compact .cw-dh b{font-size:20px}
-
-/* Visningens navn i headeren; sidernes egne overskrifter skjules */
-.hview{display:flex;flex-direction:column;justify-content:center;gap:2px;padding-left:16px;margin-left:2px;border-left:2px solid var(--line);min-width:0;max-width:280px}
-.hview b{font-size:20px;font-weight:800;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.hview span{font-size:13px;font-weight:700;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.ptitle h1{display:none}
-.ptitle:not(:has(>:not(h1))){display:none}
