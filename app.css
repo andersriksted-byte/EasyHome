@@ -1202,3 +1202,5 @@ button.w7r.sel{background:color-mix(in srgb,var(--accent) 16%,transparent);box-s
 .fb-mid{min-width:56px;font-size:20px}
 
 .fb-sub{flex:none;font-size:12px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;padding:4px 2px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+.fb-list.two{display:grid;grid-auto-flow:column;grid-template-columns:repeat(2,minmax(0,1fr));align-content:start;gap:5px 12px;overflow-y:auto;overscroll-behavior:contain}

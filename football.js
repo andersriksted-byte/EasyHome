@@ -47,11 +47,12 @@ async function schedule(t, fixture) {
 
 const follows = () => (settings.football && settings.football.follow) || [];
 const ymd = (d) => `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
-// En hel liga: kampe en uge omkring i dag (kortet finder selv den aktuelle runde)
+// En hel liga: kampe fra en uge tilbage til tre uger frem (så næste runde også kommer med efter en landskampspause)
 async function leagueDays(lg) {
-  const a = new Date(); a.setDate(a.getDate() - 6); const b = new Date(); b.setDate(b.getDate() + 6);
+  const a = new Date(); a.setDate(a.getDate() - 7); const b = new Date(); b.setDate(b.getDate() + 21);
   // ESPN tager ikke imod et datointerval, men gerne en hel måned – hent de måneder, ugen rører
-  const months = [...new Set([a, new Date(), b].map((d) => ymd(d).slice(0, 6)))];
+  const mid = new Date(); mid.setDate(mid.getDate() + 10);
+  const months = [...new Set([a, new Date(), mid, b].map((d) => ymd(d).slice(0, 6)))];
   const res = await Promise.all(months.map((m) => workerFetch(`/espn/${lg}/scoreboard?dates=${m}`).then((x) => x.json())));
   const name = ((res[0].leagues || [])[0] || {}).name || '';
   const seen = new Set();
@@ -96,14 +97,14 @@ export function view() {
 }
 
 // Fulgte ligaer: rundens kampe inkl. resultater. En runde er kampe, der ligger tæt (under 2 døgn imellem).
-// Vises den runde, der er i gang, ellers den nærmeste (den netop spillede eller den kommende).
+// Runden vises, til dagen efter dens sidste kamp er gået – derefter vises næste rundes kampe.
 export function leagueView() {
   const now = Date.now();
   return follows().map((lg) => {
     const ms = (state.leagues[lg] || []).slice().sort((a, b) => a.date - b.date);
     const rounds = []; ms.forEach((m) => { const last = rounds.length && rounds[rounds.length - 1]; if (last && m.date - last[last.length - 1].date < 48 * 3600000) last.push(m); else rounds.push([m]); });
-    const dist = (rd) => (now < rd[0].date ? rd[0].date - now : now > rd[rd.length - 1].date.getTime() + 3 * 3600000 ? now - rd[rd.length - 1].date : 0);
-    const round = rounds.length ? rounds.reduce((a, b) => (dist(b) < dist(a) ? b : a)) : [];
+    const until = (rd) => { const d = new Date(rd[rd.length - 1].date); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() + 2); return d.getTime(); };
+    const round = rounds.find((rd) => now < until(rd)) || rounds[rounds.length - 1] || [];
     const name = (LEAGUES.find((L) => L.id === lg) || {}).name || lg;
     return { lg, name, round };
   });

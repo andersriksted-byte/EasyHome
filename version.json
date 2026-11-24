@@ -1,5 +1,5 @@
 {
-  "version": "1.55.2",
+  "version": "1.56.0",
   "files": [
     "index.html",
     "app.js",
@@ -24,6 +24,16 @@
     "football.js"
   ],
   "notes": [
+    {
+      "version": "1.56.0",
+      "date": "25. november 2026",
+      "title": "Fodbold: én liga ad gangen",
+      "items": [
+        "Følger du flere ligaer, får hver liga sin egen side i Fodbold-kortet – swipe eller brug pilene",
+        "Vælg under Indstillinger → Fodbold, hvilken liga der vises først",
+        "Runden vises, til dagen efter dens sidste kamp – derefter vises næste rundes kampe"
+      ]
+    },
     {
       "version": "1.55.2",
       "date": "24. november 2026",
