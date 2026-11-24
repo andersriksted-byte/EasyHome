@@ -482,42 +482,47 @@ function later(evs, e, x) {
   if (!rest.length) return '';
   return `<div class="nx-later" data-trimcard>${rest.map((y) => `<div class="nx-li" ${evRef(y)} style="--c:${esc(y.color || 'var(--accent)')}"><time>${hhmm(y.start)}</time><span>${esc(y.title)}</span></div>`).join('')}</div>`;
 }
-// Fodbold: én side pr. fulgt liga (rundens kampe) og evt. en side med favoritholdene. Swipe eller pile skifter side.
-function fbPages() {
-  const fb = settings.football || {}; const pages = [];
-  if ((fb.teams || []).length) pages.push({ id: 'fav', name: 'Mine hold' });
-  FB.leagueView().forEach((L) => pages.push({ id: L.lg, name: L.name, L }));
-  const pref = fb.pref && pages.findIndex((p) => p.id === fb.pref);
-  if (pref > 0) pages.unshift(pages.splice(pref, 1)[0]); // foretrukken side først
-  return pages;
+// Fodbold: én side pr. dag (i dag først). Dagens kampe fra de fulgte ligaer og favoritholdene, delt op i ligaer.
+const dkey = (d) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+function fbDays() {
+  const fb = settings.football || {};
+  const seen = new Set(); const all = [];
+  Object.entries(FB.state.leagues || {}).forEach(([lg, ms]) => { if ((fb.follow || []).includes(lg)) ms.forEach((m) => { if (!seen.has(m.id)) { seen.add(m.id); all.push(m); } }); });
+  (FB.state.matches || []).forEach((m) => { if (!seen.has(m.id)) { seen.add(m.id); all.push(m); } });
+  const today = startOfDay(new Date());
+  const keys = new Map([[dkey(today), today]]);
+  all.forEach((m) => { const d = startOfDay(m.date); keys.set(dkey(d), d); });
+  const days = [...keys.values()].sort((a, b) => a - b);
+  // Ligaernes rækkefølge: den foretrukne først, så de fulgte, så resten (fx favoritholdenes pokal- og Europa-kampe)
+  const lgName = (id) => (FB.LEAGUES.find((L) => L.id === id) || {}).name || id;
+  const order = [fb.pref, ...(fb.follow || [])].filter(Boolean).map(lgName);
+  return { days, all, order, today };
 }
 function wFodbold(size, h = 1, wd = 1) {
-  const pages = fbPages();
-  if (!pages.length) return cardHead('Fodbold') + '<div class="empty">Vælg hold eller ligaer under Indstillinger → Fodbold.</div>';
-  const n = pages.length; const idx = ((ui.fbIdx || 0) % n + n) % n; const P = pages[idx];
-  const head = cardHead(P.id === 'fav' ? 'Fodbold · mine hold' : P.name, pageArrows('fb', idx, n, 'liga'));
-  if (!FB.state.at) return head + '<div class="empty">Henter kampe …</div>';
-  const today = startOfDay(new Date());
-  const dayTxt = (d) => (sameDay(d, today) ? 'I dag' : sameDay(d, addDays(today, 1)) ? 'I morgen' : sameDay(d, addDays(today, -1)) ? 'I går' : `${cap(DAYS[d.getDay()]).slice(0, 3)} ${d.getDate()}/${d.getMonth() + 1}`);
+  const fb = settings.football || {};
+  if (!(fb.teams || []).length && !(fb.follow || []).length) return cardHead('Fodbold') + '<div class="empty">Vælg hold eller ligaer under Indstillinger → Fodbold.</div>';
+  if (!FB.state.at) return cardHead('Fodbold') + '<div class="empty">Henter kampe …</div>';
+  const { days, all, order, today } = fbDays();
+  let idx = days.findIndex((d) => dkey(d) === ui.fbDay); if (idx < 0) idx = days.findIndex((d) => +d === +today);
+  const day = days[idx];
+  const dayTxt = sameDay(day, today) ? 'I dag' : sameDay(day, addDays(today, 1)) ? 'I morgen' : sameDay(day, addDays(today, -1)) ? 'I går' : cap(DAYS_LONG[day.getDay()]);
+  const arrows = `<span class="parrows"><button class="arr" data-act="wStep" data-scope="fb" data-dir="-1" aria-label="Dagen før" ${idx <= 0 ? 'disabled' : ''}>‹</button><button class="arr" data-act="wStep" data-scope="fb" data-dir="1" aria-label="Dagen efter" ${idx >= days.length - 1 ? 'disabled' : ''}>›</button></span>`;
+  const head = cardHead(`${dayTxt} · ${day.getDate()}. ${MONTHS[day.getMonth()].slice(0, 3)}`, arrows);
   // Kun klublogo (forkortelse hvis der ikke er et logo) – navnet står i logoets beskrivelse
   const side = (t, fav) => `<span class="fb-t${t.id === fav ? ' fb-fav' : ''}" title="${esc(t.name)}">${t.logo ? `<img src="${esc(t.logo)}" alt="${esc(t.name)}" loading="lazy">` : `<b>${esc(t.abbr || t.name.slice(0, 3).toUpperCase())}</b>`}</span>`;
-  const row = (m, showComp) => {
-    const pend = FB.pending(m);
+  const favIds = (fb.teams || []).map((t) => t.id);
+  const row = (m) => {
+    const pend = FB.pending(m); const fav = favIds.includes(m.home.id) ? m.home.id : favIds.includes(m.away.id) ? m.away.id : '';
     const mid = pend ? '<span class="fb-mid">–</span>' : m.state === 'pre' ? `<span class="fb-mid time">${hhmm(m.date)}</span>` : `<span class="fb-mid"><b class="${m.home.win ? 'w' : ''}">${esc(m.home.score)}</b>–<b class="${m.away.win ? 'w' : ''}">${esc(m.away.score)}</b></span>`;
-    const when = m.state === 'in' ? `<span class="fb-live">● ${esc(m.clock || m.detail || 'Live')}</span>` : esc(dayTxt(m.date));
-    const sub = pend ? 'Afventer resultat' : showComp ? m.comp : m.state === 'post' ? 'Slut' : '';
-    return `<div class="fb-row ${m.state}"><span class="fb-when">${when}${sub ? `<small>${esc(sub)}</small>` : ''}</span>${side(m.home, m.fav)}${mid}${side(m.away, m.fav)}</div>`;
+    const when = m.state === 'in' ? `<span class="fb-live">● ${esc(m.clock || m.detail || 'Live')}</span>` : pend ? 'Afventer' : m.state === 'post' ? 'Slut' : '';
+    return `<div class="fb-row ${m.state}"><span class="fb-when">${when}</span>${side(m.home, fav)}${mid}${side(m.away, fav)}</div>`;
   };
-  // Brede kort: to spalter, der læses oppefra og ned (kronologisk ned gennem første spalte og videre i anden)
-  const listHtml = (rows) => wd >= 3 && rows.length > 1 ? `<div class="fb-list two" style="grid-template-rows:repeat(${Math.ceil(rows.length / 2)},min-content)">${rows.join('')}</div>` : `<div class="fb-list" data-trim>${rows.join('')}</div>`;
-  if (P.id !== 'fav') {
-    const rd = P.L.round;
-    return head + (rd.length ? listHtml(rd.map((m) => row(m, false))) : '<div class="empty">Ingen kampe i den kommende tid.</div>');
-  }
-  // Mine hold: hvert holds seneste resultat og næste kamp (+ kampe i gang) i kronologisk rækkefølge
-  const { live, done, next } = FB.view();
-  const seen = new Set(); const all = done.concat(live.filter((m) => m.fav), next).filter((m) => (seen.has(m.id) ? false : seen.add(m.id))).sort((a, b) => a.date - b.date);
-  return head + (all.length ? listHtml(all.map((m) => row(m, true))) : '<div class="empty">Ingen kampe lige nu.</div>');
+  const todays = all.filter((m) => sameDay(m.date, day)).sort((a, b) => a.date - b.date);
+  if (!todays.length) return head + `<div class="empty">Ingen kampe ${sameDay(day, today) ? 'i dag' : 'denne dag'}.</div>`;
+  const groups = new Map(); todays.forEach((m) => { const k = m.comp || 'Andre kampe'; if (!groups.has(k)) groups.set(k, []); groups.get(k).push(m); });
+  const keys = [...groups.keys()].sort((a, b) => { const ia = order.indexOf(a), ib = order.indexOf(b); return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib); });
+  const blocks = keys.map((k) => `<div class="fb-grp"><div class="fb-sub">${esc(k)}</div>${groups.get(k).map(row).join('')}</div>`);
+  return head + `<div class="fb-days${wd >= 3 && blocks.length > 1 ? ' two' : ''}">${blocks.join('')}</div>`;
 }
 function fodboldSettings() {
   const fb = settings.football || { leagues: [], teams: [] };
@@ -527,8 +532,8 @@ function fodboldSettings() {
     if (on && !teams && hasProxy()) FB.teamsOf(L.id).then((ts) => { ui.fbTeams = { ...(ui.fbTeams || {}), [L.id]: ts }; if (ui.page === 'indstillinger') renderMain(); }).catch(() => { ui.fbTeams = { ...(ui.fbTeams || {}), [L.id]: [] }; if (ui.page === 'indstillinger') renderMain(); });
     const fol = (fb.follow || []).includes(L.id);
     return on ? `<div class="fblg"><div class="row" style="justify-content:space-between"><b>${esc(L.name)}</b><button class="pill" data-act="fbFollow" data-id="${L.id}" aria-pressed="${fol}">${fol ? '✓' : '+'} Følg hele ligaen</button></div><div class="fbchips">${teams ? (teams.length ? teams.map(chip).join('') : '<span class="small muted">Kunne ikke hente holdene</span>') : '<span class="small muted">Henter hold …</span>'}</div></div>` : ''; };
-  const prefOpts = [((fb.teams || []).length ? { id: 'fav', name: 'Mine hold' } : null)].concat((fb.follow || []).map((id) => ({ id, name: (FB.LEAGUES.find((L) => L.id === id) || {}).name || id }))).filter(Boolean);
-  const prefSel = prefOpts.length > 1 ? `<label class="inl">Vises først<select data-set="football.pref" aria-label="Foretrukken liga">${prefOpts.map((o) => `<option value="${o.id}"${(fb.pref || prefOpts[0].id) === o.id ? ' selected' : ''}>${esc(o.name)}</option>`).join('')}</select></label>` : '';
+  const prefOpts = [].concat((fb.follow || []).map((id) => ({ id, name: (FB.LEAGUES.find((L) => L.id === id) || {}).name || id }))).filter(Boolean);
+  const prefSel = prefOpts.length > 1 ? `<label class="inl">Står øverst<select data-set="football.pref" aria-label="Foretrukken liga">${prefOpts.map((o) => `<option value="${o.id}"${(fb.pref || prefOpts[0].id) === o.id ? ' selected' : ''}>${esc(o.name)}</option>`).join('')}</select></label>` : '';
   return `<section class="card"><div class="sechead2"><b>Ligaer</b>${prefSel}</div><div class="choices">${[{ id: 'nat', name: 'Landsholdet' }].concat(FB.LEAGUES).map((L) => `<button class="pill" data-act="fbLeague" data-id="${L.id}" aria-pressed="${lgs.includes(L.id)}">${lgs.includes(L.id) ? '✓' : '+'} ${esc(L.name)}</button>`).join('')}</div></section>
     <section class="card"><b>Favorithold</b>${!hasProxy() ? needProxyMsg('Fodbold') : ''}
       ${lgs.includes('nat') ? `<div class="fblg"><b>Landsholdet</b><div class="fbchips">${FB.NATIONAL.map(chip).join('')}</div></div>` : ''}
@@ -1486,7 +1491,7 @@ const act = {
     const n = settings.places.length; const dir = +b.dataset.dir;
     if (b.dataset.scope === 'n1') { const m = Math.max(1, mixedNews().length); ui.n1Idx = (((ui.n1Idx + dir) % m) + m) % m; ui.n1At = Date.now(); renderMain(); return; }
     if (b.dataset.scope === 'insp') { const m = Math.max(1, MD.state.all.length); /* indekset tages modulo den filtrerede liste */ ui.inspIdx = (((ui.inspIdx + dir) % m) + m) % m; ui.inspAt = Date.now(); renderMain(); return; }
-    if (b.dataset.scope === 'fb') { const m = Math.max(1, fbPages().length); ui.fbIdx = ((((ui.fbIdx || 0) + dir) % m) + m) % m; ui.fbTouched = Date.now(); renderMain(); return; }
+    if (b.dataset.scope === 'fb') { const { days, today } = fbDays(); let i = days.findIndex((d) => dkey(d) === ui.fbDay); if (i < 0) i = days.findIndex((d) => +d === +today); const n = days[Math.max(0, Math.min(days.length - 1, i + dir))]; ui.fbDay = n ? dkey(n) : null; ui.fbTouched = Date.now(); renderMain(); return; }
     if (b.dataset.scope === 'cd') { const m = Math.max(1, countdowns().length); ui.cdIdx = (((ui.cdIdx + dir) % m) + m) % m; ui.cdAt = Date.now(); renderMain(); return; }
     if (b.dataset.scope === 'cal') { ui.calWeek += dir; renderMain(); return; }
     if (b.dataset.scope === 'news') { const m = Math.max(1, newsSources().length); ui.newsIdx = (((ui.newsIdx + dir) % m) + m) % m; ui.newsAt = Date.now(); renderMain(); return; }
@@ -1776,7 +1781,7 @@ function boot() {
     if (Date.now() - ui.cdAt >= 10000) act.wStep({ dataset: { scope: 'cd', dir: '1' } });
   }, 1000);
   setInterval(() => { if (ui.fpPlace !== 0 && Date.now() - ui.fpTouched > 3 * 60000) { ui.fpPlace = 0; softRender(); } }, 30000);
-  setInterval(() => { if (ui.fbIdx && Date.now() - (ui.fbTouched || 0) > 3 * 60000) { ui.fbIdx = 0; softRender(); } }, 30000); // tilbage til den foretrukne liga
+  setInterval(() => { if (ui.fbDay && Date.now() - (ui.fbTouched || 0) > 3 * 60000) { ui.fbDay = null; softRender(); } }, 30000); // tilbage til i dag
   setInterval(loadNews, 5 * 60000);
   setInterval(() => { if (!document.hidden) loadFootball(); }, 60000); // FB.load bestemmer selv: hvert minut under kampe, ellers hvert 10. minut
   setInterval(loadCal, 10 * 60000);

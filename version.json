@@ -1,5 +1,5 @@
 {
-  "version": "1.56.0",
+  "version": "1.57.0",
   "files": [
     "index.html",
     "app.js",
@@ -25,13 +25,13 @@
   ],
   "notes": [
     {
-      "version": "1.56.0",
+      "version": "1.57.0",
       "date": "25. november 2026",
-      "title": "Fodbold: én liga ad gangen",
+      "title": "Fodbold dag for dag",
       "items": [
-        "Følger du flere ligaer, får hver liga sin egen side i Fodbold-kortet – swipe eller brug pilene",
-        "Vælg under Indstillinger → Fodbold, hvilken liga der vises først",
-        "Runden vises, til dagen efter dens sidste kamp – derefter vises næste rundes kampe"
+        "Fodbold-kortet viser nu én dag ad gangen – i dag først",
+        "Bladr mellem dage med pilene eller ved at swipe",
+        "Kampene er delt op i ligaer; vælg under Indstillinger → Fodbold, hvilken liga der står øverst"
       ]
     },
     {

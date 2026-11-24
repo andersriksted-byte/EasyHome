@@ -1204,3 +1204,9 @@ button.w7r.sel{background:color-mix(in srgb,var(--accent) 16%,transparent);box-s
 .fb-sub{flex:none;font-size:12px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;padding:4px 2px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
 .fb-list.two{display:grid;grid-auto-flow:column;grid-template-columns:repeat(2,minmax(0,1fr));align-content:start;gap:5px 12px;overflow-y:auto;overscroll-behavior:contain}
+
+.fb-days{display:flex;flex-direction:column;gap:10px;min-height:0;overflow-y:auto;overscroll-behavior:contain;flex:1}
+.fb-days.two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-content:start;align-items:start;gap:10px 14px}
+.fb-grp{display:flex;flex-direction:column;gap:5px;min-width:0}
+.fb-grp .fb-row{grid-template-columns:62px minmax(0,1fr) auto minmax(0,1fr)}
+.arr:disabled{opacity:.3}
