@@ -57,14 +57,18 @@ const PAGES = [
   { id: 'forside', label: 'Forside' }, { id: 'kalender', label: 'Kalender' }, { id: 'vejr', label: 'Vejret' },
   { id: 'nyheder', label: 'Nyheder' }, { id: 'musik', label: 'Musik' }, { id: 'tv', label: 'DR TV' }
 ];
-const WIDGETS = { uge: 'Familiens uge', vejr: 'Vejret', nyheder: 'Nyheder', sonos: 'Musik (Sonos)', tv: 'DR TV', nedtaelling: 'Nedtælling' };
-const DEFAULT_SIZE = { uge: 'L', vejr: 'M', nyheder: 'M', sonos: 'S', tv: 'S', nedtaelling: 'S' };
+const WIDGETS = { uge: 'Familiens uge', vejr: 'Vejret', steder: 'Vejret andre steder', nyheder: 'Nyheder', sonos: 'Musik (Sonos)', tv: 'DR TV', nedtaelling: 'Nedtælling' };
+const DEFAULT_SIZE = { uge: 'L', vejr: 'M', steder: 'M', nyheder: 'M', sonos: 'S', tv: 'S', nedtaelling: 'S' };
 const SPAN = { S: 1, M: 2, L: 4 };
 const SIZE_NAME = { S: 'Lille', M: 'Mellem', L: 'Stor' };
 
 /* ---------- Tilstand ---------- */
-const D = { weather: null, weatherErr: null, compare: null, news: null, cal: null };
-const ui = { page: pageFromHash(), editing: false, calWeek: 0, geo: null, geoMsg: '', tick: 0, connMsg: '' };
+const D = { weather: null, weatherErr: null, wx: {}, wxErr: {}, compare: null, news: null, cal: null };
+// Steder: det første sted er 'hjem' og bruges i header og tema
+const home = () => settings.places[0];
+const placeLabel = (p) => p.label || p.name;
+const placeById = (id) => settings.places.find((p) => p.id === id) || home();
+const ui = { page: pageFromHash(), wPlace: null, fpPlace: 0, fpTouched: 0, editing: false, calWeek: 0, geo: null, geoMsg: '', tick: 0, connMsg: '' };
 function pageFromHash() { const h = location.hash.slice(1); return [...PAGES.map((p) => p.id), 'indstillinger'].includes(h) ? h : 'forside'; }
 
 function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), 2600); }
@@ -150,15 +154,40 @@ function wUge(size) {
       <div class="day ${sameDay(d, today) ? 'today' : ''}"><h3>${cap(DAYS[d.getDay()])} <span>${d.getDate()}.</span></h3>
       ${eventsOn(d).slice(0, size === 'M' ? 5 : 4).map((e) => evHtml(e, d, false)).join('')}</div>`).join('')}</div>`;
 }
+function placeArrows(scope, idx) {
+  const n = settings.places.length;
+  if (n < 2) return '';
+  return `<span class="parrows"><button class="arr" data-act="wStep" data-scope="${scope}" data-dir="-1" aria-label="Forrige sted">‹</button>
+    <span class="dots" aria-hidden="true">${settings.places.map((_, i) => `<i class="${i === idx ? 'on' : ''}"></i>`).join('')}</span>
+    <button class="arr" data-act="wStep" data-scope="${scope}" data-dir="1" aria-label="Næste sted">›</button></span>`;
+}
 function wVejr(size) {
-  const w = D.weather;
-  if (!w) return `<div class="lab">Vejret</div><div class="empty">${D.weatherErr ? esc(D.weatherErr) : 'Henter vejret …'}</div>`;
-  const head = `<div class="row" style="justify-content:space-between"><span class="lab">Vejret · ${esc(settings.location.name)}</span><span class="small muted">${esc(W.modelName(w.model))}</span></div>
+  const n = settings.places.length;
+  const idx = ((ui.fpPlace % n) + n) % n;
+  const place = settings.places[idx];
+  const w = D.wx[place.id];
+  const title = `<div class="row" style="justify-content:space-between;flex-wrap:nowrap"><span class="lab" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Vejret · ${esc(placeLabel(place))}</span>${placeArrows('fp', idx)}</div>`;
+  if (!w) return `${title}<div class="empty">${D.wxErr[place.id] ? esc(D.wxErr[place.id]) : 'Henter vejret …'}</div>`;
+  const head = `${title}
     <div class="wnow">${W.weatherIcon(w.now.code, w.now.isDay, size === 'S' ? 48 : 56)}<div><div class="t">${fmtTemp(w.now.temp)}</div><div class="small muted">${esc(W.codeText(w.now.code))} · føles som ${fmtTemp(w.now.feels)}</div></div></div>`;
   if (size === 'S') return head + `<div class="small" style="margin-top:auto">I dag ${fmtTemp(w.days[0].max)} / ${fmtTemp(w.days[0].min)} · vind ${num(w.now.wind, 0)} m/s</div>`;
   const hours = `<div class="hours">${w.hours.slice(0, size === 'M' ? 8 : 12).map((h) => `<div class="hour"><span>${pad(h.time.getHours())}</span>${W.weatherIcon(h.code, h.isDay, 26)}<span>${fmtTemp(h.temp)}</span><span class="r">${h.rain > 0 ? num(h.rain) + ' mm' : '&nbsp;'}</span></div>`).join('')}</div>`;
   if (size === 'M') return head + hours;
   return head + hours + `<div class="row" style="gap:8px">${w.days.slice(1, 6).map((d) => `<div class="hour" style="flex:1"><span>${cap(DAYS[d.date.getDay()])}</span>${W.weatherIcon(d.code, 1, 26)}<span>${fmtTemp(d.max)} / ${fmtTemp(d.min)}</span></div>`).join('')}</div>`;
+}
+function wSteder(size) {
+  const others = settings.places.slice(1);
+  if (!others.length) return `<div class="lab">Vejret andre steder</div><div class="empty">Tilføj fx sommerhuset under Indstillinger → Steder.</div><button class="btn line" data-act="nav" data-page="indstillinger">Tilføj sted</button>`;
+  const row = (p) => {
+    const w = D.wx[p.id];
+    if (!w) return `<div class="row"><b>${esc(placeLabel(p))}</b><span class="small muted">${D.wxErr[p.id] ? esc(D.wxErr[p.id]) : 'Henter …'}</span></div>`;
+    const days = size === 'L' ? `<div class="row" style="gap:6px">${w.days.slice(1, 4).map((d) => `<div class="hour" style="flex:1"><span>${cap(DAYS[d.date.getDay()])}</span>${W.weatherIcon(d.code, 1, 22)}<span>${fmtTemp(d.max)}/${fmtTemp(d.min)}</span></div>`).join('')}</div>` : '';
+    return `<button data-act="wPlace" data-id="${esc(p.id)}" style="border:0;background:var(--bg);border-radius:14px;padding:10px 12px;display:flex;flex-direction:column;gap:6px;text-align:left;color:var(--text)">
+      <span class="row" style="flex-wrap:nowrap;width:100%">${W.weatherIcon(w.now.code, w.now.isDay, size === 'S' ? 30 : 38)}<span style="flex:1;min-width:0"><b style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(placeLabel(p))}</b><span class="small muted">${esc(W.codeText(w.now.code))}</span></span>
+      <span style="text-align:right"><b style="font-size:22px">${fmtTemp(w.now.temp)}</b><span class="small muted" style="display:block;white-space:nowrap">${fmtTemp(w.days[0].max)} / ${fmtTemp(w.days[0].min)}${w.days[0].rain > 0 ? ' · ' + num(w.days[0].rain) + ' mm' : ''}</span></span></span>${days}</button>`;
+  };
+  const cols = size === 'S' ? 1 : Math.min(others.length, size === 'M' ? 2 : 4);
+  return `<div class="lab">Vejret andre steder</div><div style="display:grid;grid-template-columns:repeat(${cols},minmax(0,1fr));gap:8px">${others.map(row).join('')}</div>`;
 }
 function newsList(n, big = false) {
   if (!hasProxy() && !settings.news.publicProxyForTest) return needProxyMsg('Nyheder');
@@ -184,7 +213,7 @@ function wNed() {
   const cd = countdownDays();
   return `<div class="lab">Nedtælling</div>${cd === null ? '<div class="empty">Vælg en dato i Indstillinger</div>' : `<div style="font-size:64px;font-weight:800;line-height:1">${cd < 0 ? '✓' : cd}</div><div style="font-weight:700">${cd < 0 ? esc(settings.countdown.name) + ' er overstået' : (cd === 1 ? 'dag til ' : 'dage til ') + esc(settings.countdown.name.toLowerCase())}</div>`}`;
 }
-const WRENDER = { uge: wUge, vejr: wVejr, nyheder: wNyheder, sonos: wSonos, tv: wTv, nedtaelling: wNed };
+const WRENDER = { uge: wUge, vejr: wVejr, steder: wSteder, nyheder: wNyheder, sonos: wSonos, tv: wTv, nedtaelling: wNed };
 
 function pageForside() {
   const inLayout = (id) => settings.layout.some((x) => x.id === id);
@@ -230,14 +259,16 @@ function isoWeek(d) { const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(),
 
 /* ---------- Vejr ---------- */
 function pageVejr() {
-  const w = D.weather;
+  const place = placeById(ui.wPlace);
+  const w = D.wx[place.id];
+  const places = settings.places.map((p, i) => `<button class="pill" data-act="wPlace" data-id="${esc(p.id)}" aria-pressed="${p.id === place.id}">${i === 0 ? '⌂ ' : ''}${esc(placeLabel(p))}</button>`).join('') + '<button class="pill" data-act="nav" data-page="indstillinger" style="border-style:dashed">+ Tilføj sted</button>';
   const pills = W.MODELS.map((m) => `<button class="pill" data-act="wModel" data-model="${m.id}" aria-pressed="${settings.weather.model === m.id}">${esc(m.name)}</button>`).join('');
   const model = W.MODELS.find((m) => m.id === settings.weather.model) || W.MODELS[0];
-  let body = `<div class="empty">${D.weatherErr ? esc(D.weatherErr) : 'Henter …'}</div>`;
+  let body = `<div class="empty">${D.wxErr[place.id] ? esc(D.wxErr[place.id]) : 'Henter …'}</div>`;
   if (w) {
     const maxT = Math.max(...w.days.map((d) => d.max)); const minT = Math.min(...w.days.map((d) => d.min)); const span = Math.max(1, maxT - minT);
     body = `<div class="form" style="grid-template-columns:minmax(0,1fr) minmax(0,2fr)">
-      <section class="card"><div class="lab">Lige nu · ${esc(settings.location.name)}</div>
+      <section class="card"><div class="lab">Lige nu · ${esc(placeLabel(place))}${place.label && place.label !== place.name ? ` <span class="muted">(${esc(place.name)})</span>` : ''}</div>
         <div class="wnow">${W.weatherIcon(w.now.code, w.now.isDay, 72)}<div><div class="t" style="font-size:56px">${fmtTemp(w.now.temp)}</div><div class="muted">${esc(W.codeText(w.now.code))}</div></div></div>
         <div class="small">Føles som ${fmtTemp(w.now.feels)} · Vind ${num(w.now.wind, 0)} m/s fra ${W.windDirText(w.now.windDir)} · Fugt ${w.now.humidity ?? '–'}%</div>
         <div class="small muted">Sol op ${hhmm(w.days[0].sunrise)} · ned ${hhmm(w.days[0].sunset)}</div>
@@ -247,12 +278,12 @@ function pageVejr() {
           <div class="rng"><i style="left:${((d.min - minT) / span) * 100}%;right:${100 - ((d.max - minT) / span) * 100}%"></i></div>
           <span style="font-weight:700;white-space:nowrap">${fmtTemp(d.min)} / ${fmtTemp(d.max)}</span><span class="rain small" style="color:var(--accent);white-space:nowrap">${d.rain > 0 ? num(d.rain) + ' mm' : ''}</span></div>`).join('')}</div></section></div>`;
   }
-  const cmp = D.compare ? `<section class="card"><div class="lab">Sammenligning af kilder · i dag og i morgen</div>
+  const cmp = D.compare ? `<section class="card"><div class="lab">Sammenligning af kilder · ${esc(placeLabel(place))} · i dag og i morgen</div>
     <div style="overflow-x:auto"><table class="cmp"><thead><tr><th>Kilde</th><th>Nu</th><th class="n">I dag maks/min</th><th class="n">Nedbør i dag</th><th class="n">I morgen maks/min</th><th class="n">Nedbør i morgen</th></tr></thead><tbody>
     ${D.compare.map((r) => r.err ? `<tr><td>${esc(r.name)}</td><td colspan="5" class="err">${esc(r.err)}</td></tr>` : `<tr class="${r.id === settings.weather.model ? 'sel' : ''}"><td>${esc(r.name)}</td><td>${fmtTemp(r.d.now.temp)} ${esc(W.codeText(r.d.now.code).toLowerCase())}</td><td class="n">${fmtTemp(r.d.days[0].max)} / ${fmtTemp(r.d.days[0].min)}</td><td class="n">${num(r.d.days[0].rain)} mm</td><td class="n">${fmtTemp(r.d.days[1].max)} / ${fmtTemp(r.d.days[1].min)}</td><td class="n">${num(r.d.days[1].rain)} mm</td></tr>`).join('')}
     </tbody></table></div></section>` : '';
   return `<div class="ptitle"><h1>Vejret</h1><div class="tools"><button class="btn line" data-act="compare">${D.compare ? 'Opdater sammenligning' : 'Sammenlign kilder'}</button></div></div>
-    <div class="row">${pills}</div><div class="small muted">${esc(model.desc)}</div>${body}${cmp}`;
+    <div class="row">${placeArrows('page', settings.places.indexOf(place))}${places}</div><div class="row">${pills}</div><div class="small muted">${esc(model.desc)}</div>${body}${cmp}`;
 }
 
 /* ---------- Nyheder ---------- */
@@ -308,9 +339,12 @@ function pageIndstillinger() {
       <label class="f">Nøgle (DASH_KEY)<input type="password" data-set="proxy.key" value="${esc(s.proxy.key)}" autocomplete="off"></label></div>
       <div class="row"><button class="btn primary" data-act="testConn">Test forbindelse</button><span class="small" id="connMsg">${esc(ui.connMsg)}</span></div></section>
 
-    <section class="card"><b>Sted for vejret</b><div class="muted">Nu: ${esc(s.location.name)} (${num(s.location.lat, 2)}, ${num(s.location.lon, 2)})</div>
-      <div class="row" style="flex-wrap:nowrap"><input type="text" id="geoQ" placeholder="Søg by eller adresse" aria-label="Søg sted"><button class="btn primary" data-act="geoSearch">Søg</button></div>
-      ${ui.geo ? `<div class="row">${ui.geo.map((g, i) => `<button class="pill" data-act="geoPick" data-i="${i}">${esc(g.name)}<span class="muted small">&nbsp;${esc(g.area)}</span></button>`).join('') || '<span class="muted">Ingen resultater</span>'}</div>` : ''}${ui.geoMsg ? `<div class="err">${esc(ui.geoMsg)}</div>` : ''}</section>
+    <section class="card"><b>Steder</b><p class="note">Det øverste sted er <b>hjem</b> og bruges i toppen af skærmen. Giv stederne et navn, fx "Sommerhuset".</p>
+      ${s.places.map((p, i) => `<div class="calrow" style="grid-template-columns:1fr auto auto"><label class="f" style="gap:2px">${i === 0 ? '⌂ Hjem' : 'Navn'}<input type="text" data-place="${i}" value="${esc(p.label)}" placeholder="${esc(p.name)}" aria-label="Navn på ${esc(p.name)}"><span class="small muted">${esc(p.name)} · ${num(p.lat, 2)}, ${num(p.lon, 2)}</span></label>
+        ${i > 0 ? `<button class="btn" data-act="placeHome" data-i="${i}">Gør til hjem</button>` : '<span></span>'}${s.places.length > 1 ? `<button class="btn" data-act="placeRm" data-i="${i}">Fjern</button>` : '<span></span>'}</div>`).join('')}
+      <div class="lab" style="margin-top:6px">Tilføj sted</div>
+      <div class="row" style="flex-wrap:nowrap"><input type="text" id="geoQ" placeholder="Søg by, fx Skagen" aria-label="Søg sted"><button class="btn primary" data-act="geoSearch">Søg</button></div>
+      ${ui.geo ? `<div class="row">${ui.geo.map((g, i) => `<button class="pill" data-act="geoPick" data-i="${i}">+ ${esc(g.name)}<span class="muted small">&nbsp;${esc(g.area)}</span></button>`).join('') || '<span class="muted">Ingen resultater</span>'}</div>` : ''}${ui.geoMsg ? `<div class="err">${esc(ui.geoMsg)}</div>` : ''}</section>
 
     <section class="card"><b>Vejrkilde</b>${W.MODELS.map((m) => `<label class="check"><input type="radio" name="wmodel" data-set="weather.model" value="${m.id}" ${s.weather.model === m.id ? 'checked' : ''}><span><b>${esc(m.name)}</b><br><span class="small muted">${esc(m.desc)}</span></span></label>`).join('')}</section>
 
@@ -359,13 +393,16 @@ function renderAll() { applyTheme(); renderNav(); renderHeader(); renderMain(fal
 
 /* ---------- Data ---------- */
 async function loadWeather() {
-  try { D.weather = await W.getForecast(settings.location.lat, settings.location.lon, settings.weather.model); D.weatherErr = null; }
-  catch (e) { D.weatherErr = 'Kunne ikke hente vejret: ' + e.message; }
+  await Promise.all(settings.places.map(async (p) => {
+    try { D.wx[p.id] = await W.getForecast(p.lat, p.lon, settings.weather.model); D.wxErr[p.id] = null; }
+    catch (e) { D.wxErr[p.id] = 'Kunne ikke hente vejret: ' + e.message; }
+  }));
+  D.weather = D.wx[home().id] || null; D.weatherErr = D.wxErr[home().id] || null;
   applyTheme(); renderHeader(); softRender();
 }
 async function loadCompare() {
   D.compare = await Promise.all(W.MODELS.filter((m) => m.id !== 'best_match').map(async (m) => {
-    try { return { id: m.id, name: m.name, d: await W.getForecast(settings.location.lat, settings.location.lon, m.id) }; }
+    try { const p = placeById(ui.wPlace); return { id: m.id, name: m.name, d: await W.getForecast(p.lat, p.lon, m.id) }; }
     catch (e) { return { id: m.id, name: m.name, err: e.message }; }
   }));
   softRender();
@@ -401,7 +438,7 @@ const act = {
   },
   size: (b) => { const x = settings.layout.find((y) => y.id === b.dataset.id); if (x) { x.size = b.dataset.size; save(); renderMain(); } },
   calPrev: () => { ui.calWeek--; renderMain(); }, calNext: () => { ui.calWeek++; renderMain(); }, calToday: () => { ui.calWeek = 0; renderMain(); },
-  wModel: (b) => { settings.weather.model = b.dataset.model; save(); D.weather = null; renderMain(); loadWeather(); },
+  wModel: (b) => { settings.weather.model = b.dataset.model; save(); D.wx = {}; renderMain(); loadWeather(); },
   compare: () => { D.compare = D.compare || []; renderMain(); loadCompare(); },
   newsToggle: (b) => { toggleNews(b.dataset.id); renderMain(); },
   newsRefresh: () => { N.clearNewsCache(); D.news = null; renderMain(); loadNews(); },
@@ -422,7 +459,20 @@ const act = {
     try { ui.geo = await W.geocode(q.trim()); ui.geoMsg = ''; } catch (e) { ui.geoMsg = e.message; }
     renderMain();
   },
-  geoPick: (b) => { const g = ui.geo[+b.dataset.i]; settings.location = { name: g.name, lat: g.lat, lon: g.lon }; save(); ui.geo = null; D.weather = null; D.compare = null; renderMain(); loadWeather(); toast('Sted gemt: ' + g.name); },
+  geoPick: (b) => {
+    const g = ui.geo[+b.dataset.i];
+    if (settings.places.some((p) => Math.abs(p.lat - g.lat) < 0.01 && Math.abs(p.lon - g.lon) < 0.01)) { toast(g.name + ' er allerede tilføjet'); return; }
+    settings.places.push({ id: uid(), label: '', name: g.name, lat: g.lat, lon: g.lon }); save(); ui.geo = null; renderMain(); loadWeather(); toast('Tilføjet: ' + g.name + ' – giv det gerne et navn');
+  },
+  placeHome: (b) => { const i = +b.dataset.i; const [p] = settings.places.splice(i, 1); settings.places.unshift(p); save(); D.compare = null; renderMain(); loadWeather(); toast(placeLabel(p) + ' er nu hjem'); },
+  placeRm: (b) => { ui.fpPlace = 0; const [p] = settings.places.splice(+b.dataset.i, 1); delete D.wx[p.id]; if (ui.wPlace === p.id) ui.wPlace = null; save(); renderMain(); loadWeather(); },
+  wStep: (b) => {
+    const n = settings.places.length; const dir = +b.dataset.dir;
+    if (b.dataset.scope === 'fp') { ui.fpPlace = (((ui.fpPlace + dir) % n) + n) % n; ui.fpTouched = Date.now(); }
+    else { const i = settings.places.indexOf(placeById(ui.wPlace)); ui.wPlace = settings.places[(((i + dir) % n) + n) % n].id; D.compare = null; }
+    renderMain();
+  },
+  wPlace: (b) => { ui.wPlace = b.dataset.id; D.compare = null; if (ui.page !== 'vejr') { ui.page = 'vejr'; history.replaceState(null, '', '#vejr'); renderNav(); } renderMain(false); },
   customAdd: () => {
     const name = $('#cName').value.trim(); const url = $('#cUrl').value.trim();
     if (!name || !/^https?:\/\//.test(url)) { toast('Skriv et navn og en adresse der starter med https://'); return; }
@@ -454,11 +504,12 @@ document.addEventListener('change', (e) => {
     const v = t.type === 'checkbox' ? t.checked : t.value.trim();
     setPath(t.dataset.set, v);
     if (t.dataset.set.startsWith('proxy.')) { S.state.checked = false; }
-    if (t.dataset.set === 'weather.model') { D.weather = null; loadWeather(); }
+    if (t.dataset.set === 'weather.model') { D.wx = {}; loadWeather(); }
     if (t.dataset.set === 'news.publicProxyForTest') { N.clearNewsCache(); loadNews(); }
     if (t.dataset.set.startsWith('countdown') || t.dataset.set.endsWith('Theme')) { applyTheme(); renderHeader(); }
   } else if (t.dataset.news) { toggleNews(t.dataset.news); }
   else if (t.dataset.cal !== undefined) { settings.calendars[+t.dataset.cal][t.dataset.field] = t.value.trim(); save(); C.clearCalCache(); loadCal(); }
+  else if (t.dataset.place !== undefined) { settings.places[+t.dataset.place].label = t.value.trim(); save(); renderHeader(); }
   else if (t.dataset.tv !== undefined) { settings.tv.channels[+t.dataset.tv][t.dataset.field] = t.value.trim(); save(); }
   else if (t.hasAttribute('data-vol')) { sonosDo(() => S.setVolume(+t.value)); }
 });
@@ -499,6 +550,7 @@ document.addEventListener('pointercancel', endDrag);
 
 /* ---------- Start ---------- */
 function boot() {
+  if (!settings.places.length) { const l = settings.location; settings.places = [{ id: 'hjem', label: 'Hjem', name: l.name, lat: l.lat, lon: l.lon }]; save(); }
   const q = new URLSearchParams(location.search);
   if (q.get('sonos') === 'ok') { toast('Sonos er forbundet ✓'); history.replaceState(null, '', location.pathname + '#musik'); ui.page = 'musik'; }
   if (q.get('sonos') === 'fejl') { toast('Sonos-login mislykkedes – prøv igen'); history.replaceState(null, '', location.pathname + '#musik'); ui.page = 'musik'; }
@@ -507,6 +559,7 @@ function boot() {
   setInterval(() => { const c = $('#clk'); const n = new Date(); if (c) c.textContent = hhmm(n); if (n.getSeconds() === 0) { renderHeader(); applyTheme(); } }, 1000);
   setInterval(() => { ui.tick++; renderFooter(); }, 8000);
   setInterval(loadWeather, 15 * 60000);
+  setInterval(() => { if (ui.fpPlace !== 0 && Date.now() - ui.fpTouched > 3 * 60000) { ui.fpPlace = 0; softRender(); } }, 30000);
   setInterval(loadNews, 5 * 60000);
   setInterval(loadCal, 10 * 60000);
   setInterval(() => { if (S.state.connected && !document.hidden) loadSonos(); }, 8000);

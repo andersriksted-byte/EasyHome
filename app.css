@@ -87,6 +87,11 @@ a{color:var(--accent)}
 .legend span{padding:4px 12px;border-radius:99px;font-size:14px;font-weight:700;color:#201E1B}
 
 /* Vejr */
+.parrows{display:inline-flex;align-items:center;gap:6px;flex:none}
+.parrows .arr{width:44px;height:44px;border:0;border-radius:99px;background:var(--bg);color:var(--text);font-size:26px;font-weight:700;line-height:1;display:flex;align-items:center;justify-content:center;padding-bottom:3px}
+.parrows .dots{display:flex;gap:5px}
+.parrows .dots i{width:7px;height:7px;border-radius:99px;background:var(--track)}
+.parrows .dots i.on{background:var(--text)}
 .wnow{display:flex;align-items:center;gap:14px}
 .wnow .t{font-size:44px;font-weight:800;line-height:1}
 .hours{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(56px,1fr);gap:6px;overflow-x:auto;padding-bottom:4px}

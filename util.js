@@ -30,7 +30,8 @@ export const DEFAULTS = {
   nightTheme: 'aften',
   navOpen: false,
   proxy: { url: '', key: '' },
-  location: { name: 'København', lat: 55.6761, lon: 12.5683 },
+  location: { name: 'København', lat: 55.6761, lon: 12.5683 }, // ældre felt – flyttes ind i places ved start
+  places: [], // [{ id, label, name, lat, lon }] – første sted er 'hjem'
   weather: { model: 'dmi_seamless' },
   news: { sources: ['dr-seneste', 'tv2', 'jp'], custom: [], publicProxyForTest: false },
   calendars: [],
@@ -47,6 +48,7 @@ export const DEFAULTS = {
   layout: [
     { id: 'uge', size: 'L' },
     { id: 'vejr', size: 'M' },
+    { id: 'steder', size: 'M' },
     { id: 'nyheder', size: 'M' },
     { id: 'sonos', size: 'S' },
     { id: 'nedtaelling', size: 'S' }
