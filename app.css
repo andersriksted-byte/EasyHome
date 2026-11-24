@@ -1117,3 +1117,13 @@ button.w7r.sel{background:color-mix(in srgb,var(--accent) 16%,transparent);box-s
 .evi-row>span:first-child{width:22px;flex:none;text-align:center}
 .evi-dot{display:inline-block;width:14px;height:14px;border-radius:50%;background:var(--c);vertical-align:middle}
 .evi-notes{white-space:pre-wrap;font-size:15px;line-height:1.45;background:var(--dayBg);border-radius:14px;padding:12px 14px;max-height:40vh;overflow-y:auto;overflow-wrap:anywhere}
+
+/* Indkøbsliste opdelt i kategorier som i Madro */
+.shoplist.cats{display:grid;grid-template-columns:repeat(var(--cols),minmax(0,1fr));grid-auto-rows:auto;align-items:start;gap:0 16px}
+.scol{min-width:0}
+.scat{break-inside:avoid;margin-bottom:8px;border-left:4px solid var(--cc);padding-left:8px}
+.scat-h{display:flex;align-items:center;gap:6px;height:26px;font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--text);min-width:0}
+.scat-h b{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:800}
+.scat-n{font-weight:700;color:var(--muted)}
+.shoplist.cats .shopitem{height:30px}
+.shoplist.cats .shopitem i{background:var(--cc)}

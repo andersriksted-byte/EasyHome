@@ -11,6 +11,7 @@ import * as L from './look.js';
 import * as M from './media.js';
 import * as A from './login.js';
 import * as MD from './madro.js';
+import * as MC from './mcats.js';
 import * as SF from './somfy.js';
 import * as TM from './timer.js';
 import { onAuthLost } from './util.js';
@@ -489,7 +490,15 @@ function wIndkob(size, h = 1, wd = 1) {
   if (!items.length) return head + '<div class="empty">Listen er tom.</div>' + add;
   const cols = Math.min(3, wd, shapeKind(wd, h) === 'big' ? 2 : 3);
   const amt = (x) => [x.amount != null && x.amount !== '' ? String(x.amount).replace('.', ',') : '', x.unit || ''].join(' ').trim();
-  return head + `<div class="shoplist" style="--cols:${cols}">${items.map((x) => `<div class="shopitem"><i aria-hidden="true"></i><span class="si-name">${esc(x.name)}</span>${amt(x) ? `<span class="si-amt">${esc(amt(x))}</span>` : ''}</div>`).join('')}</div>` + add;
+  // Opdelt i kategorier i samme rækkefølge som i Madro (gangen gennem butikken)
+  const groups = new Map(); items.forEach((x) => { const c = MC.catOf(x); if (!groups.has(c)) groups.set(c, []); groups.get(c).push(x); });
+  const order = [...groups.keys()].sort((p, q) => MC.CATS.indexOf(p) - MC.CATS.indexOf(q));
+  const block = (c) => `<div class="scat" style="--cc:${MC.catColor(c)}"><div class="scat-h"><span aria-hidden="true">${MC.CAT_EMO[c] || '🛒'}</span><b>${esc(c)}</b><span class="scat-n">${groups.get(c).length}</span></div>${groups.get(c).map((x) => `<div class="shopitem"><i aria-hidden="true"></i><span class="si-name">${esc(x.name)}</span>${amt(x) ? `<span class="si-amt">${esc(amt(x))}</span>` : ''}</div>`).join('')}</div>`;
+  // Kategorierne fordeles i rækkefølge ned gennem spalterne, så de bliver nogenlunde lige lange
+  const colsArr = Array.from({ length: cols }, () => ({ n: 0, c: [] }));
+  const total = order.reduce((n, c) => n + groups.get(c).length + 1, 0); let k = 0;
+  order.forEach((c) => { const sz = groups.get(c).length + 1; if (k < cols - 1 && colsArr[k].n && colsArr[k].n + sz / 2 > total / cols) k++; colsArr[k].c.push(c); colsArr[k].n += sz; });
+  return head + `<div class="shoplist cats" style="--cols:${cols}">${colsArr.map((x) => `<div class="scol">${x.c.map(block).join('')}</div>`).join('')}</div>` + add;
 }
 
 // Køkkentimer: tryk på en tid for at starte. Flere timere kan køre samtidig.

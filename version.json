@@ -1,5 +1,5 @@
 {
-  "version": "1.47.0",
+  "version": "1.48.0",
   "files": [
     "index.html",
     "app.js",
@@ -19,9 +19,19 @@
     "login.js",
     "madro.js",
     "somfy.js",
-    "timer.js"
+    "timer.js",
+    "mcats.js"
   ],
   "notes": [
+    {
+      "version": "1.48.0",
+      "date": "24. november 2026",
+      "title": "Indkøbslisten i kategorier",
+      "items": [
+        "Indkøbslisten på forsiden er nu delt op i kategorier som i Madro",
+        "Kategorierne står i samme rækkefølge som gangen gennem butikken"
+      ]
+    },
     {
       "version": "1.47.0",
       "date": "24. november 2026",
