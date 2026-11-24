@@ -437,9 +437,10 @@ const durTxt = (min) => (min >= 60 ? `${Math.floor(min / 60)} t${min % 60 ? ' ' 
 function wNaeste(size, h = 1, wd = 1) {
   if (!D.cal) return cardHead('Næste') + '<div class="empty">Henter kalender …</div>';
   const now = Date.now();
-  const evs = D.cal.events.filter((e) => !e.allDay && e.end.getTime() > now && mineEvent(e)).sort((a, b) => a.start - b.start);
+  // Kun aftaler, der ikke er begyndt endnu – en aftale i gang springes over
+  const evs = D.cal.events.filter((e) => !e.allDay && e.start.getTime() > now && mineEvent(e)).sort((a, b) => a.start - b.start);
   if (!evs.length) return cardHead('Næste') + '<div class="empty">Ingen kommende aftaler.</div>';
-  const e = evs[0]; const running = e.start.getTime() <= now;
+  const e = evs[0]; const running = false;
   const mins = Math.round((e.start.getTime() - now) / 60000);
   const kind = shapeKind(wd, h);
   // Ring: hvor meget af de sidste 3 timer før aftalen der er tilbage

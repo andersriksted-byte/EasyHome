@@ -1,5 +1,5 @@
 {
-  "version": "1.42.1",
+  "version": "1.42.2",
   "files": [
     "index.html",
     "app.js",
@@ -22,6 +22,14 @@
     "timer.js"
   ],
   "notes": [
+    {
+      "version": "1.42.2",
+      "date": "24. november 2026",
+      "title": "Næste aftale springer over igangværende",
+      "items": [
+        "Når en aftale er gået i gang, viser Næste aftale i stedet den næstkommende."
+      ]
+    },
     {
       "version": "1.42.1",
       "date": "24. november 2026",
