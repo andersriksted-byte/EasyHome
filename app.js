@@ -638,9 +638,50 @@ function pageKalender() {
       <div class="tools"><button class="btn" data-act="calPrev" aria-label="Forrige uge">‹</button><button class="btn" data-act="calToday">I dag</button><button class="btn" data-act="calNext" aria-label="Næste uge">›</button></div></div>
     ${D.cal && D.cal.demo ? '<div class="empty">Viser eksempler. Tilføj jeres kalendere under Indstillinger → Kalendere.</div>' : ''}
     ${D.cal && D.cal.errors.length ? `<div class="err">${esc(D.cal.errors.map((e) => e.cal + ': ' + e.msg).join(' · '))}</div>` : ''}
-    <div class="days calweek" data-swipe="cal" style="grid-template-columns:repeat(7,minmax(0,1fr))">${days.map((d) => `
-      <div class="day ${sameDay(d, today) ? 'today' : ''}"><h3>${cap(DAYS[d.getDay()])} <span>${d.getDate()}.</span></h3>${eventsOn(d, true).map((e) => evHtml(e, d)).join('') || '<span class="small muted">–</span>'}${dayMenu(d)}</div>`).join('')}</div>
-    ${cals.length ? `<div class="legend">${cals.map((c) => { const on = !(settings.calHidden || []).includes(c.id); return `<button class="lchip${on ? '' : ' off'}" data-act="calShow" data-id="${esc(c.id)}" aria-pressed="${on}" style="--c:${esc(c.color)};--l:${lighten(c.color)}"><i></i>${esc(c.name)}</button>`; }).join('')}</div>` : ''}`;
+    ${calTimeGrid(days, today)}
+    ${cals.length ? `<div class="legend">${calGroups(cals).map((g) => { const on = g.ids.some((id) => !(settings.calHidden || []).includes(id)); return `<button class="lchip${on ? '' : ' off'}" data-act="calShow" data-id="${esc(g.ids.join(','))}" aria-pressed="${on}" style="--c:${esc(g.color)};--l:${lighten(g.color)}"><i></i>${esc(g.name)}</button>`; }).join('')}</div>` : ''}`;
+}
+// Ugen som timegitter: heldagsaftaler øverst, aftaler placeret efter klokkeslæt, dagens menu nederst
+const CAL_HH = 52; // højde pr. time i px
+function calTimeGrid(days, today) {
+  const evs = days.map((d) => eventsOn(d, true));
+  const allDay = evs.map((l, i) => l.filter((e) => e.allDay || (e.start <= startOfDay(days[i]) && e.end >= addDays(startOfDay(days[i]), 1))));
+  const timed = evs.map((l, i) => l.filter((e) => !allDay[i].includes(e)));
+  const cols = 'grid-template-columns:52px repeat(7,minmax(0,1fr))';
+  const head = `<div class="tg-row tg-head" style="${cols}"><span></span>${days.map((d) => `<div class="${sameDay(d, today) ? 'today' : ''}">${cap(DAYS[d.getDay()]).slice(0, 3)} <b>${d.getDate()}.</b></div>`).join('')}</div>`;
+  const ad = allDay.some((l) => l.length) ? `<div class="tg-row tg-all" style="${cols}"><span class="tg-lab">Hele<br>dagen</span>${allDay.map((l) => `<div>${l.map((e) => `<div class="ev" style="${evStyle(e)}">${esc(e.title)}</div>`).join('')}</div>`).join('')}</div>` : '';
+  const hours = Array.from({ length: 24 }, (_, h) => `<span class="tg-h" style="top:${h * CAL_HH}px">${h ? pad(h) + ':00' : ''}</span>`).join('');
+  const now = new Date();
+  const body = days.map((d, i) => {
+    const s0 = startOfDay(d).getTime();
+    const items = timed[i].map((e) => ({ e, a: Math.max(0, (e.start - s0) / 3600000), b: Math.min(24, (e.end - s0) / 3600000) })).sort((x, y) => x.a - y.a || y.b - x.b);
+    // Overlappende aftaler deler bredden
+    let group = [], end = -1; const groups = [];
+    items.forEach((it) => { if (it.a >= end && group.length) { groups.push(group); group = []; } group.push(it); end = Math.max(end, it.b); });
+    if (group.length) groups.push(group);
+    groups.forEach((g) => { const lanes = []; g.forEach((it) => { let k = lanes.findIndex((x) => x <= it.a); if (k < 0) { k = lanes.length; lanes.push(0); } lanes[k] = it.b; it.k = k; }); g.forEach((it) => { it.n = lanes.length; }); });
+    const html = items.map(({ e, a, b, k, n }) => { const h = Math.max(0.5, b - a) * CAL_HH - 2; return `<div class="ev tg-ev${h < 40 ? ' short' : ''}" style="${evStyle(e)};top:${a * CAL_HH}px;height:${h}px;left:calc(${(k / n) * 100}% + 2px);width:calc(${100 / n}% - 4px)" title="${esc(e.title)}"><time>${esc(evTime(e, d))}</time><span>${esc(e.title)}</span></div>`; }).join('');
+    const nowLine = sameDay(d, today) ? `<i class="tg-now" style="top:${((now - s0) / 3600000) * CAL_HH}px"></i>` : '';
+    return `<div class="tg-day${sameDay(d, today) ? ' today' : ''}">${html}${nowLine}</div>`;
+  }).join('');
+  const menus = days.map((d) => dayMenu(d));
+  const menu = menus.some(Boolean) ? `<div class="tg-row tg-menu" style="${cols}"><span></span>${menus.map((m) => `<div>${m}</div>`).join('')}</div>` : '';
+  requestAnimationFrame(calScroll);
+  return `<div class="tgrid" data-swipe="cal">${head}${ad}<div class="tg-body" id="tgBody"><div class="tg-inner" style="${cols};height:${24 * CAL_HH}px"><div class="tg-hours">${hours}</div>${body}</div></div>${menu}</div>`;
+}
+// Start ved kl. 7 (eller lige før nu i dag), og behold placeringen ved opdateringer
+function calScroll() {
+  const el = document.getElementById('tgBody'); if (!el) return;
+  const key = String(ui.calWeek || 0);
+  if (ui.calScrollKey !== key) { ui.calScrollKey = key; ui.calScrollTop = Math.max(0, Math.min(7, new Date().getHours() - 1)) * CAL_HH - 10; }
+  el.scrollTop = ui.calScrollTop;
+  el.onscroll = () => { if (el.clientHeight) ui.calScrollTop = el.scrollTop; };
+}
+// Kalendere med samme navn og farve vises og skjules samlet
+function calGroups(cals) {
+  const m = new Map();
+  cals.forEach((c) => { const k = (c.name || '').trim().toLowerCase() + '|' + String(c.color || '').toLowerCase(); if (!m.has(k)) m.set(k, { name: c.name, color: c.color, ids: [] }); m.get(k).ids.push(c.id); });
+  return [...m.values()];
 }
 function isoWeek(d) { const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())); const day = t.getUTCDay() || 7; t.setUTCDate(t.getUTCDate() + 4 - day); const y = new Date(Date.UTC(t.getUTCFullYear(), 0, 1)); return Math.ceil(((t - y) / 86400000 + 1) / 7); }
 
@@ -1359,7 +1400,7 @@ const act = {
   customRm: (b) => { settings.news.custom = settings.news.custom.filter((c) => c.id !== b.dataset.id); settings.news.sources = settings.news.sources.filter((x) => x !== b.dataset.id); save(); N.clearNewsCache(); renderMain(); loadNews(); },
   calAdd: () => { const colors = ['#D0563C', '#4C78D0', '#D9A400', '#2E9D5B', '#7A5AC8']; const c = { id: uid(), name: 'Ny kalender', color: colors[settings.calendars.length % colors.length], url: '' }; settings.calendars.push(c); ui.calEdit = c.id; save(); renderMain(); setTimeout(() => { const el = document.querySelectorAll('.calname'); if (el.length) { el[el.length - 1].focus(); el[el.length - 1].select(); } }, 50); },
   calEdit: (b) => { ui.calEdit = ui.calEdit === b.dataset.id ? null : b.dataset.id; renderMain(); },
-  calShow: (b) => { const h = settings.calHidden || []; const id = b.dataset.id; settings.calHidden = h.includes(id) ? h.filter((x) => x !== id) : h.concat(id); save(); renderMain(); },
+  calShow: (b) => { const ids = b.dataset.id.split(','); const h = settings.calHidden || []; const show = b.getAttribute('aria-pressed') !== 'true'; settings.calHidden = h.filter((x) => !ids.includes(x)).concat(show ? [] : ids); save(); renderMain(); },
   calRm: (b) => { settings.calendars.splice(+b.dataset.i, 1); save(); C.clearCalCache(); renderMain(); loadCal(); },
   tvAdd: () => { settings.tv.channels.push({ name: 'Ny knap', url: 'https://www.dr.dk/drtv' }); save(); renderMain(); },
   tvRm: (b) => { settings.tv.channels.splice(+b.dataset.i, 1); save(); renderMain(); },
