@@ -1,5 +1,5 @@
 {
-  "version": "1.38.1",
+  "version": "1.39.0",
   "files": [
     "index.html",
     "app.js",
@@ -22,6 +22,16 @@
     "timer.js"
   ],
   "notes": [
+    {
+      "version": "1.39.0",
+      "date": "24. november 2026",
+      "title": "Én nyhed ad gangen",
+      "items": [
+        "Nyt kort: Én nyhed ad gangen. Det viser én stor overskrift – med billede, når der er et – og skifter selv til næste nyhed.",
+        "Nyhederne blandes fra alle jeres medier på skift. Tryk for at læse, eller bladr med pilene.",
+        "Tilføj kortet under Tilpas forside."
+      ]
+    },
     {
       "version": "1.38.1",
       "date": "24. november 2026",

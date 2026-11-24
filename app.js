@@ -83,7 +83,7 @@ const SERVICES = [
   { id: 'somfy', name: 'Somfy', icon: 'blinds', desc: 'Styr screens, markiser og gardiner.', pages: ['somfy'], widgets: ['screens'], tabs: [] },
   { id: 'kalender', name: 'Kalender', icon: 'kalender', desc: 'Familiens aftaler fra iCloud m.fl.', pages: ['kalender'], widgets: ['uge'], tabs: [] },
   { id: 'vejr', name: 'Vejret', icon: 'vejr', desc: 'Prognoser fra DMI og andre kilder for jeres steder.', pages: ['vejr'], widgets: ['vejr', 'steder'], tabs: ['vejr'] },
-  { id: 'nyheder', name: 'Nyheder', icon: 'nyheder', desc: 'Overskrifter fra DR, TV 2, JP og egne kilder.', pages: ['nyheder'], widgets: ['nyheder'], tabs: ['nyheder'] },
+  { id: 'nyheder', name: 'Nyheder', icon: 'nyheder', desc: 'Overskrifter fra DR, TV 2, JP og egne kilder.', pages: ['nyheder'], widgets: ['nyheder', 'nyhed1'], tabs: ['nyheder'] },
   { id: 'musik', name: 'Musik (Sonos)', icon: 'musik', desc: 'Styr Sonos: afspil, rum og lydstyrke.', pages: ['musik'], widgets: ['sonos'], tabs: [] },
   { id: 'tv', name: 'DR TV', icon: 'tv', desc: 'Genveje til DR\'s kanaler.', pages: ['tv'], widgets: ['tv'], tabs: ['tv'] },
   { id: 'timer', name: 'Timer', icon: 'timer', desc: 'Køkkentimer med alarm – fx til madlavning.', pages: [], widgets: ['timer'], tabs: [] },
@@ -93,10 +93,10 @@ const svcOn = (id) => !settings.services || settings.services[id] !== false;
 const pageOn = (p) => SERVICES.every((x) => !x.pages.includes(p) || svcOn(x.id));
 const widgetOn = (w) => SERVICES.every((x) => !x.widgets.includes(w) || svcOn(x.id));
 const tabOn = (t) => (t === 'somfy' ? svcOn('somfy') : t === 'kalender' ? svcOn('kalender') || svcOn('nedtaelling') : SERVICES.every((x) => !x.tabs.includes(t) || svcOn(x.id)));
-const WIDGETS = { timer: 'Timer', screens: 'Screens (Somfy)', madplan: 'Madplan', indkob: 'Indkøbsliste', inspiration: 'Opskrift-inspiration', uge: 'Familiens uge', vejr: 'Vejret', steder: 'Vejret andre steder', nyheder: 'Nyheder', sonos: 'Musik (Sonos)', tv: 'DR TV', nedtaelling: 'Nedtælling' };
+const WIDGETS = { nyhed1: 'Én nyhed ad gangen', timer: 'Timer', screens: 'Screens (Somfy)', madplan: 'Madplan', indkob: 'Indkøbsliste', inspiration: 'Opskrift-inspiration', uge: 'Familiens uge', vejr: 'Vejret', steder: 'Vejret andre steder', nyheder: 'Nyheder', sonos: 'Musik (Sonos)', tv: 'DR TV', nedtaelling: 'Nedtælling' };
 // Forsiden er et gitter af ens kvadrater. Et kort fylder w kvadrater i bredden og h i højden.
 const SHAPES = [[1, 1], [2, 1], [3, 1], [4, 1], [1, 2], [1, 3], [1, 4], [2, 2]];
-const DEFAULT_SHAPE = { timer: [1, 1], screens: [2, 1], madplan: [4, 1], indkob: [2, 1], inspiration: [2, 1], uge: [4, 1], vejr: [2, 1], steder: [2, 1], nyheder: [2, 1], sonos: [1, 1], tv: [1, 1], nedtaelling: [1, 1] };
+const DEFAULT_SHAPE = { nyhed1: [2, 1], timer: [1, 1], screens: [2, 1], madplan: [4, 1], indkob: [2, 1], inspiration: [2, 1], uge: [4, 1], vejr: [2, 1], steder: [2, 1], nyheder: [2, 1], sonos: [1, 1], tv: [1, 1], nedtaelling: [1, 1] };
 const LEGACY = { S: [1, 1], M: [2, 1], L: [4, 1] };
 const shapeOf = (x) => (x.w && x.h ? [x.w, x.h] : LEGACY[x.size] || [1, 1]);
 const FIT = ['uge']; // kort der aldrig må skære indhold af – de bliver kompakte og vokser i højden ved behov
@@ -109,7 +109,7 @@ const D = { weather: null, weatherErr: null, wx: {}, wxErr: {}, compare: null, n
 const home = () => settings.places[0];
 const placeLabel = (p) => p.label || p.name;
 const placeById = (id) => settings.places.find((p) => p.id === id) || home();
-const ui = { sfMsg: '', inspIdx: 0, inspAt: Date.now(), calEdit: null, famMsg: null, cdIdx: 0, cdAt: Date.now(), cdMsg: null, bgMsg: null, sizeFor: null, newsIdx: 0, newsAt: Date.now(), feedMsg: null, feedDraft: null, page: pageFromHash(), setTab: 'familie', wPlace: null, fpPlace: 0, fpTouched: 0, editing: false, calWeek: 0, geo: null, geoMsg: '', tick: 0, connMsg: '' };
+const ui = { n1Idx: 0, n1At: Date.now(), sfMsg: '', inspIdx: 0, inspAt: Date.now(), calEdit: null, famMsg: null, cdIdx: 0, cdAt: Date.now(), cdMsg: null, bgMsg: null, sizeFor: null, newsIdx: 0, newsAt: Date.now(), feedMsg: null, feedDraft: null, page: pageFromHash(), setTab: 'familie', wPlace: null, fpPlace: 0, fpTouched: 0, editing: false, calWeek: 0, geo: null, geoMsg: '', tick: 0, connMsg: '' };
 function pageFromHash() { const h = location.hash.slice(1); return [...PAGES.map((p) => p.id), 'indstillinger'].includes(h) && (h === 'indstillinger' || pageOn(h)) ? h : 'forside'; }
 
 function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), 2600); }
@@ -328,6 +328,26 @@ function newsList(n, big = false) {
 }
 const newsSecs = () => (settings.news.rotateSecs === undefined ? 20 : +settings.news.rotateSecs);
 const newsLeft = () => Math.max(0, Math.ceil(newsSecs() - (Date.now() - ui.newsAt) / 1000));
+// Nyheder fra alle valgte medier på skift (DR, TV 2, JP, DR …), så intet medie fylder det hele
+function mixedNews() {
+  const all = D.news ? D.news.items : []; const by = {};
+  all.forEach((i) => { (by[i.sourceId] = by[i.sourceId] || []).push(i); });
+  const ls = Object.values(by); const out = [];
+  for (let r = 0; r < 40; r++) { let any = false; ls.forEach((l) => { if (l[r]) { out.push(l[r]); any = true; } }); if (!any) break; }
+  return out;
+}
+// Én nyhed ad gangen – skifter selv og blander alle medier
+function wNyhed1(size, h = 1, wd = 1) {
+  if (!hasProxy() && !settings.news.publicProxyForTest) return cardHead('Nyheder') + needProxyMsg('Nyheder');
+  const list = mixedNews();
+  if (!list.length) return cardHead('Nyheder') + `<div class="empty">${D.news ? 'Ingen nyheder lige nu.' : 'Henter nyheder …'}</div>`;
+  const n = list.length; const idx = ((ui.n1Idx % n) + n) % n; const it = list[idx];
+  const secs = newsSecs() || 20;
+  return `<a class="n1 ${it.image ? 'has-img' : ''}" href="${esc(it.link)}" data-read="${esc(it.source)}" target="_blank" rel="noopener" ${it.image ? `style="background-image:url('${esc(it.image)}')"` : ''}>
+    <span class="n1-in"><span class="n1-top"><span class="n1-src">${esc(it.source)}</span><span class="parrows" data-noread><button class="arr" data-act="wStep" data-scope="n1" data-dir="-1" aria-label="Forrige nyhed">‹</button><button class="arr" data-act="wStep" data-scope="n1" data-dir="1" aria-label="Næste nyhed">›</button></span></span>
+    <i class="n1-bar"><i id="n1Bar" style="width:${Math.max(0, 100 - ((Date.now() - ui.n1At) / (secs * 10)))}%"></i></i>
+    <span class="n1-txt">${it.date ? `<span class="meta">${esc(relTime(it.date))}</span>` : ''}<b>${esc(it.title)}</b></span></span></a>`;
+}
 function newsSources() { return N.allSources().filter((src) => settings.news.sources.includes(src.id)); }
 function wNyheder(size, h = 1, wd = 1) {
   const srcs = newsSources();
@@ -494,7 +514,7 @@ function wNed(size, h = 1, wd = 1) {
     <div class="cdw"><div class="cdn">${c.days < 0 ? '✓' : c.days}</div><div class="cdl">${label}</div><div class="cdd">${cap(DAYS_LONG[d.getDay()])} ${d.getDate()}. ${MONTHS[d.getMonth()]} ${d.getFullYear()}</div></div></div></div>`;
 }
 
-const WRENDER = { timer: wTimer, screens: wScreens, madplan: wMadplan, indkob: wIndkob, inspiration: wInspiration, uge: wUge, vejr: wVejr, steder: wSteder, nyheder: wNyheder, sonos: wSonos, tv: wTv, nedtaelling: wNed };
+const WRENDER = { nyhed1: wNyhed1, timer: wTimer, screens: wScreens, madplan: wMadplan, indkob: wIndkob, inspiration: wInspiration, uge: wUge, vejr: wVejr, steder: wSteder, nyheder: wNyheder, sonos: wSonos, tv: wTv, nedtaelling: wNed };
 
 function pageForside() {
   const inLayout = (id) => curLayout().some((x) => x.id === id);
@@ -1210,6 +1230,7 @@ const act = {
   setTab: (b) => { ui.setTab = b.dataset.tab; ui.geo = null; renderMain(false); },
   wStep: (b) => {
     const n = settings.places.length; const dir = +b.dataset.dir;
+    if (b.dataset.scope === 'n1') { const m = Math.max(1, mixedNews().length); ui.n1Idx = (((ui.n1Idx + dir) % m) + m) % m; ui.n1At = Date.now(); renderMain(); return; }
     if (b.dataset.scope === 'insp') { const m = Math.max(1, MD.state.all.length); ui.inspIdx = (((ui.inspIdx + dir) % m) + m) % m; ui.inspAt = Date.now(); renderMain(); return; }
     if (b.dataset.scope === 'cd') { const m = Math.max(1, countdowns().length); ui.cdIdx = (((ui.cdIdx + dir) % m) + m) % m; ui.cdAt = Date.now(); renderMain(); return; }
     if (b.dataset.scope === 'cal') { ui.calWeek += dir; renderMain(); return; }
@@ -1251,7 +1272,7 @@ let volTimer = null;
 async function sonosDo(fn) { try { await fn(); setTimeout(() => loadSonos(), 400); } catch (e) { toast('Sonos: ' + e.message); } }
 
 document.addEventListener('click', (e) => {
-  const link = e.target.closest('a[data-read]');
+  const link = e.target.closest('[data-noread]') ? null : e.target.closest('a[data-read]');
   if (link) { e.preventDefault(); R.openReader(link.href, link.dataset.read); return; }
   const b = e.target.closest('[data-act]');
   if (b && act[b.dataset.act]) {
@@ -1320,7 +1341,7 @@ document.addEventListener('change', (e) => {
 window.addEventListener('hashchange', () => { const p = pageFromHash(); if (p !== ui.page) { ui.page = p; renderNav(); renderMain(false); } });
 
 /* ---------- Swipe i kort med flere sider (vejr, nyheder) ---------- */
-const SWIPE_SCOPE = { vejr: 'fp', nyheder: 'news', nedtaelling: 'cd', inspiration: 'insp' };
+const SWIPE_SCOPE = { nyhed1: 'n1', vejr: 'fp', nyheder: 'news', nedtaelling: 'cd', inspiration: 'insp' };
 let swipe = null; let swipedAt = 0;
 document.addEventListener('pointerdown', (e) => {
   if (ui.editing || e.target.closest('.hours, input, .handle')) return; // timeoversigten scroller selv vandret
@@ -1462,6 +1483,14 @@ function boot() {
     const left = newsLeft();
     if (left <= 0) { act.wStep({ dataset: { scope: 'news', dir: '1' } }); return; }
     bar.style.width = (left / newsSecs()) * 100 + '%';
+  }, 1000);
+  // "Én nyhed ad gangen": skift efter samme tid som nyhedskortet
+  setInterval(() => {
+    const on = ui.page === 'forside' && !ui.editing && !drag && !R.isOpen() && curLayout().some((x) => x.id === 'nyhed1') && widgetOn('nyhed1') && mixedNews().length > 1;
+    if (!on) { ui.n1At = Date.now(); return; }
+    const secs = newsSecs() || 20; const left = secs * 1000 - (Date.now() - ui.n1At);
+    const bar = document.getElementById('n1Bar'); if (bar) bar.style.width = Math.max(0, left / (secs * 10)) + '%';
+    if (left <= 0) act.wStep({ dataset: { scope: 'n1', dir: '1' } });
   }, 1000);
   // Inspirationskortet: ny ret hvert 20. sekund
   setInterval(() => {

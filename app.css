@@ -951,3 +951,19 @@ button.w7r.sel{background:color-mix(in srgb,var(--accent) 16%,transparent);box-s
 .sfallcard{flex-direction:row;gap:20px}.sfall-win{max-width:none}
 .sfone .sfw{flex:none;height:36px}
 @container (max-height:320px){.sfone .sfw{display:none}}
+
+/* Én nyhed ad gangen */
+.w[data-wid=nyhed1]{padding:0}
+.n1{flex:1;min-height:0;display:flex;border-radius:20px;overflow:hidden;background:var(--card) center/cover no-repeat;text-decoration:none;color:var(--text)}
+.n1-in{flex:1;display:flex;flex-direction:column;gap:8px;padding:16px 20px 18px;min-height:0}
+.n1.has-img .n1-in{background:linear-gradient(180deg,rgba(0,0,0,.45),rgba(0,0,0,0) 35%,rgba(0,0,0,.78));color:#fff}
+.n1-top{display:flex;align-items:center;justify-content:space-between;gap:8px;height:36px}
+.n1-src{font-size:14px;font-weight:800;color:var(--hot);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.n1.has-img .n1-src{color:#fff}
+.n1.has-img .parrows .arr{background:rgba(255,255,255,.22);color:#fff}
+.n1-bar{display:block;height:3px;border-radius:99px;background:color-mix(in srgb,currentColor 18%,transparent);overflow:hidden}
+.n1-bar i{display:block;height:100%;background:currentColor;opacity:.8;transition:width 1s linear}
+.n1-txt{margin-top:auto;display:flex;flex-direction:column;gap:4px;min-width:0}
+.n1-txt .meta{font-size:12px;opacity:.85}
+.n1-txt b{font-size:clamp(18px,7cqmin,32px);line-height:1.2;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.n1.has-img .n1-txt b{text-shadow:0 2px 12px rgba(0,0,0,.4)}
