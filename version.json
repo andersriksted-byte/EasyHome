@@ -1,5 +1,5 @@
 {
-  "version": "1.50.2",
+  "version": "1.51.0",
   "files": [
     "index.html",
     "app.js",
@@ -23,6 +23,16 @@
     "mcats.js"
   ],
   "notes": [
+    {
+      "version": "1.51.0",
+      "date": "24. november 2026",
+      "title": "Visningen står i toppen",
+      "items": [
+        "Navnet på den side, du ser, står nu i toppen ved siden af uret",
+        "I kalenderen står ugenummer og datoer også dér",
+        "Sidernes egne overskrifter er fjernet, så der er mere plads"
+      ]
+    },
     {
       "version": "1.50.2",
       "date": "24. november 2026",
