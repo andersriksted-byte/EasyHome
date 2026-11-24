@@ -1,5 +1,5 @@
 {
-  "version": "1.15.2",
+  "version": "1.15.3",
   "files": [
     "index.html",
     "app.js",
@@ -19,6 +19,15 @@
     "login.js"
   ],
   "notes": [
+    {
+      "version": "1.15.3",
+      "date": "24. november 2026",
+      "title": "Strammere udseende",
+      "items": [
+        "Alle kort har nu samme slags overskrift på én linje – lange navne forkortes med …",
+        "Nyhedsoverskrifter, DR TV-knapper, nedtællinger og nedtællingen øverst holder sig inden for faste rammer, så intet skubber til opsætningen."
+      ]
+    },
     {
       "version": "1.15.2",
       "date": "24. november 2026",

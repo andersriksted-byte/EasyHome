@@ -183,22 +183,24 @@ function renderFooter() {
 }
 
 /* ---------- Forside-widgets ---------- */
+// Fælles overskrift for alle kort: altid én linje i samme højde. For lang tekst forkortes med …
+const cardHead = (title, right = '') => `<div class="whead"><span class="lab" title="${esc(title)}">${esc(title)}</span>${right}</div>`;
 function wUge(size, h = 1, w = 1) {
   const today = startOfDay(new Date());
-  const demo = D.cal && D.cal.demo ? '<div class="small muted">Eksempel – tilføj jeres kalendere i Indstillinger</div>' : '';
-  if (!D.cal) return '<div class="lab">Familiens uge</div><div class="empty">Henter kalender …</div>';
+  const demo = D.cal && D.cal.demo ? '<span class="small muted">Eksempel</span>' : '';
+  if (!D.cal) return cardHead('Familiens uge') + '<div class="empty">Henter kalender …</div>';
   if (size === 'S' && h >= 2) {
     const n = h * 2;
-    return `<div class="lab">Familien · ${n} dage</div><div style="display:flex;flex-direction:column;gap:8px">${Array.from({ length: n }, (_, i) => addDays(today, i)).map((d) => `<div><div class="small" style="font-weight:800">${i0(d, today)}</div><div style="display:flex;flex-direction:column;gap:4px;margin-top:4px">${eventsOn(d).map((e) => evHtml(e, d, false)).join('') || '<span class="small muted">–</span>'}</div></div>`).join('')}</div>${demo}`;
+    return `${cardHead('Familien · ' + n + ' dage')}<div style="display:flex;flex-direction:column;gap:8px">${Array.from({ length: n }, (_, i) => addDays(today, i)).map((d) => `<div><div class="small" style="font-weight:800">${i0(d, today)}</div><div style="display:flex;flex-direction:column;gap:4px;margin-top:4px">${eventsOn(d).map((e) => evHtml(e, d, false)).join('') || '<span class="small muted">–</span>'}</div></div>`).join('')}</div>${demo}`;
   }
   if (size === 'S') {
     const t = eventsOn(today); const m = eventsOn(addDays(today, 1));
-    return `<div class="lab">I dag</div><div class="evlist" style="display:flex;flex-direction:column;gap:6px">${t.length ? t.map((e) => evHtml(e, today)).join('') : '<div class="small muted">Ingen aftaler</div>'}</div>
+    return `${cardHead('I dag')}<div class="evlist" style="display:flex;flex-direction:column;gap:6px">${t.length ? t.map((e) => evHtml(e, today)).join('') : '<div class="small muted">Ingen aftaler</div>'}</div>
       <div style="margin-top:auto;border-top:2px dashed var(--line);padding-top:8px;display:flex;flex-direction:column;gap:6px"><div class="lab">I morgen</div>${m.map((e) => evHtml(e, addDays(today, 1), false)).join('') || '<div class="small muted">Ingen aftaler</div>'}</div>${demo}`;
   }
   const nd = size === 'L' ? 7 : w >= 3 ? 5 : 3;
   const days = nd === 7 ? [0, 1, 2, 3, 4, 5, 6].map((i) => addDays(weekStart(0), i)) : Array.from({ length: nd }, (_, i) => addDays(today, i));
-  return `<div class="row" style="justify-content:space-between"><span class="lab">${nd === 7 ? 'Familiens uge' : 'Næste ' + nd + ' dage'}</span>${demo}</div>
+  return `${cardHead(nd === 7 ? 'Familiens uge' : 'Næste ' + nd + ' dage', demo)}
     <div class="days" style="grid-template-columns:repeat(${days.length},minmax(0,1fr))">${days.map((d) => `
       <div class="day ${sameDay(d, today) ? 'today' : ''}"><h3>${cap(DAYS[d.getDay()])} <span>${d.getDate()}.</span></h3>
       ${eventsOn(d).map((e) => evHtml(e, d, false)).join('')}</div>`).join('')}</div>`;
@@ -218,7 +220,7 @@ function wVejr(size, h = 1, wd = 1) {
   const idx = ((ui.fpPlace % n) + n) % n;
   const place = settings.places[idx];
   const w = D.wx[place.id];
-  const title = `<div class="whead"><span class="lab" title="${esc(placeLabel(place))}">${wd > 1 ? 'Vejret · ' : ''}${esc(placeLabel(place))}</span>${placeArrows('fp', idx)}</div>`;
+  const title = cardHead((wd > 1 ? 'Vejret · ' : '') + placeLabel(place), placeArrows('fp', idx));
   if (!w) return `${title}<div class="empty">${D.wxErr[place.id] ? esc(D.wxErr[place.id]) : 'Henter vejret …'}</div>`;
   const kind = shapeKind(wd, h);
   const t = w.days[0];
@@ -240,7 +242,7 @@ function wVejr(size, h = 1, wd = 1) {
 }
 function wSteder(size) {
   const others = settings.places.slice(1);
-  if (!others.length) return `<div class="lab">Vejret andre steder</div><div class="empty">Steder tilføjes under Indstillinger → Vejret.</div>`;
+  if (!others.length) return `${cardHead('Vejret andre steder')}<div class="empty">Steder tilføjes under Indstillinger → Vejret.</div>`;
   const row = (p) => {
     const w = D.wx[p.id];
     if (!w) return `<div class="row"><b>${esc(placeLabel(p))}</b><span class="small muted">${D.wxErr[p.id] ? esc(D.wxErr[p.id]) : 'Henter …'}</span></div>`;
@@ -250,7 +252,7 @@ function wSteder(size) {
       <span style="text-align:right"><b style="font-size:22px">${fmtTemp(w.now.temp)}</b><span class="small muted" style="display:block;white-space:nowrap">${fmtTemp(w.days[0].max)} / ${fmtTemp(w.days[0].min)}${w.days[0].rain > 0 ? ' · ' + num(w.days[0].rain) + ' mm' : ''}</span></span></span>${days}</button>`;
   };
   const cols = size === 'S' ? 1 : Math.min(others.length, size === 'M' ? 2 : 4);
-  return `<div class="lab">Vejret andre steder</div><div style="display:grid;grid-template-columns:repeat(${cols},minmax(0,1fr));gap:8px">${others.map(row).join('')}</div>`;
+  return `${cardHead('Vejret andre steder')}<div style="display:grid;grid-template-columns:repeat(${cols},minmax(0,1fr));gap:8px">${others.map(row).join('')}</div>`;
 }
 function newsList(n, big = false) {
   if (!hasProxy() && !settings.news.publicProxyForTest) return needProxyMsg('Nyheder');
@@ -264,11 +266,11 @@ const newsLeft = () => Math.max(0, Math.ceil(newsSecs() - (Date.now() - ui.newsA
 function newsSources() { return N.allSources().filter((src) => settings.news.sources.includes(src.id)); }
 function wNyheder(size, h = 1, wd = 1) {
   const srcs = newsSources();
-  if (!hasProxy() && !settings.news.publicProxyForTest) return `<div class="lab">Nyheder</div>${needProxyMsg('Nyheder')}`;
-  if (!srcs.length) return '<div class="lab">Nyheder</div><div class="empty">Vælg nyhedskilder under Indstillinger → Nyheder.</div>';
+  if (!hasProxy() && !settings.news.publicProxyForTest) return `${cardHead('Nyheder')}${needProxyMsg('Nyheder')}`;
+  if (!srcs.length) return cardHead('Nyheder') + '<div class="empty">Vælg nyhedskilder under Indstillinger → Nyheder.</div>';
   const n = srcs.length; const idx = ((ui.newsIdx % n) + n) % n; const src = srcs[idx];
   const left = n > 1 ? newsLeft() : 0;
-  const head = `<div class="whead"><span class="lab">${esc(src.name)}</span>${pageArrows('news', idx, n, 'nyhedskilde')}</div>
+  const head = `${cardHead(src.name, pageArrows('news', idx, n, 'nyhedskilde'))}
     ${n > 1 && newsSecs() > 0 ? `<div class="nbar" aria-hidden="true"><i id="newsBar" style="width:${(left / newsSecs()) * 100}%"></i></div>` : ''}`;
   if (!D.news) return head + '<div class="empty">Henter nyheder …</div>';
   const all = D.news.items.filter((i) => i.sourceId === src.id).slice(0, 30);
@@ -284,7 +286,7 @@ function wNyheder(size, h = 1, wd = 1) {
   return head + `<div class="nbody nb-${kind}${heroItem ? ' has-hero' : ''}">${hero}${list}</div>`;
 }
 function wSonos(size, h = 1, wd = 1) {
-  if (!S.state.connected) return `<div class="lab">Musik</div><div class="empty">Sonos er ikke forbundet endnu.</div><button class="btn line" data-act="nav" data-page="musik">Gå til Musik</button>`;
+  if (!S.state.connected) return `${cardHead('Musik')}<div class="empty">Sonos er ikke forbundet endnu.</div><button class="btn line" data-act="nav" data-page="musik">Gå til Musik</button>`;
   const np = S.nowPlaying();
   const kind = shapeKind(wd, h);
   const art = np.image ? `background-image:url('${esc(np.image)}')` : '';
@@ -300,17 +302,17 @@ function wSonos(size, h = 1, wd = 1) {
 function wTv(size, h = 1, wd = 1) {
   const ch = settings.tv.channels;
   const cols = Math.max(1, Math.min(ch.length, h >= 2 ? wd : wd * 2)); const rows = Math.max(1, Math.min(Math.ceil(ch.length / cols), h * 2));
-  return `<div class="lab">DR TV</div><div class="tvw" style="--c:${cols};--r:${rows}">${ch.slice(0, cols * rows).map((c) => `<a class="tvtile" href="${esc(c.url)}" target="_blank" rel="noopener">${fillSvg('play', 28)}${esc(c.name)}</a>`).join('')}</div>`;
+  return `${cardHead('DR TV')}<div class="tvw" style="--c:${cols};--r:${rows}">${ch.slice(0, cols * rows).map((c) => `<a class="tvtile" href="${esc(c.url)}" target="_blank" rel="noopener">${fillSvg('play', 28)}<span class="tvname">${esc(c.name)}</span></a>`).join('')}</div>`;
 }
 function wNed(size, h = 1, wd = 1) {
   const list = countdowns();
-  if (!list.length) return '<div class="cdcard"><div class="cdinner"><div class="lab">Nedtælling</div><div class="empty">Vælg nedtællinger til kortet under Indstillinger → Kalender.</div></div></div>';
+  if (!list.length) return '<div class="cdcard"><div class="cdinner">' + cardHead('Nedtælling') + '<div class="empty">Vælg nedtællinger til kortet under Indstillinger → Kalender.</div></div></div>';
   const n = list.length; const idx = ((ui.cdIdx % n) + n) % n; const c = list[idx];
   const d = new Date(c.date + 'T00:00');
   const img = M.getImage(c.imageId);
   const label = c.days < 0 ? esc(c.name) + ' er overstået' : c.days === 0 ? 'I dag!' : (c.days === 1 ? 'dag til ' : 'dage til ') + esc(c.name.toLowerCase());
   return `<div class="cdcard ${img ? 'has-img' : ''}" ${img ? `style="background-image:url('${img}')"` : ''}>
-    <div class="cdinner"><div class="whead"><span class="lab">${esc(c.name)}</span>${pageArrows('cd', idx, n, 'nedtælling')}</div>
+    <div class="cdinner">${cardHead(c.name, pageArrows('cd', idx, n, 'nedtælling'))}
     <div class="cdw"><div class="cdn">${c.days < 0 ? '✓' : c.days}</div><div class="cdl">${label}</div><div class="cdd">${cap(DAYS_LONG[d.getDay()])} ${d.getDate()}. ${MONTHS[d.getMonth()]} ${d.getFullYear()}</div></div></div></div>`;
 }
 

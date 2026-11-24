@@ -219,7 +219,8 @@ a{color:var(--accent)}
 .parrows .dots{display:flex;gap:4px;padding:0 2px}
 .parrows .dots i{width:5px;height:5px;border-radius:99px;background:var(--track)}
 .parrows .dots i.on{background:var(--text)}
-.whead{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0;flex-wrap:nowrap}
+.whead{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0;flex-wrap:nowrap;height:36px;flex:none}
+.whead>:not(.lab){flex:none;white-space:nowrap}
 /* Overskriften holdes på én linje – bliver den for lang, forkortes den med … så indholdet ikke flytter sig */
 .whead .lab{line-height:1.3;min-width:0;flex:1 1 auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .whead .parrows{flex:none}
@@ -449,3 +450,13 @@ span.avatar{opacity:1}
 .tgl i{position:absolute;top:3px;left:3px;width:26px;height:26px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:left .2s}
 .svc.on .tgl{background:var(--accent)}.svc.on .tgl i{left:23px}
 .ftr[hidden]{display:none}
+
+/* Faste rammer for nyheder: overskrifter fylder højst et fast antal linjer, så kortet ser ens ud uanset tekstlængde */
+.nlist b{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.nhero b{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+
+/* Strammere rammer: tekst må aldrig skubbe til opsætningen */
+.tvtile svg{flex:none}
+.tvw .tvname{display:block;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chip.accent{display:inline-block;max-width:34ch;line-height:28px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cdl{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
