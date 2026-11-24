@@ -182,7 +182,7 @@ function wVejr(size, h = 1) {
   const idx = ((ui.fpPlace % n) + n) % n;
   const place = settings.places[idx];
   const w = D.wx[place.id];
-  const title = `<div class="row" style="justify-content:space-between;flex-wrap:nowrap"><span class="lab" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Vejret · ${esc(placeLabel(place))}</span>${placeArrows('fp', idx)}</div>`;
+  const title = `<div class="whead"><span class="lab">Vejret · ${esc(placeLabel(place))}</span>${placeArrows('fp', idx)}</div>`;
   if (!w) return `${title}<div class="empty">${D.wxErr[place.id] ? esc(D.wxErr[place.id]) : 'Henter vejret …'}</div>`;
   const head = `${title}
     <div class="wnow">${W.weatherIcon(w.now.code, w.now.isDay, size === 'S' ? 48 : 56)}<div><div class="t">${fmtTemp(w.now.temp)}</div><div class="small muted">${esc(W.codeText(w.now.code))} · føles som ${fmtTemp(w.now.feels)}</div></div></div>`;
@@ -224,7 +224,7 @@ function wNyheder(size, h = 1) {
   if (!srcs.length) return '<div class="lab">Nyheder</div><div class="empty">Vælg nyhedskilder under Indstillinger → Nyheder.</div>';
   const n = srcs.length; const idx = ((ui.newsIdx % n) + n) % n; const src = srcs[idx];
   const left = n > 1 ? newsLeft() : 0;
-  const head = `<div class="row" style="justify-content:space-between;flex-wrap:nowrap"><span class="lab" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(src.name)}</span>${pageArrows('news', idx, n, 'nyhedskilde')}</div>
+  const head = `<div class="whead"><span class="lab">${esc(src.name)}</span>${pageArrows('news', idx, n, 'nyhedskilde')}</div>
     ${n > 1 ? `<div class="nbar" aria-hidden="true"><i id="newsBar" style="width:${(left / NEWS_SECS) * 100}%"></i></div>` : ''}`;
   if (!D.news) return head + '<div class="empty">Henter nyheder …</div>';
   const items = D.news.items.filter((i) => i.sourceId === src.id).slice(0, count);

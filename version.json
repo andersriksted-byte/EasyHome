@@ -1,5 +1,5 @@
 {
-  "version": "1.9.0",
+  "version": "1.9.1",
   "files": [
     "index.html",
     "app.js",
@@ -16,6 +16,15 @@
     "reader.js"
   ],
   "notes": [
+    {
+      "version": "1.9.1",
+      "date": "24. november 2026",
+      "title": "Pænere overskrifter i kortene",
+      "items": [
+        "Pilene i nyheds- og vejrkortet er blevet mindre.",
+        "Overskriften må bruge to linjer i smalle kort, så den ikke bliver klippet af."
+      ]
+    },
     {
       "version": "1.9.0",
       "date": "24. november 2026",

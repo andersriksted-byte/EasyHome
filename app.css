@@ -99,11 +99,14 @@ a{color:var(--accent)}
 .legend span{padding:4px 12px;border-radius:99px;font-size:14px;font-weight:700;color:#201E1B}
 
 /* Vejr */
-.parrows{display:inline-flex;align-items:center;gap:6px;flex:none}
-.parrows .arr{width:44px;height:44px;border:0;border-radius:99px;background:var(--bg);color:var(--text);font-size:26px;font-weight:700;line-height:1;display:flex;align-items:center;justify-content:center;padding-bottom:3px}
-.parrows .dots{display:flex;gap:5px}
-.parrows .dots i{width:7px;height:7px;border-radius:99px;background:var(--track)}
+.parrows{display:inline-flex;align-items:center;gap:4px;flex:none}
+.parrows .arr{position:relative;width:32px;height:32px;border:0;border-radius:99px;background:var(--bg);color:var(--text2);font-size:20px;font-weight:700;line-height:1;display:flex;align-items:center;justify-content:center;padding-bottom:2px}
+.parrows .arr::after{content:"";position:absolute;inset:-6px}
+.parrows .dots{display:flex;gap:4px;padding:0 2px}
+.parrows .dots i{width:5px;height:5px;border-radius:99px;background:var(--track)}
 .parrows .dots i.on{background:var(--text)}
+.whead{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+.whead .lab{line-height:1.3;padding-top:7px;overflow-wrap:anywhere}
 .wnow{display:flex;align-items:center;gap:14px}
 .wnow .t{font-size:44px;font-weight:800;line-height:1}
 .hours{touch-action:pan-x;display:grid;grid-auto-flow:column;grid-auto-columns:minmax(56px,1fr);gap:6px;overflow-x:auto;padding-bottom:4px}
