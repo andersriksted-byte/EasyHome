@@ -464,7 +464,7 @@ function pageForside() {
     </section>`;
   }).join('');
   const me = meMember();
-  return `<div class="ptitle"><h1>${esc((settings.family && settings.family.name) || 'Forside')}</h1>${me ? `<span class="mechip" style="--c:${esc(me.color)}">${esc(me.name)}s visning <button data-act="pickMe" data-id="${esc(me.id)}" aria-label="Vis hele familien">✕</button></span>` : ''}</div>
+  return `${me ? `<div class="ptitle"><span class="mechip" style="--c:${esc(me.color)}">${esc(me.name)}s visning <button data-act="pickMe" data-id="${esc(me.id)}" aria-label="Vis hele familien">✕</button></span></div>` : ''}
     ${edit}<div class="gridwrap"><div class="grid ${ui.editing ? 'editing' : ''}" id="grid" style="--gcols:${settings.gridCols || 4}">${cards || '<div class="empty">Forsiden er tom. Tryk "Tilpas forside" og vælg kort.</div>'}</div></div>`;
 }
 function themePicker() {
@@ -872,7 +872,7 @@ function pageIndstillinger() {
     </section>`; },
     familie: () => `
     <section class="card"><b>Familien</b>
-      <label class="f">Familienavn (står øverst på forsiden)<input type="text" data-set="family.name" value="${esc(s.family.name)}" placeholder="Fx Familien Riksted"></label>
+      <label class="f">Familienavn (bruges ved login)<input type="text" data-set="family.name" value="${esc(s.family.name)}" placeholder="Fx Familien Riksted"></label>
       <div class="memrows">${s.family.members.map((m, i) => `<div class="memrow"><span class="avatar" style="--c:${esc(m.color)}" aria-hidden="true">${esc(initials(m.name))}</span>
         <input type="text" data-mem="${i}" data-field="name" value="${esc(m.name)}" placeholder="Navn" aria-label="Navn">
         <input type="color" data-mem="${i}" data-field="color" value="${esc(m.color)}" aria-label="Farve">
