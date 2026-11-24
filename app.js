@@ -498,32 +498,71 @@ function pageKalender() {
 function isoWeek(d) { const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())); const day = t.getUTCDay() || 7; t.setUTCDate(t.getUTCDate() + 4 - day); const y = new Date(Date.UTC(t.getUTCFullYear(), 0, 1)); return Math.ceil(((t - y) / 86400000 + 1) / 7); }
 
 /* ---------- Vejr ---------- */
+// Vejrsiden: stort "lige nu"-kort, de næste 24 timer som kurve og 7 dage – alt på én skærm
+function wxTheme(code, isDay) {
+  if (!isDay) return 'night';
+  if ([95, 96, 99].includes(code)) return 'storm';
+  if (code >= 71 && code <= 86 && ![80, 81, 82].includes(code)) return 'snow';
+  if ((code >= 51 && code <= 67) || [80, 81, 82].includes(code)) return 'rain';
+  if (code >= 2) return 'cloud';
+  return 'sun';
+}
+function hourChart(hours) {
+  const H = hours.slice(0, 24); if (H.length < 2) return '';
+  const Wd = 960, Ht = 200, top = 34, bot = 150, gx = 20;
+  const ts = H.map((h) => h.temp); const mx = Math.max(...ts), mn = Math.min(...ts); const span = Math.max(4, mx - mn);
+  const x = (i) => gx + (i * (Wd - 2 * gx)) / (H.length - 1);
+  const y = (t) => top + (1 - (t - mn) / span) * (bot - top - 20) + 10;
+  const pts = H.map((h, i) => [x(i), y(h.temp)]);
+  let d = `M${pts[0][0]},${pts[0][1]}`;
+  for (let i = 0; i < pts.length - 1; i++) { const [x0, y0] = pts[Math.max(0, i - 1)], [x1, y1] = pts[i], [x2, y2] = pts[i + 1], [x3, y3] = pts[Math.min(pts.length - 1, i + 2)]; d += ` C${x1 + (x2 - x0) / 6},${y1 + (y2 - y0) / 6} ${x2 - (x3 - x1) / 6},${y2 - (y3 - y1) / 6} ${x2},${y2}`; }
+  const maxRain = Math.max(1, ...H.map((h) => h.rain || 0));
+  const bars = H.map((h, i) => h.rain > 0 ? `<rect x="${x(i) - 9}" y="${Ht - 6 - (h.rain / maxRain) * 34}" width="18" height="${(h.rain / maxRain) * 34}" rx="4" fill="var(--rainc)" opacity=".8"/>` : '').join('');
+  const labels = H.map((h, i) => (i % 3 === 0 ? `<text x="${x(i)}" y="${y(h.temp) - 12}" text-anchor="middle" class="ct">${Math.round(h.temp)}°</text><circle cx="${x(i)}" cy="${y(h.temp)}" r="4" fill="var(--card)" stroke="var(--accent)" stroke-width="2.5"/>` : '')).join('');
+  const now = `<line x1="${x(0)}" y1="${top - 6}" x2="${x(0)}" y2="${Ht - 6}" stroke="var(--line)" stroke-dasharray="3 4"/>`;
+  return `<svg class="hchart" viewBox="0 0 ${Wd} ${Ht}" role="img" aria-label="Temperatur og nedbør de næste 24 timer">
+    <defs><linearGradient id="tfill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--accent)" stop-opacity=".28"/><stop offset="1" stop-color="var(--accent)" stop-opacity="0"/></linearGradient></defs>
+    ${now}<path d="${d} L${pts[pts.length - 1][0]},${bot + 10} L${pts[0][0]},${bot + 10} Z" fill="url(#tfill)"/>
+    <path d="${d}" fill="none" stroke="var(--accent)" stroke-width="3.5" stroke-linecap="round"/>${labels}${bars}</svg>
+    <div class="hicons">${H.map((h, i) => (i % 3 === 0 ? `<span><b>${i === 0 ? 'Nu' : pad(h.time.getHours())}</b>${W.weatherIcon(h.code, h.isDay, 26)}${h.rain > 0 ? `<i>${num(h.rain)}</i>` : '<i></i>'}</span>` : '')).join('')}</div>`;
+}
 function pageVejr() {
   const place = placeById(ui.wPlace);
   const w = D.wx[place.id];
-  const places = settings.places.map((p, i) => `<button class="pill" data-act="wPlace" data-id="${esc(p.id)}" aria-pressed="${p.id === place.id}">${i === 0 ? '⌂ ' : ''}${esc(placeLabel(p))}</button>`).join('');
-  const pills = W.MODELS.map((m) => `<button class="pill" data-act="wModel" data-model="${m.id}" aria-pressed="${settings.weather.model === m.id}">${esc(m.name)}</button>`).join('');
+  const idx = settings.places.indexOf(place);
   const model = W.MODELS.find((m) => m.id === settings.weather.model) || W.MODELS[0];
-  let body = `<div class="empty">${D.wxErr[place.id] ? esc(D.wxErr[place.id]) : 'Henter …'}</div>`;
+  const seg = settings.places.length > 1 ? `<div class="wseg">${settings.places.map((p, i) => `<button data-act="wPlace" data-id="${esc(p.id)}" aria-pressed="${p.id === place.id}">${i === 0 ? ico('home', 14) : ''}<span>${esc(placeLabel(p))}</span></button>`).join('')}</div>` : '';
+  let body = `<div class="empty">${D.wxErr[place.id] ? esc(D.wxErr[place.id]) : 'Henter vejret …'}</div>`;
   if (w) {
+    const t0 = w.days[0];
     const maxT = Math.max(...w.days.map((d) => d.max)); const minT = Math.min(...w.days.map((d) => d.min)); const span = Math.max(1, maxT - minT);
-    body = `<div class="form" style="grid-template-columns:minmax(0,1fr) minmax(0,2fr)">
-      <section class="card"><div class="lab">Lige nu · ${esc(placeLabel(place))}${place.label && place.label !== place.name ? ` <span class="muted">(${esc(place.name)})</span>` : ''}</div>
-        <div class="wnow">${W.weatherIcon(w.now.code, w.now.isDay, 72)}<div><div class="t" style="font-size:56px">${fmtTemp(w.now.temp)}</div><div class="muted">${esc(W.codeText(w.now.code))}</div></div></div>
-        <div class="small">Føles som ${fmtTemp(w.now.feels)} · Vind ${num(w.now.wind, 0)} m/s fra ${W.windDirText(w.now.windDir)} · Fugt ${w.now.humidity ?? '–'}%</div>
-        <div class="small muted">Sol op ${hhmm(w.days[0].sunrise)} · ned ${hhmm(w.days[0].sunset)}</div>
-        <div class="small muted" style="margin-top:auto">Kilde: ${esc(model.name)} via Open-Meteo · opdateret ${hhmm(w.fetched)}</div></section>
-      <section class="card"><div class="lab">De næste 24 timer</div><div class="hours">${w.hours.slice(0, 24).map((h) => `<div class="hour"><span>${pad(h.time.getHours())}</span>${W.weatherIcon(h.code, h.isDay, 28)}<span>${fmtTemp(h.temp)}</span><span class="r">${h.rain > 0 ? num(h.rain) + ' mm' : '&nbsp;'}</span></div>`).join('')}</div>
-        <div class="lab" style="margin-top:8px">7 dage</div><div class="dlist">${w.days.map((d, i) => `<div class="drow"><b>${i === 0 ? 'I dag' : cap(DAYS[d.date.getDay()])}</b>${W.weatherIcon(d.code, 1, 30)}
-          <div class="rng"><i style="left:${((d.min - minT) / span) * 100}%;right:${100 - ((d.max - minT) / span) * 100}%"></i></div>
-          <span style="font-weight:700;white-space:nowrap">${fmtTemp(d.min)} / ${fmtTemp(d.max)}</span><span class="rain small" style="color:var(--accent);white-space:nowrap">${d.rain > 0 ? num(d.rain) + ' mm' : ''}</span></div>`).join('')}</div></section></div>`;
+    const trend = wxTrend(w);
+    const stat = (label, val, extra = '') => `<div class="wstat"><span>${label}</span><b>${val}</b>${extra}</div>`;
+    const arrow = `<svg width="16" height="16" viewBox="0 0 24 24" style="transform:rotate(${(w.now.windDir || 0) + 180}deg)"><path d="M12 3l6 16-6-4-6 4z" fill="currentColor"/></svg>`;
+    body = `<div class="wxpage">
+      <section class="wxhero wx-${wxTheme(w.now.code, w.now.isDay)}">
+        <div class="wxh-top"><span>${esc(placeLabel(place))}${place.label && place.label !== place.name ? ` · ${esc(place.name)}` : ''}</span><span>${esc(model.name)} · ${hhmm(w.fetched)}</span></div>
+        <div class="wxh-main">${W.weatherIcon(w.now.code, w.now.isDay, 96)}<div><div class="wxh-t">${fmtTemp(w.now.temp)}</div><div class="wxh-c">${esc(W.codeText(w.now.code))}</div></div></div>
+        <div class="wxh-sub">Føles som ${fmtTemp(w.now.feels)} · ↑ ${fmtTemp(t0.max)} ↓ ${fmtTemp(t0.min)}${trend && trend.msg ? ` · ${esc(trend.msg)}` : ''}</div>
+        <div class="wstats">
+          ${stat('Vind', `${arrow} ${num(w.now.wind, 0)} m/s`, `<small>fra ${W.windDirText(w.now.windDir)}</small>`)}
+          ${stat('Nedbør i dag', t0.rain > 0 ? num(t0.rain) + ' mm' : '0 mm', t0.prob != null ? `<small>${t0.prob} % risiko</small>` : '')}
+          ${stat('Fugt', (w.now.humidity ?? '–') + ' %')}
+          ${stat('Sol', `${hhmm(t0.sunrise)}`, `<small>ned ${hhmm(t0.sunset)}</small>`)}
+        </div>
+      </section>
+      <section class="card wx24"><div class="lab">De næste 24 timer</div>${hourChart(w.hours)}</section>
+      <section class="card wx7"><div class="lab">7 dage</div><div class="w7">${w.days.map((d, i) => `<div class="w7r ${i === 0 ? 'today' : ''}"><b>${i === 0 ? 'I dag' : cap(DAYS[d.date.getDay()])}</b>${W.weatherIcon(d.code, 1, 28)}
+        <span class="w7rain">${d.rain > 0.05 ? num(d.rain) + ' mm' : ''}</span><span class="w7min">${fmtTemp(d.min)}</span>
+        <div class="rng"><i style="left:${((d.min - minT) / span) * 100}%;right:${100 - ((d.max - minT) / span) * 100}%"></i></div><span class="w7max">${fmtTemp(d.max)}</span></div>`).join('')}</div></section>
+    </div>`;
   }
   const cmp = D.compare ? `<section class="card"><div class="lab">Sammenligning af kilder · ${esc(placeLabel(place))} · i dag og i morgen</div>
     <div style="overflow-x:auto"><table class="cmp"><thead><tr><th>Kilde</th><th>Nu</th><th class="n">I dag maks/min</th><th class="n">Nedbør i dag</th><th class="n">I morgen maks/min</th><th class="n">Nedbør i morgen</th></tr></thead><tbody>
     ${D.compare.map((r) => r.err ? `<tr><td>${esc(r.name)}</td><td colspan="5" class="err">${esc(r.err)}</td></tr>` : `<tr class="${r.id === settings.weather.model ? 'sel' : ''}"><td>${esc(r.name)}</td><td>${fmtTemp(r.d.now.temp)} ${esc(W.codeText(r.d.now.code).toLowerCase())}</td><td class="n">${fmtTemp(r.d.days[0].max)} / ${fmtTemp(r.d.days[0].min)}</td><td class="n">${num(r.d.days[0].rain)} mm</td><td class="n">${fmtTemp(r.d.days[1].max)} / ${fmtTemp(r.d.days[1].min)}</td><td class="n">${num(r.d.days[1].rain)} mm</td></tr>`).join('')}
     </tbody></table></div></section>` : '';
-  return `<div class="ptitle"><h1>Vejret</h1><div class="tools"><button class="btn line" data-act="compare">${D.compare ? 'Opdater sammenligning' : 'Sammenlign kilder'}</button></div></div>
-    <div class="row">${placeArrows('page', settings.places.indexOf(place))}${places}</div><div class="row">${pills}</div><div class="small muted">${esc(model.desc)}</div>${body}${cmp}`;
+  return `<div class="ptitle"><h1>Vejret</h1>${seg}<div class="tools"><button class="btn line" data-act="compare">${D.compare ? 'Opdater sammenligning' : 'Sammenlign kilder'}</button></div></div>
+    ${body}${cmp}`;
 }
 
 /* ---------- Nyheder ---------- */

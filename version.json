@@ -1,5 +1,5 @@
 {
-  "version": "1.29.0",
+  "version": "1.30.0",
   "files": [
     "index.html",
     "app.js",
@@ -21,6 +21,15 @@
     "somfy.js"
   ],
   "notes": [
+    {
+      "version": "1.30.0",
+      "date": "24. november 2026",
+      "title": "Ny vejrside",
+      "items": [
+        "Vejrsiden er lavet om: et stort kort med vejret lige nu, en kurve for de næste 24 timer og 7 dage – alt på én skærm.",
+        "Skift sted med knapperne ved overskriften. Vejrkilden vælges under Indstillinger → Vejret."
+      ]
+    },
     {
       "version": "1.29.0",
       "date": "24. november 2026",
