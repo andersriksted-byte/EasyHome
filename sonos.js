@@ -157,3 +157,17 @@ export async function setPlayModes(patch) {
   state.playback = { ...(state.playback || {}), playModes: { ...((state.playback && state.playback.playModes) || {}), ...patch } };
   await api(`/groups/${gid}/playback/playMode`, 'POST', { playModes: patch });
 }
+
+// Hvilken favorit spiller nu? Sammenlign det, der spilles fra, med favoritterne (id eller navn).
+let lastFav = null;
+export function markFav(id) { lastFav = { id, group: settings.sonos.groupId, at: Date.now() }; }
+export function playingFavId() {
+  const m = state.meta || {}; const c = m.container || {};
+  const playing = state.playback && /PLAYING|BUFFERING/.test(state.playback.playbackState || '');
+  const n = (x) => String(x || '').trim().toLowerCase();
+  const cid = c.id && c.id.objectId; const names = [c.name, m.streamInfo, m.currentItem && m.currentItem.track && m.currentItem.track.name].map(n).filter(Boolean);
+  const hit = state.favorites.find((f) => { const fid = f.resource && f.resource.id && f.resource.id.objectId; return (cid && fid && cid === fid) || names.includes(n(f.name)); });
+  if (hit) return playing ? hit.id : null;
+  if (lastFav && playing && lastFav.group === settings.sonos.groupId && Date.now() - lastFav.at < 6 * 3600000) return lastFav.id;
+  return null;
+}
