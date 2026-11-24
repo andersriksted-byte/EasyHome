@@ -10,6 +10,7 @@ import * as R from './reader.js';
 import * as L from './look.js';
 import * as M from './media.js';
 import * as A from './login.js';
+import * as MD from './madro.js';
 import { onAuthLost } from './util.js';
 
 const $ = (s, r = document) => r.querySelector(s);
@@ -46,6 +47,7 @@ const themeLabel = (id) => (id === 'auto' ? 'Automatisk' : THEMES[id].label);
 
 /* ---------- Ikoner ---------- */
 const ICON = {
+  madro: 'M4 11h16v5a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4zM2 11h20M9 7c0-1.2 1-1.8 1-3M14 7c0-1.2 1-1.8 1-3',
   cd: 'M12 8v5l3 2M9 2h6M12 22a8 8 0 1 0 0-16 8 8 0 0 0 0 16z', store: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z',
   menu: 'M4 7h16M4 12h16M4 17h16', back: 'M15 6l-6 6 6 6',
   forside: 'M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z',
@@ -63,12 +65,13 @@ const fillSvg = (name, size = 20) => `<svg aria-hidden="true" width="${size}" he
 const GRIP = '<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg>';
 
 const PAGES = [
-  { id: 'forside', label: 'Forside' }, { id: 'kalender', label: 'Kalender' }, { id: 'vejr', label: 'Vejret' },
+  { id: 'forside', label: 'Forside' }, { id: 'kalender', label: 'Kalender' }, { id: 'madro', label: 'Madro' }, { id: 'vejr', label: 'Vejret' },
   { id: 'nyheder', label: 'Nyheder' }, { id: 'musik', label: 'Musik' }, { id: 'tv', label: 'DR TV' }
 ];
 // Tjenester ("app store"): hver tjeneste kan slås til og fra under Indstillinger → Tjenester.
 // Slås en tjeneste fra, skjules dens side, kort, faner og felter. Kortene på forsiden huskes til den slås til igen.
 const SERVICES = [
+  { id: 'madro', name: 'Madro', icon: 'madro', desc: 'Madplan, indkøbsliste og opskrifter.', pages: ['madro'], widgets: ['madplan', 'indkob'], tabs: [] },
   { id: 'kalender', name: 'Kalender', icon: 'kalender', desc: 'Familiens aftaler fra iCloud m.fl.', pages: ['kalender'], widgets: ['uge'], tabs: [] },
   { id: 'vejr', name: 'Vejret', icon: 'vejr', desc: 'Prognoser fra DMI og andre kilder for jeres steder.', pages: ['vejr'], widgets: ['vejr', 'steder'], tabs: ['vejr'] },
   { id: 'nyheder', name: 'Nyheder', icon: 'nyheder', desc: 'Overskrifter fra DR, TV 2, JP og egne kilder.', pages: ['nyheder'], widgets: ['nyheder'], tabs: ['nyheder'] },
@@ -80,10 +83,10 @@ const svcOn = (id) => !settings.services || settings.services[id] !== false;
 const pageOn = (p) => SERVICES.every((x) => !x.pages.includes(p) || svcOn(x.id));
 const widgetOn = (w) => SERVICES.every((x) => !x.widgets.includes(w) || svcOn(x.id));
 const tabOn = (t) => (t === 'kalender' ? svcOn('kalender') || svcOn('nedtaelling') : SERVICES.every((x) => !x.tabs.includes(t) || svcOn(x.id)));
-const WIDGETS = { uge: 'Familiens uge', vejr: 'Vejret', steder: 'Vejret andre steder', nyheder: 'Nyheder', sonos: 'Musik (Sonos)', tv: 'DR TV', nedtaelling: 'Nedtælling' };
+const WIDGETS = { madplan: 'Madplan', indkob: 'Indkøbsliste', uge: 'Familiens uge', vejr: 'Vejret', steder: 'Vejret andre steder', nyheder: 'Nyheder', sonos: 'Musik (Sonos)', tv: 'DR TV', nedtaelling: 'Nedtælling' };
 // Forsiden er et gitter af ens kvadrater. Et kort fylder w kvadrater i bredden og h i højden.
 const SHAPES = [[1, 1], [2, 1], [3, 1], [4, 1], [1, 2], [1, 3], [1, 4], [2, 2]];
-const DEFAULT_SHAPE = { uge: [4, 1], vejr: [2, 1], steder: [2, 1], nyheder: [2, 1], sonos: [1, 1], tv: [1, 1], nedtaelling: [1, 1] };
+const DEFAULT_SHAPE = { madplan: [4, 1], indkob: [2, 1], uge: [4, 1], vejr: [2, 1], steder: [2, 1], nyheder: [2, 1], sonos: [1, 1], tv: [1, 1], nedtaelling: [1, 1] };
 const LEGACY = { S: [1, 1], M: [2, 1], L: [4, 1] };
 const shapeOf = (x) => (x.w && x.h ? [x.w, x.h] : LEGACY[x.size] || [1, 1]);
 const FIT = ['uge']; // kort der aldrig må skære indhold af – de bliver kompakte og vokser i højden ved behov
@@ -304,6 +307,35 @@ function wTv(size, h = 1, wd = 1) {
   const cols = Math.max(1, Math.min(ch.length, h >= 2 ? wd : wd * 2)); const rows = Math.max(1, Math.min(Math.ceil(ch.length / cols), h * 2));
   return `${cardHead('DR TV')}<div class="tvw" style="--c:${cols};--r:${rows}">${ch.slice(0, cols * rows).map((c) => `<a class="tvtile" href="${esc(c.url)}" target="_blank" rel="noopener">${fillSvg('play', 28)}<span class="tvname">${esc(c.name)}</span></a>`).join('')}</div>`;
 }
+/* ---------- Madro: madplan og indkøbsliste ---------- */
+function madroStatus(title) {
+  const st = MD.state;
+  if (st.status === 'ok') return '';
+  const msg = st.status === 'nologin' ? 'Log ind i Madro for at se den her.' : st.status === 'nofamily' ? 'Opret eller vælg familie i Madro.' : st.status === 'error' ? 'Kunne ikke hente fra Madro.' : 'Henter fra Madro …';
+  return `${cardHead(title)}<button class="empty mdmsg" data-act="mdOpen" data-sub="">${esc(msg)}${['nologin', 'nofamily'].includes(st.status) ? ' <b>Åbn Madro ›</b>' : ''}</button>`;
+}
+function wMadplan(size, h = 1, wd = 1) {
+  const wait = madroStatus('Madplan'); if (wait) return wait;
+  const kind = shapeKind(wd, h);
+  const n = kind === 'tiny' ? 2 : kind === 'wide' ? ({ 2: 3, 3: 5 }[wd] || 7) : kind === 'tall' ? Math.min(7, h * 2) : 4;
+  const today = startOfDay(new Date());
+  const days = Array.from({ length: n }, (_, i) => addDays(today, i));
+  const dayLabel = (d, i) => (i === 0 ? 'I dag' : i === 1 ? 'I morgen' : cap(DAYS[d.getDay()]) + ' ' + d.getDate() + '.');
+  const meal = (m) => `<span class="mdmeal ${m.image ? 'has-img' : ''} ${m.note ? 'note' : ''}" ${m.image ? `style="background-image:url('${esc(m.image)}')"` : ''}><b>${esc(m.title)}</b></span>`;
+  const cells = days.map((d, i) => { const ms = MD.mealsOn(d); return `<button class="mdday ${i === 0 ? 'today' : ''}" data-act="mdOpen" data-sub="madplan"><span class="mdlab">${dayLabel(d, i)}</span>${ms.length ? ms.slice(0, 2).map(meal).join('') : '<span class="mdnone">–</span>'}</button>`; }).join('');
+  const layout = kind === 'wide' ? `style="grid-template-columns:repeat(${n},minmax(0,1fr))"` : kind === 'big' ? 'style="grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:repeat(2,minmax(0,1fr))"' : `style="grid-template-rows:repeat(${n},minmax(0,1fr))"`;
+  return `${cardHead('Madplan')}<div class="mdplan md-${kind}" ${layout}>${cells}</div>`;
+}
+function wIndkob(size, h = 1, wd = 1) {
+  const wait = madroStatus('Indkøbsliste'); if (wait) return wait;
+  const items = MD.openItems();
+  const head = cardHead('Indkøbsliste', `<span class="small muted">${items.length ? items.length + (items.length === 1 ? ' vare' : ' varer') : ''}</span>`);
+  if (!items.length) return head + '<div class="empty">Alt er handlet ✓</div>';
+  const cols = Math.min(3, wd, shapeKind(wd, h) === 'big' ? 2 : 3);
+  const amt = (x) => [x.amount != null && x.amount !== '' ? String(x.amount).replace('.', ',') : '', x.unit || ''].join(' ').trim();
+  return head + `<div class="shoplist" data-trim style="--cols:${cols}">${items.map((x) => `<button class="shopitem" data-act="mdToggle" data-id="${esc(x.id)}"><i aria-hidden="true"></i><span class="si-name">${esc(x.name)}</span>${amt(x) ? `<span class="si-amt">${esc(amt(x))}</span>` : ''}</button>`).join('')}</div>`;
+}
+
 function wNed(size, h = 1, wd = 1) {
   const list = countdowns();
   if (!list.length) return '<div class="cdcard"><div class="cdinner">' + cardHead('Nedtælling') + '<div class="empty">Vælg nedtællinger til kortet under Indstillinger → Kalender.</div></div></div>';
@@ -316,7 +348,7 @@ function wNed(size, h = 1, wd = 1) {
     <div class="cdw"><div class="cdn">${c.days < 0 ? '✓' : c.days}</div><div class="cdl">${label}</div><div class="cdd">${cap(DAYS_LONG[d.getDay()])} ${d.getDate()}. ${MONTHS[d.getMonth()]} ${d.getFullYear()}</div></div></div></div>`;
 }
 
-const WRENDER = { uge: wUge, vejr: wVejr, steder: wSteder, nyheder: wNyheder, sonos: wSonos, tv: wTv, nedtaelling: wNed };
+const WRENDER = { madplan: wMadplan, indkob: wIndkob, uge: wUge, vejr: wVejr, steder: wSteder, nyheder: wNyheder, sonos: wSonos, tv: wTv, nedtaelling: wNed };
 
 function pageForside() {
   const inLayout = (id) => settings.layout.some((x) => x.id === id);
@@ -640,10 +672,21 @@ function pageIndstillinger() {
   <div class="form" role="tabpanel">${T[tab]()}</div>`;
 }
 
-const PAGE_RENDER = { forside: pageForside, kalender: pageKalender, vejr: pageVejr, nyheder: pageNyheder, musik: pageMusik, tv: pageTv, indstillinger: pageIndstillinger };
+const PAGE_RENDER = { madro: () => '', forside: pageForside, kalender: pageKalender, vejr: pageVejr, nyheder: pageNyheder, musik: pageMusik, tv: pageTv, indstillinger: pageIndstillinger };
 
+// Madro vises som hele appen i en ramme, der bliver liggende (så den ikke genindlæses ved hver opdatering)
+let madroSub = '';
+function showMadroFrame(on) {
+  let f = document.getElementById('madroFrame');
+  $('#main').hidden = on;
+  if (!on) { if (f) f.hidden = true; return; }
+  if (!f) { f = document.createElement('iframe'); f.id = 'madroFrame'; f.className = 'madroframe'; f.title = 'Madro'; f.src = MD.BASE + (madroSub ? '#' + madroSub : ''); $('#main').after(f); }
+  else if (madroSub) { try { f.contentWindow.location.hash = madroSub; } catch (e) { /* ignorer */ } }
+  madroSub = ''; f.hidden = false;
+}
 function renderMain(keepScroll = true) {
   const m = $('#main'); const y = m.scrollTop;
+  showMadroFrame(ui.page === 'madro');
   m.innerHTML = PAGE_RENDER[ui.page]();
   if (ui.page === 'forside') { fitCards(); trimCards(); }
   if (keepScroll) m.scrollTop = y;
@@ -716,7 +759,7 @@ async function loadSonos(full = false) {
   renderFooter();
   if (ui.page === 'musik' || (ui.page === 'forside' && settings.layout.some((x) => x.id === 'sonos'))) softRender();
 }
-function loadAll() { loadWeather(); loadNews(); loadCal(); loadSonos(true); }
+function loadAll() { loadWeather(); loadNews(); loadCal(); loadSonos(true); if (svcOn('madro')) MD.start(); }
 
 /* ---------- Handlinger ---------- */
 const act = {
@@ -741,6 +784,8 @@ const act = {
     renderAll(); if (svcOn(id)) loadAll();
   },
   wStepSet: (b) => { settings.weather.step = +b.dataset.v; save(); renderMain(); },
+  mdOpen: (b) => { madroSub = b.dataset.sub || ''; act.nav({ dataset: { page: 'madro' } }); },
+  mdToggle: (b) => { b.classList.add('done'); setTimeout(() => MD.toggleItem(b.dataset.id), 350); },
   pickMe: (b) => { settings.me = settings.me === b.dataset.id ? '' : b.dataset.id; save(); renderHeader(); renderMain(); },
   memAdd: () => { const colors = ['#D0563C', '#4C78D0', '#D9A400', '#2E9D5B', '#7A5AC8', '#C2407E']; const m = settings.family.members; m.push({ id: uid(), name: '', color: colors[m.length % colors.length] }); save(); renderMain(); setTimeout(() => { const el = document.querySelectorAll('[data-mem][data-field=name]'); if (el.length) el[el.length - 1].focus(); }, 50); },
   memRm: (b) => { const [m] = settings.family.members.splice(+b.dataset.i, 1); if (m) { settings.calendars.forEach((c) => { if (c.owner === m.id) c.owner = ''; }); if (settings.me === m.id) settings.me = ''; } save(); renderHeader(); renderMain(); },
@@ -959,6 +1004,9 @@ function boot() {
   // Kun én nedtælling øverst: vælg den nærmeste, første gang
   if (settings.cdTop === undefined) { const n = countdowns('top').find((c) => c.days >= 0); settings.cdTop = n ? n.id : ''; save(); }
   M.onMediaLoaded(() => softRender());
+  MD.onMadroChange(() => { if (ui.page === 'forside') softRender(); });
+  // Madplan og indkøbsliste på forsiden – brugeren bad selv om dem (én gang)
+  if ((settings.layoutRev || 1) < 3) { const have = new Set(settings.layout.map((x) => x.id)); settings.layout = [{ id: 'madplan', w: 4, h: 1 }, { id: 'indkob', w: 2, h: 1 }].filter((x) => !have.has(x.id)).concat(settings.layout); settings.layoutRev = 3; save(); }
   S.onArtLoaded(() => { renderFooter(); if (['forside', 'musik'].includes(ui.page)) softRender(); });
   if (settings.layout.some((x) => !x.w)) { settings.layout = settings.layout.map((x) => { const [w, h] = shapeOf(x); return { id: x.id, w, h }; }); save(); }
   if (settings.navOpen) { settings.navOpen = false; }

@@ -1,5 +1,5 @@
 {
-  "version": "1.16.4",
+  "version": "1.17.0",
   "files": [
     "index.html",
     "app.js",
@@ -16,9 +16,21 @@
     "reader.js",
     "look.js",
     "media.js",
-    "login.js"
+    "login.js",
+    "madro.js"
   ],
   "notes": [
+    {
+      "version": "1.17.0",
+      "date": "24. november 2026",
+      "title": "Madro er flyttet ind",
+      "items": [
+        "Madplanen og indkøbslisten fra Madro ligger nu øverst på forsiden.",
+        "Tryk på en vare på indkøbslisten for at sætte kryds – det ses med det samme på jeres telefoner.",
+        "Den nye side Madro i menuen har hele Madro: opskrifter, madplan og søgning.",
+        "Første gang logger I ind i Madro på skærmen – derefter husker den jer."
+      ]
+    },
     {
       "version": "1.16.4",
       "date": "24. november 2026",
