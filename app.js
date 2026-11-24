@@ -69,7 +69,7 @@ const D = { weather: null, weatherErr: null, wx: {}, wxErr: {}, compare: null, n
 const home = () => settings.places[0];
 const placeLabel = (p) => p.label || p.name;
 const placeById = (id) => settings.places.find((p) => p.id === id) || home();
-const ui = { page: pageFromHash(), wPlace: null, fpPlace: 0, fpTouched: 0, editing: false, calWeek: 0, geo: null, geoMsg: '', tick: 0, connMsg: '' };
+const ui = { page: pageFromHash(), setTab: 'vejr', wPlace: null, fpPlace: 0, fpTouched: 0, editing: false, calWeek: 0, geo: null, geoMsg: '', tick: 0, connMsg: '' };
 function pageFromHash() { const h = location.hash.slice(1); return [...PAGES.map((p) => p.id), 'indstillinger'].includes(h) ? h : 'forside'; }
 
 function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), 2600); }
@@ -97,7 +97,7 @@ function countdownDays() {
 }
 const fmtTemp = (t) => (t === null || t === undefined ? '–' : `${Math.round(t)}°`);
 const num = (v, d = 1) => (v === null || v === undefined ? '–' : v.toFixed(d).replace('.', ','));
-const needProxyMsg = (what) => `<div class="empty">${esc(what)} kræver forbindelsen til jeres lille server (Cloudflare Worker). <button class="btn line" data-act="nav" data-page="indstillinger">Opsæt i Indstillinger</button></div>`;
+const needProxyMsg = (what) => `<div class="empty">${esc(what)} kræver forbindelsen til jeres lille server (Cloudflare Worker). <button class="btn line" data-act="openSet" data-tab="forbindelse">Opsæt i Indstillinger</button></div>`;
 
 /* ---------- Navigation ---------- */
 function renderNav() {
@@ -157,7 +157,7 @@ function wUge(size) {
 }
 function placeArrows(scope, idx) {
   const n = settings.places.length;
-  if (n < 2) return scope === 'fp' ? '<button class="pill" data-act="addPlace" style="min-height:40px;font-size:13px;border-style:dashed;flex:none">+ Tilføj sted</button>' : '';
+  if (n < 2) return '';
   return `<span class="parrows"><button class="arr" data-act="wStep" data-scope="${scope}" data-dir="-1" aria-label="Forrige sted">‹</button>
     <span class="dots" aria-hidden="true">${settings.places.map((_, i) => `<i class="${i === idx ? 'on' : ''}"></i>`).join('')}</span>
     <button class="arr" data-act="wStep" data-scope="${scope}" data-dir="1" aria-label="Næste sted">›</button></span>`;
@@ -178,7 +178,7 @@ function wVejr(size) {
 }
 function wSteder(size) {
   const others = settings.places.slice(1);
-  if (!others.length) return `<div class="lab">Vejret andre steder</div><div class="empty">Tilføj fx sommerhuset under Indstillinger → Steder.</div><button class="btn line" data-act="nav" data-page="indstillinger">Tilføj sted</button>`;
+  if (!others.length) return `<div class="lab">Vejret andre steder</div><div class="empty">Steder tilføjes under Indstillinger → Vejret.</div>`;
   const row = (p) => {
     const w = D.wx[p.id];
     if (!w) return `<div class="row"><b>${esc(placeLabel(p))}</b><span class="small muted">${D.wxErr[p.id] ? esc(D.wxErr[p.id]) : 'Henter …'}</span></div>`;
@@ -262,7 +262,7 @@ function isoWeek(d) { const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(),
 function pageVejr() {
   const place = placeById(ui.wPlace);
   const w = D.wx[place.id];
-  const places = settings.places.map((p, i) => `<button class="pill" data-act="wPlace" data-id="${esc(p.id)}" aria-pressed="${p.id === place.id}">${i === 0 ? '⌂ ' : ''}${esc(placeLabel(p))}</button>`).join('') + '<button class="pill" data-act="nav" data-page="indstillinger" style="border-style:dashed">+ Tilføj sted</button>';
+  const places = settings.places.map((p, i) => `<button class="pill" data-act="wPlace" data-id="${esc(p.id)}" aria-pressed="${p.id === place.id}">${i === 0 ? '⌂ ' : ''}${esc(placeLabel(p))}</button>`).join('');
   const pills = W.MODELS.map((m) => `<button class="pill" data-act="wModel" data-model="${m.id}" aria-pressed="${settings.weather.model === m.id}">${esc(m.name)}</button>`).join('');
   const model = W.MODELS.find((m) => m.id === settings.weather.model) || W.MODELS[0];
   let body = `<div class="empty">${D.wxErr[place.id] ? esc(D.wxErr[place.id]) : 'Henter …'}</div>`;
@@ -328,54 +328,62 @@ function pageTv() {
 }
 
 /* ---------- Indstillinger ---------- */
+const SET_TABS = [
+  { id: 'vejr', label: 'Vejret' }, { id: 'nyheder', label: 'Nyheder' }, { id: 'kalender', label: 'Kalender' }, { id: 'musik', label: 'Musik' },
+  { id: 'tv', label: 'DR TV' }, { id: 'udseende', label: 'Udseende' }, { id: 'forbindelse', label: 'Forbindelse' }, { id: 'backup', label: 'Sikkerhedskopi' }
+];
 function pageIndstillinger() {
   const s = settings;
   const groups = {};
   N.allSources().forEach((src) => { (groups[src.group] = groups[src.group] || []).push(src); });
-  return `<div class="ptitle"><h1>Indstillinger</h1></div>
-  <div class="form">
-    <section class="card wide"><b>Forbindelse til jeres server</b>
-      <p class="note">Nyheder, kalendere og Sonos går gennem en lille gratis Cloudflare Worker, som I selv ejer. Se README.md for opsætning. Vejret virker uden.</p>
-      <div class="form"><label class="f">Worker-adresse<input type="url" data-set="proxy.url" value="${esc(s.proxy.url)}" placeholder="https://easyhome.ditnavn.workers.dev" autocomplete="off"></label>
-      <label class="f">Nøgle (DASH_KEY)<input type="password" data-set="proxy.key" value="${esc(s.proxy.key)}" autocomplete="off"></label></div>
-      <div class="row"><button class="btn primary" data-act="testConn">Test forbindelse</button><span class="small" id="connMsg">${esc(ui.connMsg)}</span></div></section>
-
+  const tab = SET_TABS.some((t) => t.id === ui.setTab) ? ui.setTab : 'vejr';
+  const needsConn = ['nyheder', 'kalender', 'musik'].includes(tab) && !hasProxy();
+  const T = {
+    vejr: () => `
     <section class="card"><b>Steder</b><p class="note">Det øverste sted er <b>hjem</b> og bruges i toppen af skærmen. Giv stederne et navn, fx "Sommerhuset".</p>
       ${s.places.map((p, i) => `<div class="calrow" style="grid-template-columns:1fr auto auto"><label class="f" style="gap:2px">${i === 0 ? '⌂ Hjem' : 'Navn'}<input type="text" data-place="${i}" value="${esc(p.label)}" placeholder="${esc(p.name)}" aria-label="Navn på ${esc(p.name)}"><span class="small muted">${esc(p.name)} · ${num(p.lat, 2)}, ${num(p.lon, 2)}</span></label>
         ${i > 0 ? `<button class="btn" data-act="placeHome" data-i="${i}">Gør til hjem</button>` : '<span></span>'}${s.places.length > 1 ? `<button class="btn" data-act="placeRm" data-i="${i}">Fjern</button>` : '<span></span>'}</div>`).join('')}
       <div class="lab" style="margin-top:6px">Tilføj sted</div>
       <div class="row" style="flex-wrap:nowrap"><input type="text" id="geoQ" placeholder="Søg by, fx Skagen" aria-label="Søg sted"><button class="btn primary" data-act="geoSearch">Søg</button></div>
       ${ui.geo ? `<div class="row">${ui.geo.map((g, i) => `<button class="pill" data-act="geoPick" data-i="${i}">+ ${esc(g.name)}<span class="muted small">&nbsp;${esc(g.area)}</span></button>`).join('') || '<span class="muted">Ingen resultater</span>'}</div>` : ''}${ui.geoMsg ? `<div class="err">${esc(ui.geoMsg)}</div>` : ''}</section>
-
-    <section class="card"><b>Vejrkilde</b>${W.MODELS.map((m) => `<label class="check"><input type="radio" name="wmodel" data-set="weather.model" value="${m.id}" ${s.weather.model === m.id ? 'checked' : ''}><span><b>${esc(m.name)}</b><br><span class="small muted">${esc(m.desc)}</span></span></label>`).join('')}</section>
-
+    <section class="card"><b>Vejrkilde</b>${W.MODELS.map((m) => `<label class="check"><input type="radio" name="wmodel" data-set="weather.model" value="${m.id}" ${s.weather.model === m.id ? 'checked' : ''}><span><b>${esc(m.name)}</b><br><span class="small muted">${esc(m.desc)}</span></span></label>`).join('')}</section>`,
+    nyheder: () => `
     <section class="card wide"><b>Nyhedskilder</b><p class="note">Vælg en eller flere. Nyhederne blandes og sorteres efter tid. Kilder markeret "afprøves" er ikke bekræftet endnu.</p>
       <div class="form">${Object.entries(groups).map(([g, list]) => `<div>${list.map((src) => `<label class="check"><input type="checkbox" data-news="${esc(src.id)}" ${s.news.sources.includes(src.id) ? 'checked' : ''}>${esc(src.name)}${src.unverified ? ' <span class="small muted">(afprøves)</span>' : ''}${src.custom ? ` <button class="btn" data-act="customRm" data-id="${esc(src.id)}" aria-label="Fjern ${esc(src.name)}">Fjern</button>` : ''}</label>`).join('')}</div>`).join('')}</div>
       <div class="row" style="flex-wrap:nowrap"><input type="text" id="cName" placeholder="Navn, fx Lokalavisen" aria-label="Navn på egen kilde"><input type="url" id="cUrl" placeholder="RSS-adresse" aria-label="RSS-adresse"><button class="btn primary" data-act="customAdd">Tilføj</button></div>
-      <label class="check"><input type="checkbox" data-set="news.publicProxyForTest" ${s.news.publicProxyForTest ? 'checked' : ''}>Brug en offentlig test-proxy til nyheder, indtil jeres worker er klar (kun til afprøvning)</label></section>
-
+      <label class="check"><input type="checkbox" data-set="news.publicProxyForTest" ${s.news.publicProxyForTest ? 'checked' : ''}>Brug en offentlig test-proxy til nyheder, indtil jeres worker er klar (kun til afprøvning)</label></section>`,
+    kalender: () => `
     <section class="card wide"><b>Kalendere</b>
       <p class="note">Indsæt et link for hver kalender (fx én pr. familiemedlem). <b>iPhone/iPad:</b> Kalender → Kalendere → tryk ⓘ ved kalenderen → slå <i>Offentlig kalender</i> til → <i>Del link</i> → Kopiér. <b>Mac:</b> Kalender → højreklik på kalenderen → Del kalender → <i>Offentlig kalender</i> → kopiér adressen. Linket starter med <code>webcal://</code> – det klarer dashboardet. Andre: Google ("Hemmelig adresse i iCal-format") og Outlook (ICS-link) virker også. Behandl linkene som adgangskoder.</p>
       ${s.calendars.map((c, i) => `<div class="calrow"><input type="text" data-cal="${i}" data-field="name" value="${esc(c.name)}" aria-label="Navn"><input type="color" data-cal="${i}" data-field="color" value="${esc(c.color)}" aria-label="Farve"><input type="url" data-cal="${i}" data-field="url" value="${esc(c.url)}" placeholder="https://… .ics" aria-label="iCal-link"><button class="btn" data-act="calRm" data-i="${i}">Fjern</button></div>`).join('')}
       <div><button class="btn primary" data-act="calAdd">+ Tilføj kalender</button></div>
       ${D.cal && D.cal.errors.length ? `<div class="err">${esc(D.cal.errors.map((e) => e.cal + ': ' + e.msg).join(' · '))}</div>` : ''}</section>
-
-    <section class="card"><b>Nedtælling</b><label class="f">Begivenhed<input type="text" data-set="countdown.name" value="${esc(s.countdown.name)}"></label><label class="f">Dato<input type="date" data-set="countdown.date" value="${esc(s.countdown.date)}"></label></section>
-
-    <section class="card"><b>Sonos</b><div class="muted">${!hasProxy() ? 'Opsæt forbindelsen først.' : S.state.connected ? 'Forbundet.' : 'Ikke forbundet.'}</div>
-      <div class="row">${hasProxy() && !S.state.connected ? '<button class="btn primary" data-act="sConnect">Forbind Sonos</button>' : ''}${S.state.connected ? '<button class="btn line" data-act="sLogout">Afbryd Sonos</button>' : ''}</div></section>
-
+    <section class="card wide"><b>Nedtælling</b><label class="f">Begivenhed<input type="text" data-set="countdown.name" value="${esc(s.countdown.name)}"></label><label class="f">Dato<input type="date" data-set="countdown.date" value="${esc(s.countdown.date)}"></label></section>`,
+    musik: () => `
+    <section class="card wide"><b>Sonos</b><div class="muted">${!hasProxy() ? 'Opsæt forbindelsen først.' : S.state.connected ? 'Forbundet.' : 'Ikke forbundet.'}</div>
+      <div class="row">${hasProxy() && !S.state.connected ? '<button class="btn primary" data-act="sConnect">Forbind Sonos</button>' : ''}${S.state.connected ? '<button class="btn line" data-act="sLogout">Afbryd Sonos</button>' : ''}</div></section>`,
+    tv: () => `
     <section class="card wide"><b>DR TV-knapper</b>${s.tv.channels.map((c, i) => `<div class="calrow" style="grid-template-columns:1fr 2fr auto"><input type="text" data-tv="${i}" data-field="name" value="${esc(c.name)}" aria-label="Navn"><input type="url" data-tv="${i}" data-field="url" value="${esc(c.url)}" aria-label="Adresse"><button class="btn" data-act="tvRm" data-i="${i}">Fjern</button></div>`).join('')}
-      <div><button class="btn" data-act="tvAdd">+ Tilføj knap</button></div></section>
-
+      <div><button class="btn" data-act="tvAdd">+ Tilføj knap</button></div></section>`,
+    udseende: () => `
     <section class="card wide"><b>Farvetema</b>${themePicker()}
       ${s.theme === 'auto' ? `<div class="form"><label class="f">Om dagen<select data-set="dayTheme">${Object.keys(THEMES).map((k) => `<option value="${k}" ${s.dayTheme === k ? 'selected' : ''}>${THEMES[k].label}</option>`).join('')}</select></label>
-        <label class="f">Efter solnedgang<select data-set="nightTheme">${Object.keys(THEMES).map((k) => `<option value="${k}" ${s.nightTheme === k ? 'selected' : ''}>${THEMES[k].label}</option>`).join('')}</select></label></div>` : ''}</section>
-
+        <label class="f">Efter solnedgang<select data-set="nightTheme">${Object.keys(THEMES).map((k) => `<option value="${k}" ${s.nightTheme === k ? 'selected' : ''}>${THEMES[k].label}</option>`).join('')}</select></label></div>` : ''}</section>`,
+    forbindelse: () => `
+    <section class="card wide"><b>Forbindelse til jeres server</b>
+      <p class="note">Nyheder, kalendere og Sonos går gennem en lille gratis Cloudflare Worker, som I selv ejer. Se README.md for opsætning. Vejret virker uden.</p>
+      <div class="form"><label class="f">Worker-adresse<input type="url" data-set="proxy.url" value="${esc(s.proxy.url)}" placeholder="https://easyhome.ditnavn.workers.dev" autocomplete="off"></label>
+      <label class="f">Nøgle (DASH_KEY)<input type="password" data-set="proxy.key" value="${esc(s.proxy.key)}" autocomplete="off"></label></div>
+      <div class="row"><button class="btn primary" data-act="testConn">Test forbindelse</button><span class="small" id="connMsg">${esc(ui.connMsg)}</span></div></section>`,
+    backup: () => `
     <section class="card wide"><b>Sikkerhedskopi</b><p class="note">Kopiér indstillingerne til en anden skærm, eller gem dem. Teksten indeholder jeres nøgle og kalenderlinks – del den ikke.</p>
       <textarea id="cfg" aria-label="Indstillinger som tekst">${esc(JSON.stringify(settings, null, 2))}</textarea>
-      <div class="row"><button class="btn" data-act="copyCfg">Kopiér</button><button class="btn primary" data-act="importCfg">Indlæs fra feltet</button></div></section>
-  </div>`;
+      <div class="row"><button class="btn" data-act="copyCfg">Kopiér</button><button class="btn primary" data-act="importCfg">Indlæs fra feltet</button></div></section>`
+  };
+  return `<div class="ptitle"><h1>Indstillinger</h1></div>
+  <div class="tabs" role="tablist" aria-label="Indstillinger">${SET_TABS.map((t) => `<button role="tab" class="tab" data-act="setTab" data-tab="${t.id}" aria-selected="${t.id === tab}">${esc(t.label)}</button>`).join('')}</div>
+  ${needsConn ? '<div class="empty">Denne del kræver forbindelsen til jeres server. <button class="btn line" data-act="setTab" data-tab="forbindelse">Gå til Forbindelse</button></div>' : ''}
+  <div class="form" role="tabpanel">${T[tab]()}</div>`;
 }
 
 const PAGE_RENDER = { forside: pageForside, kalender: pageKalender, vejr: pageVejr, nyheder: pageNyheder, musik: pageMusik, tv: pageTv, indstillinger: pageIndstillinger };
@@ -467,7 +475,9 @@ const act = {
   },
   placeHome: (b) => { const i = +b.dataset.i; const [p] = settings.places.splice(i, 1); settings.places.unshift(p); save(); D.compare = null; renderMain(); loadWeather(); toast(placeLabel(p) + ' er nu hjem'); },
   placeRm: (b) => { ui.fpPlace = 0; const [p] = settings.places.splice(+b.dataset.i, 1); delete D.wx[p.id]; if (ui.wPlace === p.id) ui.wPlace = null; save(); renderMain(); loadWeather(); },
-  addPlace: () => { ui.page = 'indstillinger'; history.replaceState(null, '', '#indstillinger'); renderNav(); renderMain(false); setTimeout(() => { const q = $('#geoQ'); if (q) { q.scrollIntoView({ block: 'center' }); q.focus(); } }, 50); },
+  addPlace: () => { ui.setTab = 'vejr'; ui.page = 'indstillinger'; history.replaceState(null, '', '#indstillinger'); renderNav(); renderMain(false); setTimeout(() => { const q = $('#geoQ'); if (q) { q.scrollIntoView({ block: 'center' }); q.focus(); } }, 50); },
+  openSet: (b) => { ui.setTab = b.dataset.tab; act.nav({ dataset: { page: 'indstillinger' } }); },
+  setTab: (b) => { ui.setTab = b.dataset.tab; ui.geo = null; renderMain(false); },
   wStep: (b) => {
     const n = settings.places.length; const dir = +b.dataset.dir;
     if (b.dataset.scope === 'fp') { ui.fpPlace = (((ui.fpPlace + dir) % n) + n) % n; ui.fpTouched = Date.now(); }

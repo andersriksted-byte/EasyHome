@@ -9,6 +9,11 @@ Familie-dashboard (web-app på GitHub Pages) til en touchskærm/iPad på væggen
 3. Er der kommet en ny fil, så tilføj den til `"files"` i `version.json`.
 4. Commit og push til `main`. Fortæl brugeren i chatten: der kommer en besked "Ny opdatering klar" på skærmen inden for 2 minutter → tryk **Opdater** → "Det er nyt" viser ændringerne.
 
+## Designregler fra brugeren
+- Ændringer af indstillinger (steder, kilder, kalendere, forbindelser osv.) sker KUN under Indstillinger. Forsiden og de andre sider viser og styrer (fx afspil, skift sted med pile) – de har ingen "tilføj"- eller opsætningsknapper.
+- Indstillinger er delt i faner efter emne (`SET_TABS` i app.js). Nye indstillinger lægges i den fane, de hører til.
+- Nye funktioner må ikke selv tilføje kort til forsiden. Kun brugeren vælger kort under "Tilpas forside".
+
 ## Struktur
 Alle filer ligger i roden (Safari kan ikke uploade mapper til GitHub). ES-moduler uden byggetrin.
 - `app.js` layout, sider, forside-widgets, indstillinger · `util.js` indstillinger (localStorage) · `updater.js` opdateringsbesked

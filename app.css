@@ -35,6 +35,7 @@ a{color:var(--accent)}
 
 /* Indhold */
 .main{flex:1;min-height:0;overflow-y:auto;padding:20px 28px;display:flex;flex-direction:column;gap:16px;-webkit-overflow-scrolling:touch}
+.main>*{flex-shrink:0}
 .ptitle{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 .ptitle h1{margin:0;font-size:26px;font-weight:800}
 .ptitle .tools{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
@@ -135,6 +136,9 @@ a{color:var(--accent)}
 .tvtile small{font-size:13px;font-weight:600;opacity:.8}
 
 /* Indstillinger */
+.tabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;border-bottom:2px solid var(--line)}
+.tab{flex:none;min-height:48px;border:0;background:transparent;padding:0 18px;font-size:15px;font-weight:800;color:var(--muted);border-radius:12px 12px 0 0;border-bottom:3px solid transparent;margin-bottom:-2px}
+.tab[aria-selected=true]{color:var(--text);border-bottom-color:var(--accent);background:var(--card)}
 .form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
 .form .card.wide{grid-column:1/-1}
 label.f{display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:700;color:var(--muted)}
