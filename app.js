@@ -521,8 +521,13 @@ function wFodbold(size, h = 1, wd = 1) {
   if (!todays.length) return head + `<div class="empty">Ingen kampe ${sameDay(day, today) ? 'i dag' : 'denne dag'}.</div>`;
   const groups = new Map(); todays.forEach((m) => { const k = m.comp || 'Andre kampe'; if (!groups.has(k)) groups.set(k, []); groups.get(k).push(m); });
   const keys = [...groups.keys()].sort((a, b) => { const ia = order.indexOf(a), ib = order.indexOf(b); return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib); });
+  // Brede kort: kampene står som fliser ved siden af hinanden; smalle kort: én kamp pr. linje
+  if (wd >= 2) {
+    const tile = (m) => { const r = row(m); return r.replace('class="fb-row ', 'class="fb-tile '); };
+    return head + `<div class="fb-days">${keys.map((k) => `<div class="fb-grp"><div class="fb-sub">${esc(k)}</div><div class="fb-tiles">${groups.get(k).map(tile).join('')}</div></div>`).join('')}</div>`;
+  }
   const blocks = keys.map((k) => `<div class="fb-grp"><div class="fb-sub">${esc(k)}</div>${groups.get(k).map(row).join('')}</div>`);
-  return head + `<div class="fb-days${wd >= 3 && blocks.length > 1 ? ' two' : ''}">${blocks.join('')}</div>`;
+  return head + `<div class="fb-days">${blocks.join('')}</div>`;
 }
 function fodboldSettings() {
   const fb = settings.football || { leagues: [], teams: [] };
