@@ -575,16 +575,17 @@ function wScreens(size, h = 1, wd = 1, x = {}) {
 }
 
 // Inspiration: en ret fra kogebogen ad gangen, skifter hvert 20. sekund
-function wInspiration(size, h = 1, wd = 1) {
+function wInspiration(size, h = 1, wd = 1, x = null) {
   const wait = madroStatus('Inspiration'); if (wait) return wait;
-  const list = MD.state.all;
-  if (!list.length) return cardHead('Inspiration') + '<div class="empty">Henter opskrifter …</div>';
+  const meal = (x && x.meal) || '';
+  const list = MD.state.all.filter((r) => MD.mealMatch(r, meal));
+  if (!list.length) return cardHead('Inspiration') + `<div class="empty">${MD.state.all.length ? 'Ingen opskrifter med ' + esc(meal.toLowerCase()) + '.' : 'Henter opskrifter …'}</div>`;
   const n = list.length; const idx = ((ui.inspIdx % n) + n) % n; const r = list[idx];
   const kind = shapeKind(wd, h);
   const bg = r.image ? `background-image:url('${esc(r.image)}')` : `background-image:linear-gradient(135deg,${r.art[0]},${r.art[1]})`;
   const kick = [r.theme, r.time].filter(Boolean).join(' · ');
   return `<div class="insp" style="${bg}"><div class="insp-in">
-    <div class="whead"><span class="lab">Prøv noget nyt</span><span class="parrows"><button class="arr" data-act="wStep" data-scope="insp" data-dir="-1" aria-label="Forrige opskrift">‹</button><button class="arr" data-act="wStep" data-scope="insp" data-dir="1" aria-label="Næste opskrift">›</button></span></div>
+    <div class="whead"><span class="lab">Prøv noget nyt${meal ? ' · ' + esc(meal.toLowerCase()) : ''}</span><span class="parrows"><button class="arr" data-act="wStep" data-scope="insp" data-dir="-1" aria-label="Forrige opskrift">‹</button><button class="arr" data-act="wStep" data-scope="insp" data-dir="1" aria-label="Næste opskrift">›</button></span></div>
     <div class="nbar insp-bar" aria-hidden="true"><i id="inspBar" style="width:${Math.max(0, 100 - ((Date.now() - ui.inspAt) / 200))}%"></i></div>
     <button class="insp-go" data-act="mdRecipe" data-id="${esc(r.id)}">${kick ? `<span class="insp-kick">${esc(kick)}</span>` : ''}<b>${esc(r.title)}</b>${r.intro && kind !== 'tiny' ? `<span class="insp-intro">${esc(r.intro)}</span>` : ''}</button>
   </div></div>`;
@@ -617,6 +618,7 @@ function pageForside() {
     <section class="card w" data-wid="${x.id}" ${FIT.includes(x.id) ? `data-fit data-h="${h}"` : ''} style="--w:${w};--h:${h}">
       ${ui.editing ? `<div class="wbar"><button class="handle" aria-label="Træk for at flytte ${esc(WIDGETS[x.id])}">${GRIP}Flyt</button><span class="nm">${esc(WIDGETS[x.id])}</span>
         ${x.id === 'screens' ? `<span class="wopt" role="group" aria-label="Betjening">${[[1, 'Alle samlet'], [2, 'Hver for sig'], [3, 'Begge']].map(([v, l]) => `<button data-act="wOpt" data-id="screens" data-k="mode" data-v="${v}" aria-pressed="${(x.mode || 3) === v}">${l}</button>`).join('')}</span>` : ''}
+        ${x.id === 'inspiration' ? `<select class="wsel" data-wsel="inspiration" data-k="meal" aria-label="Måltid">${['', ...MD.MEALS].map((m) => `<option value="${m}"${(x.meal || '') === m ? ' selected' : ''}>${m || 'Alle måltider'}</option>`).join('')}</select>` : ''}
         ${x.id === 'madplan' ? `<span class="wopt" role="group" aria-label="Antal dage">${[[1, '1 dag'], [5, '5 dage']].map(([v, l]) => `<button data-act="wOpt" data-id="madplan" data-k="days" data-v="${v}" aria-pressed="${(x.days || 5) === v}">${l}</button>`).join('')}</span>` : ''}
         <button class="sz" data-act="sizeFor" data-id="${x.id}" aria-expanded="${ui.sizeFor === x.id}" aria-label="Vælg størrelse (nu ${w} gange ${h})">${shapeIcon(w, h)}<span>${w}×${h}</span></button>
         <button class="x" data-act="toggleW" data-id="${x.id}" aria-label="Fjern ${esc(WIDGETS[x.id])}">×</button></div>${picker}` : ''}
@@ -1406,7 +1408,7 @@ const act = {
   wStep: (b) => {
     const n = settings.places.length; const dir = +b.dataset.dir;
     if (b.dataset.scope === 'n1') { const m = Math.max(1, mixedNews().length); ui.n1Idx = (((ui.n1Idx + dir) % m) + m) % m; ui.n1At = Date.now(); renderMain(); return; }
-    if (b.dataset.scope === 'insp') { const m = Math.max(1, MD.state.all.length); ui.inspIdx = (((ui.inspIdx + dir) % m) + m) % m; ui.inspAt = Date.now(); renderMain(); return; }
+    if (b.dataset.scope === 'insp') { const m = Math.max(1, MD.state.all.length); /* indekset tages modulo den filtrerede liste */ ui.inspIdx = (((ui.inspIdx + dir) % m) + m) % m; ui.inspAt = Date.now(); renderMain(); return; }
     if (b.dataset.scope === 'cd') { const m = Math.max(1, countdowns().length); ui.cdIdx = (((ui.cdIdx + dir) % m) + m) % m; ui.cdAt = Date.now(); renderMain(); return; }
     if (b.dataset.scope === 'cal') { ui.calWeek += dir; renderMain(); return; }
     if (b.dataset.scope === 'news') { const m = Math.max(1, newsSources().length); ui.newsIdx = (((ui.newsIdx + dir) % m) + m) % m; ui.newsAt = Date.now(); renderMain(); return; }
@@ -1473,6 +1475,7 @@ document.addEventListener('submit', (e) => {
 });
 document.addEventListener('change', (e) => {
   const t = e.target;
+  if (t.dataset.wsel) { const x = editLayout().find((y) => y.id === t.dataset.wsel); if (x) { x[t.dataset.k] = t.value; ui.inspIdx = 0; ui.inspAt = Date.now(); save(); renderMain(); } return; }
   if (t.dataset.set) {
     const v = t.type === 'checkbox' ? t.checked : t.value.trim();
     setPath(t.dataset.set, v);

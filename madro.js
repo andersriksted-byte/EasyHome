@@ -150,12 +150,17 @@ async function loadAll() {
   try {
     const snap = await fs.collection('families/' + state.fid + '/recipes').get();
     snap.docs.forEach((d) => { const r = d.data() || {}; state.recipes[d.id] = { title: r.title, image: r.image, time: r.time, themes: r.themes, description: r.description }; }); // fylder også madplanens retter ud
-    const list = snap.docs.map((d) => { const r = d.data() || {}; return { id: d.id, title: r.title || '', image: imgUrl(r.image), art: artColors(r.title), time: r.time || '', theme: (r.themes || [])[0] || '', intro: intro(r) }; }).filter((r) => r.title);
+    const list = snap.docs.map((d) => { const r = d.data() || {}; return { id: d.id, title: r.title || '', image: imgUrl(r.image), art: artColors(r.title), time: r.time || '', theme: (r.themes || [])[0] || '', intro: intro(r), meals: recipeMeals(r) }; }).filter((r) => r.title);
     for (let i = list.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [list[i], list[j]] = [list[j], list[i]]; }
     list.sort((a, b) => (b.image ? 1 : 0) - (a.image ? 1 : 0)); // retter med foto først
     state.all = list; onChange();
   } catch (e) { /* prøv igen senere */ }
 }
+// Måltidstyper som i Madro: et eget felt, ellers udledt af tags. Retter uden type tæller som aftensmad.
+export const MEALS = ['Morgenmad', 'Brunch', 'Frokost', 'Aftensmad', 'Dessert', 'Snacks', 'Drinks'];
+const MEAL_TAG = { morgenmad: 'Morgenmad', brunch: 'Brunch', frokost: 'Frokost', aftensmad: 'Aftensmad', middag: 'Aftensmad', dessert: 'Dessert', kage: 'Snacks', bagværk: 'Snacks', snack: 'Snacks', snacks: 'Snacks', drikke: 'Drinks', drink: 'Drinks', drinks: 'Drinks', cocktail: 'Drinks' };
+function recipeMeals(r) { if (Array.isArray(r.meals)) return r.meals; return [...new Set((r.tags || []).map((t) => MEAL_TAG[String(t).toLowerCase()]).filter(Boolean))]; }
+export const mealMatch = (r, meal) => !meal || (r.meals || []).includes(meal) || (meal === 'Aftensmad' && !(r.meals || []).length);
 function intro(r) {
   let d = String(r.description || '').replace(/\s+/g, ' ').trim();
   if (!d) return '';

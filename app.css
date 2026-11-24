@@ -1121,9 +1121,12 @@ button.w7r.sel{background:color-mix(in srgb,var(--accent) 16%,transparent);box-s
 /* Indkøbsliste opdelt i kategorier som i Madro */
 .shoplist.cats{display:grid;grid-template-columns:repeat(var(--cols),minmax(0,1fr));grid-auto-rows:auto;align-items:start;gap:0 16px}
 .scol{min-width:0}
-.scat{break-inside:avoid;margin-bottom:8px;border-left:4px solid var(--cc);padding-left:8px}
-.scat-h{display:flex;align-items:center;gap:6px;height:26px;font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--text);min-width:0}
-.scat-h b{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:800}
-.scat-n{font-weight:700;color:var(--muted)}
-.shoplist.cats .shopitem{height:30px}
+.scat{margin-bottom:10px;border-radius:12px;overflow:hidden;background:color-mix(in srgb,var(--cc) 14%,transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--cc) 35%,transparent)}
+.scat-h{display:flex;align-items:center;gap:8px;height:32px;padding:0 10px;background:var(--cc);color:#fff;font-size:13px;text-transform:uppercase;letter-spacing:.05em;min-width:0}
+.scat-h b{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:800;text-shadow:0 1px 2px rgba(0,0,0,.25)}
+.scat-n{font-weight:800;background:rgba(255,255,255,.25);border-radius:99px;padding:1px 8px;font-size:12px}
+.shoplist.cats .shopitem{height:32px;padding:0 10px}
+.shoplist.cats .shopitem+.shopitem{border-top:1px solid color-mix(in srgb,var(--cc) 20%,transparent)}
 .shoplist.cats .shopitem i{background:var(--cc)}
+
+.wsel{min-height:36px;max-width:160px;border-radius:10px;border:1px solid var(--line);background:var(--dayBg);color:var(--text);font:inherit;font-size:14px;font-weight:700;padding:0 8px}

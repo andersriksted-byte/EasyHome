@@ -1,5 +1,5 @@
 {
-  "version": "1.48.0",
+  "version": "1.49.0",
   "files": [
     "index.html",
     "app.js",
@@ -23,6 +23,16 @@
     "mcats.js"
   ],
   "notes": [
+    {
+      "version": "1.49.0",
+      "date": "24. november 2026",
+      "title": "Inspiration efter måltid",
+      "items": [
+        "Inspirationskortet kan nu vise fx kun aftensmad, frokost eller dessert",
+        "Vælg måltid under Tilpas forside (blyanten) på kortet",
+        "Kategorierne i indkøbslisten har fået en tydelig farvet overskrift"
+      ]
+    },
     {
       "version": "1.48.0",
       "date": "24. november 2026",
