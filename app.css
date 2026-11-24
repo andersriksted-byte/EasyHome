@@ -1047,3 +1047,24 @@ button.w7r.sel{background:color-mix(in srgb,var(--accent) 16%,transparent);box-s
   .nx2-title{-webkit-line-clamp:1;font-size:clamp(15px,7cqmin,22px)}
   .nx2-drive b{font-size:clamp(16px,8cqmin,24px)}
 }
+
+/* Timer: vælg vilkårlig tid */
+.tm-any{display:flex;align-items:center;justify-content:center;gap:6px;background:color-mix(in srgb,var(--accent) 18%,var(--bg))!important}
+.tm-any span{font-size:13px}
+.tmpick-shade{position:fixed;inset:0;z-index:1100;background:rgba(0,0,0,.45);display:grid;place-items:center;padding:20px}
+.tmpick{width:min(400px,100%);background:var(--card);color:var(--text);border-radius:24px;padding:22px;display:flex;flex-direction:column;gap:14px;box-shadow:0 30px 80px rgba(0,0,0,.35)}
+.tp-disp{display:flex;align-items:flex-start;justify-content:center;gap:6px;font-variant-numeric:tabular-nums}
+.tp-disp.empty b{color:var(--muted)}
+.tp-disp i{font-style:normal;font-size:44px;font-weight:800;line-height:1;color:var(--muted)}
+.tps{display:flex;flex-direction:column;align-items:center}
+.tps b{font-size:52px;font-weight:800;line-height:1}
+.tps small{font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.tp-quick{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.tp-quick button{height:40px;border:0;border-radius:12px;background:var(--bg);color:var(--text);font-weight:800;font-size:13px}
+.tp-keys{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.tp-keys button{height:56px;border:0;border-radius:16px;background:var(--bg);color:var(--text);font-size:24px;font-weight:800}
+.tp-keys button:active,.tp-quick button:active{background:var(--accent);color:var(--onAccent)}
+.tp-foot{display:grid;grid-template-columns:1fr 1.4fr;gap:10px}
+.tp-foot .btn{height:52px;font-size:17px}
+.tp-foot .btn[disabled]{opacity:.4}
+.tm-any span{white-space:nowrap}

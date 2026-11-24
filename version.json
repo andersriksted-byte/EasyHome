@@ -1,5 +1,5 @@
 {
-  "version": "1.42.2",
+  "version": "1.43.0",
   "files": [
     "index.html",
     "app.js",
@@ -22,6 +22,15 @@
     "timer.js"
   ],
   "notes": [
+    {
+      "version": "1.43.0",
+      "date": "24. november 2026",
+      "title": "Timer med valgfri tid",
+      "items": [
+        "Timeren kan nu sættes til en hvilken som helst tid: tryk \"Andet\" og tast tiden ind som på en telefon – fx 1-2-3-0 giver 12 min 30 sek.",
+        "Knapperne +5 min, +10 min, +30 min og +1 t lægger tid til, før man starter."
+      ]
+    },
     {
       "version": "1.42.2",
       "date": "24. november 2026",

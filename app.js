@@ -496,7 +496,7 @@ function wIndkob(size, h = 1, wd = 1) {
 const TM_PRESETS = [1, 3, 5, 10, 15, 20, 30, 45, 60];
 function wTimer(size, h = 1, wd = 1) {
   const ts = TM.timers();
-  const presets = (n) => `<div class="tmp" style="--c:${n}">${TM_PRESETS.map((m) => `<button data-act="tmStart" data-m="${m}">${m >= 60 ? m / 60 + ' t' : m + ' min'}</button>`).join('')}</div>`;
+  const presets = (n) => `<div class="tmp" style="--c:${n}">${TM_PRESETS.slice(0, n * 3 - 1).map((m) => `<button data-act="tmStart" data-m="${m}">${m >= 60 ? m / 60 + ' t' : m + ' min'}</button>`).join('')}<button class="tm-any" data-act="tmPickOpen" aria-label="Vælg en anden tid">${svg('timer', 18)}<span>Andet</span></button></div>`;
   if (!ts.length) return cardHead('Timer') + presets(wd >= 2 && h === 1 ? 5 : 3);
   const row = (t) => {
     const l = TM.left(t); const pct = t.total ? Math.max(0, Math.min(100, (l / t.total) * 100)) : 0;
@@ -507,6 +507,22 @@ function wTimer(size, h = 1, wd = 1) {
     </div>`;
   };
   return cardHead('Timer') + `<div class="tmlist">${ts.map(row).join('')}<div class="tmmore">${presets(Math.min(5, Math.max(3, wd * 3)))}</div></div>`;
+}
+// Vælg en vilkårlig tid: tast cifre som på et telefon-ur (fx 1-2-3-0 = 12 min 30 sek)
+function tmPickDigits() { return (ui.tmPick || '').replace(/^0+/, '').slice(-6); }
+function tmPickParts() { const d = tmPickDigits().padStart(6, '0'); return { h: +d.slice(0, 2), m: +d.slice(2, 4), s: +d.slice(4, 6) }; }
+function renderTmPicker() {
+  let el = document.getElementById('tmPicker');
+  if (ui.tmPick === undefined || ui.tmPick === null) { if (el) el.remove(); return; }
+  if (!el) { el = document.createElement('div'); el.id = 'tmPicker'; el.className = 'tmpick-shade'; el.addEventListener('click', (e) => { if (e.target === el) { ui.tmPick = null; renderTmPicker(); } }); document.body.appendChild(el); }
+  const p = tmPickParts(); const any = p.h || p.m || p.s;
+  const seg = (v, l) => `<span class="tps"><b>${String(v).padStart(2, '0')}</b><small>${l}</small></span>`;
+  el.innerHTML = `<div class="tmpick" role="dialog" aria-modal="true" aria-label="Vælg tid til timeren">
+    <div class="tp-disp ${any ? '' : 'empty'}">${seg(p.h, 'timer')}<i>:</i>${seg(p.m, 'min')}<i>:</i>${seg(p.s, 'sek')}</div>
+    <div class="tp-quick">${[[5, '+5 min'], [10, '+10 min'], [30, '+30 min'], [60, '+1 t']].map(([m, l]) => `<button data-act="tmPickAdd" data-m="${m}">${l}</button>`).join('')}</div>
+    <div class="tp-keys">${[1, 2, 3, 4, 5, 6, 7, 8, 9].map((k) => `<button data-act="tmKey" data-k="${k}">${k}</button>`).join('')}<button data-act="tmKey" data-k="00">00</button><button data-act="tmKey" data-k="0">0</button><button data-act="tmBack" aria-label="Slet sidste ciffer">⌫</button></div>
+    <div class="tp-foot"><button class="btn line" data-act="tmPickClose">Annuller</button><button class="btn primary" data-act="tmPickStart" ${any ? '' : 'disabled'}>Start</button></div>
+  </div>`;
 }
 function timerTick() {
   TM.tick();
@@ -1184,6 +1200,16 @@ const act = {
   wStepSet: (b) => { settings.weather.step = +b.dataset.v; save(); renderMain(); },
   awake: () => { settings.keepAwake = !settings.keepAwake; save(); applyWakeLock(); renderNav(); toast(settings.keepAwake ? 'Skærmen holdes tændt' : 'Skærmen må slukke igen'); },
   tmStart: (b) => { TM.start(+b.dataset.m); },
+  tmPickOpen: () => { ui.tmPick = ''; renderTmPicker(); },
+  tmPickClose: () => { ui.tmPick = null; renderTmPicker(); },
+  tmKey: (b) => { ui.tmPick = (tmPickDigits() + b.dataset.k).slice(-6); renderTmPicker(); },
+  tmBack: () => { ui.tmPick = tmPickDigits().slice(0, -1); renderTmPicker(); },
+  tmPickAdd: (b) => { const p = tmPickParts(); let t = p.h * 3600 + p.m * 60 + p.s + +b.dataset.m * 60; t = Math.min(t, 99 * 3600 + 59 * 60 + 59); const h = Math.floor(t / 3600), m = Math.floor((t % 3600) / 60), s2 = t % 60; ui.tmPick = String(h).padStart(2, '0') + String(m).padStart(2, '0') + String(s2).padStart(2, '0'); renderTmPicker(); },
+  tmPickStart: () => {
+    const p = tmPickParts(); const sec = p.h * 3600 + p.m * 60 + p.s; if (!sec) return;
+    const label = [p.h ? p.h + ' t' : '', p.m ? p.m + ' min' : '', p.s ? p.s + ' sek' : ''].filter(Boolean).join(' ');
+    TM.start(sec / 60, label); ui.tmPick = null; renderTmPicker();
+  },
   tmToggle: (b) => { TM.toggle(b.dataset.id); },
   tmAdd: (b) => { TM.add(b.dataset.id, +b.dataset.m); },
   tmRm: (b) => { TM.remove(b.dataset.id); timerTick(); },
