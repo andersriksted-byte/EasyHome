@@ -15,7 +15,7 @@ Familie-dashboard (web-app på GitHub Pages) til en touchskærm/iPad på væggen
 - Nye funktioner må ikke selv tilføje kort til forsiden. Kun brugeren vælger kort under "Tilpas forside".
 
 ## Workeren
-`cloudflare-worker.js` deployes IKKE automatisk. Ændres den, skal brugeren kopiere hele filen ind i Cloudflare (Workers & Pages → easyhome → Edit code → ⌘A, sæt ind, Deploy). Guid brugeren trin for trin, og sig tydeligt til, når det er nødvendigt.
+`cloudflare-worker.js` deployes automatisk af Cloudflare Workers Builds ved push til main (opsætning i `wrangler.toml`, `keep_vars = true` bevarer variabler/secrets fra dashboardet). Hvis Builds ikke er forbundet, skal brugeren kopiere filen ind manuelt (Workers & Pages → easyhome → Edit code). Rør ikke KV-id'et i wrangler.toml.
 Variabler i Cloudflare: DASH_KEY (secret), APP_ORIGIN, SONOS_CLIENT_ID, SONOS_CLIENT_SECRET (secret). KV-binding: DASH_KV (Sonos-login + fælles indstillinger `shared_settings`).
 
 ## Deling mellem skærme
