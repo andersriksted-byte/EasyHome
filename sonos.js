@@ -126,6 +126,22 @@ export async function setMembers(playerIds) {
   if (r && r.group && r.group.id) { settings.sonos.groupId = r.group.id; save(); }
   state.household = null; // hent rum og grupper på ny
 }
+// Tag et rum ud af gruppen – også det rum, musikken startede i (gruppens "styrer").
+// Sonos giver så styringen videre til et af de andre rum, og musikken fortsætter dér.
+export async function removePlayer(pid) {
+  const g = currentGroup(); if (!g) return;
+  const rest = (g.playerIds || []).filter((x) => x !== pid); if (!rest.length) return;
+  if (pid !== g.coordinatorId) return setMembers(rest);
+  await api(`/groups/${g.id}/groups/modifyGroupMembers`, 'POST', { playerIdsToRemove: [pid] });
+  // Find den nye gruppe med de rum, der er tilbage
+  for (let i = 0; i < 6; i++) {
+    await new Promise((r) => setTimeout(r, 600));
+    await loadHousehold();
+    const ng = state.groups.find((x) => (x.playerIds || []).includes(rest[0]));
+    if (ng && !(ng.playerIds || []).includes(pid)) { settings.sonos.groupId = ng.id; save(); break; }
+  }
+  state.household = null;
+}
 export async function soloPlayer(pid) {
   // Lav en gruppe med kun dette rum (tager det ud af den gruppe, det er i)
   const r = await api(`/households/${state.household}/groups/createGroup`, 'POST', { playerIds: [pid] });

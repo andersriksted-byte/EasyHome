@@ -1,5 +1,5 @@
 {
-  "version": "1.33.3",
+  "version": "1.33.4",
   "files": [
     "index.html",
     "app.js",
@@ -21,6 +21,15 @@
     "somfy.js"
   ],
   "notes": [
+    {
+      "version": "1.33.4",
+      "date": "24. november 2026",
+      "title": "Sonos: slå startrummet fra",
+      "items": [
+        "Nu kan I også tage det rum ud af gruppen, som musikken startede i – musikken fortsætter i de andre rum.",
+        "Knapper til Sonos og Somfy pulserer, mens de venter på svar, så man kan se, at der sker noget."
+      ]
+    },
     {
       "version": "1.33.3",
       "date": "24. november 2026",

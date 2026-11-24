@@ -629,7 +629,7 @@ function sonosRooms() {
     const vol = S.state.playerVol[pl.id];
     const status = isCoord ? 'styrer' : inG ? 'med' : other && other.playerIds.length > 1 ? esc(other.name) : other && other.playbackState === 'PLAYBACK_STATE_PLAYING' ? 'spiller selv' : 'ledig';
     return `<div class="room ${inG ? 'on' : ''}">
-      <button class="rtoggle" data-act="sMember" data-pid="${esc(pl.id)}" aria-pressed="${inG}" ${isCoord ? 'disabled' : ''} aria-label="${inG ? 'Tag ' + esc(pl.name) + ' ud af gruppen' : 'Føj ' + esc(pl.name) + ' til gruppen'}"><span class="rbox">${inG ? '✓' : ''}</span><span class="rname"><b>${esc(pl.name)}</b><span class="psub">${status}</span></span></button>
+      <button class="rtoggle" data-act="sMember" data-pid="${esc(pl.id)}" aria-pressed="${inG}" ${isCoord && members.length < 2 ? 'disabled' : ''} aria-label="${inG ? 'Tag ' + esc(pl.name) + ' ud af gruppen' : 'Føj ' + esc(pl.name) + ' til gruppen'}"><span class="rbox">${inG ? '✓' : ''}</span><span class="rname"><b>${esc(pl.name)}</b><span class="psub">${status}</span></span></button>
       ${inG && vol !== undefined && vol !== null ? `<input class="rslider" type="range" min="0" max="100" value="${vol}" data-pvol="${esc(pl.id)}" aria-label="Lydstyrke i ${esc(pl.name)}">` : ''}
     </div>`;
   }).join('');
@@ -1067,9 +1067,8 @@ const act = {
   sMember: (b) => {
     const cg = S.currentGroup(); if (!cg) return;
     const pid = b.dataset.pid; const cur = cg.playerIds || [];
-    const next = cur.includes(pid) ? cur.filter((x) => x !== pid) : cur.concat([pid]);
-    if (!next.length) return;
-    b.disabled = true; sonosDo(() => S.setMembers(next));
+    if (cur.includes(pid)) { if (cur.length < 2) return; sonosDo(() => S.removePlayer(pid)); return; }
+    sonosDo(() => S.setMembers(cur.concat([pid])));
   },
   sAll: () => sonosDo(() => S.setMembers(S.state.players.map((p) => p.id))),
   sOnly: () => { const cg = S.currentGroup(); if (cg) sonosDo(() => S.setMembers([cg.coordinatorId])); },
@@ -1143,7 +1142,12 @@ document.addEventListener('click', (e) => {
   const link = e.target.closest('a[data-read]');
   if (link) { e.preventDefault(); R.openReader(link.href, link.dataset.read); return; }
   const b = e.target.closest('[data-act]');
-  if (b && act[b.dataset.act]) { e.preventDefault(); act[b.dataset.act](b, e); }
+  if (b && act[b.dataset.act]) {
+    e.preventDefault();
+    // Sonos og Somfy svarer langsomt: lad knappen pulsere, indtil svaret er kommet
+    if (/^(s[A-Z]|sf)/.test(b.dataset.act) && !/^(sfTest|spAdd|spRm|spReset)$/.test(b.dataset.act)) { b.classList.add('pending'); setTimeout(() => b.classList.remove('pending'), 10000); }
+    act[b.dataset.act](b, e);
+  }
 });
 document.addEventListener('input', (e) => {
   const t = e.target;

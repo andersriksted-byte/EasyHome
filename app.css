@@ -820,3 +820,8 @@ span.avatar{opacity:1}
 .sfone.grid2 .sfb .sfstop{grid-column:1/-1;min-height:0}
 .sfone.one-row .sfb{grid-template-columns:repeat(var(--cols),minmax(0,1fr)) minmax(0,.6fr);grid-template-rows:1fr}
 .sfone.grid2 .sfb button{min-height:0}
+
+/* Venter på svar fra Sonos/Somfy: knappen pulserer */
+@keyframes pendingPulse{0%,100%{box-shadow:0 0 0 0 color-mix(in srgb,var(--accent) 55%,transparent);filter:brightness(1)}50%{box-shadow:0 0 0 6px color-mix(in srgb,var(--accent) 0%,transparent);filter:brightness(1.25)}}
+.pending{animation:pendingPulse 1s ease-in-out infinite;position:relative}
+.pending[aria-pressed=true],.rtoggle.pending .rbox{animation:pendingPulse 1s ease-in-out infinite}
