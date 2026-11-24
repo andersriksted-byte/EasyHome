@@ -1,5 +1,5 @@
 {
-  "version": "1.37.0",
+  "version": "1.37.1",
   "files": [
     "index.html",
     "app.js",
@@ -22,6 +22,16 @@
     "timer.js"
   ],
   "notes": [
+    {
+      "version": "1.37.1",
+      "date": "24. november 2026",
+      "title": "Kortene passer bedre på mindre skærme",
+      "items": [
+        "Screens-knapperne klemmes ikke længere sammen i lave kort – de står nu 3 og 3.",
+        "Nyhedsoverskrifter kan ikke længere flyde ind over hinanden; i lave kort vises kun listen.",
+        "Madplanen viser nu altid rettens navn i stedet for \"…\"."
+      ]
+    },
     {
       "version": "1.37.0",
       "date": "24. november 2026",

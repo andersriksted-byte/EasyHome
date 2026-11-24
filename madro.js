@@ -58,10 +58,15 @@ function fail(e) { state.status = 'error'; state.error = e && e.code === 'permis
 async function loadRecipes() {
   const ids = new Set();
   Object.values(state.plans).forEach((list) => list.forEach((e) => { if (e.recipeId && !state.recipes[e.recipeId]) ids.add(e.recipeId); }));
-  for (const id of ids) {
-    state.recipes[id] = { title: '…' };
-    try { const d = await fs.doc('families/' + state.fid + '/recipes/' + id).get(); state.recipes[id] = d.exists ? d.data() : { title: 'Ukendt ret' }; } catch (e) { state.recipes[id] = { title: 'Ukendt ret' }; }
-  }
+  await Promise.all([...ids].map(async (id) => {
+    state.recipes[id] = { title: '…', loading: true };
+    const get = (path) => Promise.race([fs.doc(path).get(), new Promise((_, rej) => setTimeout(() => rej(new Error('tid')), 8000))]);
+    try {
+      let d = await get('families/' + state.fid + '/recipes/' + id);
+      if (!d.exists && /^c_/.test(id)) d = await get('library/' + id.slice(2)); // opskrift fra opskriftsfællesskabet
+      state.recipes[id] = d.exists ? d.data() : { title: 'Ukendt ret' };
+    } catch (e) { delete state.recipes[id]; setTimeout(loadRecipes, 15000); } // prøv igen lidt senere
+  }));
   if (ids.size) onChange();
 }
 
@@ -82,7 +87,7 @@ export function mealsOn(date) {
   return list.filter((e) => e.day === day).map((e) => {
     if (e.note != null) return { title: e.note, sub: e.sub || '', image: imgUrl(e.image) || (/ude|restaurant/i.test(e.note) ? BASE + 'img/spiser-ude.jpg' : ''), art: artColors(e.note), note: true };
     if (e.pendingUrl) return { title: 'Opskrift hentes …', image: '', note: true };
-    const r = state.recipes[e.recipeId] || { title: '…' };
+    const r = state.recipes[e.recipeId] || { title: e.title || '…' };
     return { title: r.title || 'Ret', image: imgUrl(r.image), art: artColors(r.title), note: false, status: shopStatus(e, r) };
   });
 }
@@ -144,6 +149,7 @@ async function loadAll() {
   if (!fs || !state.fid) return;
   try {
     const snap = await fs.collection('families/' + state.fid + '/recipes').get();
+    snap.docs.forEach((d) => { const r = d.data() || {}; state.recipes[d.id] = { title: r.title, image: r.image }; }); // fylder også madplanens retter ud
     const list = snap.docs.map((d) => { const r = d.data() || {}; return { id: d.id, title: r.title || '', image: imgUrl(r.image), art: artColors(r.title), time: r.time || '', theme: (r.themes || [])[0] || '', intro: intro(r) }; }).filter((r) => r.title);
     for (let i = list.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [list[i], list[j]] = [list[j], list[i]]; }
     list.sort((a, b) => (b.image ? 1 : 0) - (a.image ? 1 : 0)); // retter med foto først
