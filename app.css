@@ -581,3 +581,7 @@ span.avatar{opacity:1}
 .si-name{font-size:14px}
 .si-amt{font-size:12px}
 .shopadd{margin-top:6px}
+
+.hdredit{width:44px;height:44px;flex:none;display:grid;place-items:center;border-radius:50%;border:0;background:var(--card);color:var(--text)}
+.hdredit.on{background:var(--accent);color:var(--onAccent)}
+.hdredit.on{background:var(--text);color:var(--bg)}

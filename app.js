@@ -163,7 +163,7 @@ function renderHeader() {
     <div class="clock"><b id="clk">${hhmm(now)}</b><span>${esc(longDate(now))}</span></div>
     ${w && svcOn('vejr') ? `<button class="chip" data-act="nav" data-page="vejr">${W.weatherIcon(w.now.code, w.now.isDay, 24)} ${fmtTemp(w.now.temp)} · ${esc(W.codeText(w.now.code).toLowerCase())}</button>` : ''}
     ${next ? `<span class="chip accent">${next.days === 0 ? `I dag: ${esc(next.name)}` : `${next.days} ${next.days === 1 ? 'dag' : 'dage'} til ${esc(next.name.toLowerCase())}`}</span>` : ''}
-    <div class="right">${members().length ? `<div class="profiles" role="group" aria-label="Hvem bruger skærmen?">${members().map((m) => `<button class="avatar" data-act="pickMe" data-id="${esc(m.id)}" aria-pressed="${settings.me === m.id}" aria-label="${esc(m.name)}${settings.me === m.id ? ' (valgt – tryk for alle)' : ''}" style="--c:${esc(m.color)}">${esc(initials(m.name))}</button>`).join('')}</div>` : ''}</div>`;
+    <div class="right">${ui.page === 'forside' ? `<button class="hdredit ${ui.editing ? 'on' : ''}" data-act="edit" aria-pressed="${ui.editing}" aria-label="${ui.editing ? 'Færdig med at tilpasse forsiden' : 'Tilpas forside'}" title="${ui.editing ? 'Færdig' : 'Tilpas forside'}">${ui.editing ? ico('check', 20) : ico('edit', 20)}</button>` : ''}${members().length ? `<div class="profiles" role="group" aria-label="Hvem bruger skærmen?">${members().map((m) => `<button class="avatar" data-act="pickMe" data-id="${esc(m.id)}" aria-pressed="${settings.me === m.id}" aria-label="${esc(m.name)}${settings.me === m.id ? ' (valgt – tryk for alle)' : ''}" style="--c:${esc(m.color)}">${esc(initials(m.name))}</button>`).join('')}</div>` : ''}</div>`;
 }
 
 /* ---------- Footer ---------- */
@@ -370,7 +370,7 @@ function pageForside() {
     </section>`;
   }).join('');
   const me = meMember();
-  return `<div class="ptitle"><h1>${esc((settings.family && settings.family.name) || 'Forside')}</h1>${me ? `<span class="mechip" style="--c:${esc(me.color)}">${esc(me.name)}s visning <button data-act="pickMe" data-id="${esc(me.id)}" aria-label="Vis hele familien">✕</button></span>` : ''}<div class="tools"><button class="btn ${ui.editing ? 'dark' : 'line'}" data-act="edit">${ui.editing ? 'Færdig' : 'Tilpas forside'}</button></div></div>
+  return `<div class="ptitle"><h1>${esc((settings.family && settings.family.name) || 'Forside')}</h1>${me ? `<span class="mechip" style="--c:${esc(me.color)}">${esc(me.name)}s visning <button data-act="pickMe" data-id="${esc(me.id)}" aria-label="Vis hele familien">✕</button></span>` : ''}</div>
     ${edit}<div class="gridwrap"><div class="grid ${ui.editing ? 'editing' : ''}" id="grid">${cards || '<div class="empty">Forsiden er tom. Tryk "Tilpas forside" og vælg kort.</div>'}</div></div>`;
 }
 function themePicker() {
@@ -700,6 +700,7 @@ function showMadroFrame(on) {
 }
 function renderMain(keepScroll = true) {
   const m = $('#main'); const y = m.scrollTop;
+  if (ui.hdrPage !== ui.page) { ui.hdrPage = ui.page; renderHeader(); }
   showMadroFrame(ui.page === 'madro');
   m.innerHTML = PAGE_RENDER[ui.page]();
   if (ui.page === 'forside') { fitCards(); trimCards(); }
@@ -783,7 +784,7 @@ const act = {
   toggleNav: () => { settings.navOpen = !settings.navOpen; save(); renderNav(); },
   nextTheme: () => { const i = THEME_ORDER.indexOf(settings.theme); settings.theme = THEME_ORDER[(i + 1) % THEME_ORDER.length]; save(); applyTheme(); renderHeader(); if (ui.editing || ui.page === 'indstillinger') renderMain(); },
   setTheme: (b) => { settings.theme = b.dataset.theme; save(); applyTheme(); renderHeader(); renderMain(); },
-  edit: () => { ui.editing = !ui.editing; renderMain(); },
+  edit: () => { ui.editing = !ui.editing; renderHeader(); renderMain(); },
   toggleW: (b) => {
     const id = b.dataset.id; const i = settings.layout.findIndex((x) => x.id === id);
     if (i >= 0) settings.layout.splice(i, 1); else { const [w, h] = DEFAULT_SHAPE[id] || [1, 1]; settings.layout.push({ id, w, h }); }
