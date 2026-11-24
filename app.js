@@ -47,6 +47,7 @@ const themeLabel = (id) => (id === 'auto' ? 'Automatisk' : THEMES[id].label);
 
 /* ---------- Ikoner ---------- */
 const ICON = {
+  shuffle: 'M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5', repeat: 'M17 1l4 4-4 4M3 11V9a4 4 0 0 1 4-4h14M7 23l-4-4 4-4M21 13v2a4 4 0 0 1-4 4H3',
   madro: 'M4 11h16v5a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4zM2 11h20M9 7c0-1.2 1-1.8 1-3M14 7c0-1.2 1-1.8 1-3',
   cd: 'M12 8v5l3 2M9 2h6M12 22a8 8 0 1 0 0-16 8 8 0 0 0 0 16z', store: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z',
   menu: 'M4 7h16M4 12h16M4 17h16', back: 'M15 6l-6 6 6 6',
@@ -441,7 +442,7 @@ function sonosRooms() {
   const coord = cg ? cg.coordinatorId : null;
   const coordName = (S.state.players.find((x) => x.id === coord) || {}).name || 'dette rum';
   const players = [...S.state.players].sort((x, y) => x.name.localeCompare(y.name, 'da'));
-  const groups = S.state.groups.length > 1 ? `<div class="mgroups">${S.state.groups.map((g) => `<button class="chipbtn" data-act="sGroup" data-id="${esc(g.id)}" aria-pressed="${g.id === settings.sonos.groupId}">${esc(g.name)}${g.playbackState === 'PLAYBACK_STATE_PLAYING' ? ' ♪' : ''}</button>`).join('')}</div>` : '';
+  const groups = S.state.groups.length > 1 ? `<div class="mgroups">${S.state.groups.map((g) => `<button class="chipbtn" data-act="sGroup" data-id="${esc(g.id)}" aria-pressed="${g.id === settings.sonos.groupId}" title="${esc(g.name)}"><span class="cbt">${esc(g.name)}</span>${g.playbackState === 'PLAYBACK_STATE_PLAYING' ? ' ♪' : ''}</button>`).join('')}</div>` : '';
   const rows = players.map((pl) => {
     const inG = members.includes(pl.id);
     const isCoord = pl.id === coord;
@@ -454,7 +455,7 @@ function sonosRooms() {
     </div>`;
   }).join('');
   return `<section class="card mcol">
-      <div class="mhead"><span class="lab">Rum</span><span class="row" style="gap:6px"><button class="chipbtn" data-act="sAll">Alle sammen</button><button class="chipbtn" data-act="sOnly">Kun ${esc(coordName)}</button></span></div>
+      <div class="mhead"><span class="lab">Rum</span><span class="row" style="gap:6px"><button class="chipbtn" data-act="sAll">Alle sammen</button><button class="chipbtn" data-act="sOnly" title="Kun ${esc(coordName)}"><span class="cbt">Kun ${esc(coordName)}</span></button></span></div>
       ${groups}
       <div class="rooms mscroll">${rows || '<span class="muted">Ingen rum fundet</span>'}</div>
     </section>`;
@@ -471,7 +472,8 @@ function pageMusik() {
     <section class="player mplayer">
       <div class="art" style="${np.image ? `background-image:url('${esc(np.image)}')` : ''}"></div>
       <div class="mnow"><b>${esc(np.title || 'Intet spiller')}</b><span>${esc(np.artist || '')}</span><span class="mgrp">${esc(np.group)}</span></div>
-      <div class="ctl"><button data-act="sPrev" aria-label="Forrige">${fillSvg('prev', 18)}</button><button class="pbig" data-act="sPlay" aria-label="${np.playing ? 'Pause' : 'Afspil'}">${fillSvg(np.playing ? 'pause' : 'play', 22)}</button><button data-act="sNext" aria-label="Næste">${fillSvg('next', 18)}</button></div>
+      <div class="ctl"><button class="mode" data-act="sShuffle" aria-pressed="${!!np.modes.shuffle}" aria-label="Bland sangene">${svg('shuffle', 20)}</button><button data-act="sPrev" aria-label="Forrige">${fillSvg('prev', 18)}</button><button class="pbig" data-act="sPlay" aria-label="${np.playing ? 'Pause' : 'Afspil'}">${fillSvg(np.playing ? 'pause' : 'play', 22)}</button><button data-act="sNext" aria-label="Næste">${fillSvg('next', 18)}</button><button class="mode" data-act="sRepeat" aria-pressed="${!!(np.modes.repeat || np.modes.repeatOne)}" aria-label="${np.modes.repeatOne ? 'Gentag én sang' : np.modes.repeat ? 'Gentag hele listen' : 'Gentag fra'}">${svg('repeat', 20)}${np.modes.repeatOne ? '<i>1</i>' : ''}</button></div>
+      <div class="mqueue">${np.source ? `<div class="mq-src" title="${esc(np.source)}">Fra ${esc(np.source)}</div>` : ''}${np.next ? `<div class="mq-lab">Næste</div><div class="mq-row"><span class="mq-art" style="${np.next.image ? `background-image:url('${esc(np.next.image)}')` : ''}"></span><span class="mq-txt"><b>${esc(np.next.title)}</b><span>${esc(np.next.artist)}</span></span></div>` : ''}</div>
       ${np.volume !== null ? `<label class="vol"><span class="small">Lyd</span><input type="range" min="0" max="100" value="${np.volume}" data-vol aria-label="Lydstyrke for hele gruppen"></label>` : ''}
     </section>
     ${sonosRooms()}
@@ -786,6 +788,8 @@ const act = {
   wStepSet: (b) => { settings.weather.step = +b.dataset.v; save(); renderMain(); },
   mdOpen: (b) => { madroSub = b.dataset.sub || ''; act.nav({ dataset: { page: 'madro' } }); },
   mdToggle: (b) => { b.classList.add('done'); setTimeout(() => MD.toggleItem(b.dataset.id), 350); },
+  sShuffle: () => { const m = S.nowPlaying().modes; S.setPlayModes({ shuffle: !m.shuffle }).catch(() => toast('Sonos kunne ikke skifte')); renderMain(); },
+  sRepeat: () => { const m = S.nowPlaying().modes; const nx = m.repeatOne ? { repeat: false, repeatOne: false } : m.repeat ? { repeat: false, repeatOne: true } : { repeat: true, repeatOne: false }; S.setPlayModes(nx).catch(() => toast('Sonos kunne ikke skifte')); renderMain(); },
   pickMe: (b) => { settings.me = settings.me === b.dataset.id ? '' : b.dataset.id; save(); renderHeader(); renderMain(); },
   memAdd: () => { const colors = ['#D0563C', '#4C78D0', '#D9A400', '#2E9D5B', '#7A5AC8', '#C2407E']; const m = settings.family.members; m.push({ id: uid(), name: '', color: colors[m.length % colors.length] }); save(); renderMain(); setTimeout(() => { const el = document.querySelectorAll('[data-mem][data-field=name]'); if (el.length) el[el.length - 1].focus(); }, 50); },
   memRm: (b) => { const [m] = settings.family.members.splice(+b.dataset.i, 1); if (m) { settings.calendars.forEach((c) => { if (c.owner === m.id) c.owner = ''; }); if (settings.me === m.id) settings.me = ''; } save(); renderHeader(); renderMain(); },

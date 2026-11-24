@@ -1,5 +1,5 @@
 {
-  "version": "1.17.0",
+  "version": "1.18.0",
   "files": [
     "index.html",
     "app.js",
@@ -20,6 +20,16 @@
     "madro.js"
   ],
   "notes": [
+    {
+      "version": "1.18.0",
+      "date": "24. november 2026",
+      "title": "Bland og gentag på Sonos",
+      "items": [
+        "På Musik-siden kan I nu blande sangene og slå gentag til (hele listen eller én sang).",
+        "Under afspilleren står, hvilken liste der spilles fra, og hvilken sang der kommer som den næste.",
+        "Rummene øverst står nu pænt på én linje."
+      ]
+    },
     {
       "version": "1.17.0",
       "date": "24. november 2026",

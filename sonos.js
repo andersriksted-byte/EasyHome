@@ -103,7 +103,10 @@ export function nowPlaying() {
   const image = art(item) || art(container) || art(m.currentItem) || (item ? lookupArt(item.artist && item.artist.name, item.name) : '');
   const playing = state.playback && /PLAYING|BUFFERING/.test(state.playback.playbackState || '');
   const group = state.groups.find((g) => g.id === settings.sonos.groupId);
-  return { title, artist, image, playing, group: group ? group.name : '', volume: state.volume ? state.volume.volume : null };
+  const nx = m.nextItem && m.nextItem.track ? m.nextItem.track : null;
+  const next = nx ? { title: nx.name || '', artist: nx.artist ? nx.artist.name : '', image: art(nx) || lookupArt(nx.artist && nx.artist.name, nx.name) } : null;
+  const modes = (state.playback && state.playback.playModes) || {};
+  return { title, artist, image, playing, group: group ? group.name : '', volume: state.volume ? state.volume.volume : null, next, source: container.name && container.name !== title ? container.name : '', modes };
 }
 
 const gid = () => settings.sonos.groupId;
@@ -131,3 +134,10 @@ export async function soloPlayer(pid) {
 }
 export const setPlayerVolume = (pid, v) => api(`/players/${pid}/playerVolume`, 'POST', { volume: Math.max(0, Math.min(100, Math.round(v))) });
 export const playPlaylist = (id) => api(`/groups/${gid()}/playlists`, 'POST', { playlistId: id, playOnCompletion: true });
+
+// Bland (shuffle) og gentag (repeat). Gentag skifter: fra → hele listen → én sang → fra
+export async function setPlayModes(patch) {
+  const gid = settings.sonos.groupId; if (!gid) return;
+  state.playback = { ...(state.playback || {}), playModes: { ...((state.playback && state.playback.playModes) || {}), ...patch } };
+  await api(`/groups/${gid}/playback/playMode`, 'POST', { playModes: patch });
+}
