@@ -546,3 +546,21 @@ span.avatar{opacity:1}
 .mplayer .ctl>button{flex:none;width:44px;height:44px;border-radius:50%;padding:0}
 .mplayer .ctl>button.pbig{width:60px;height:60px}
 .mplayer .ctl>button.mode{width:40px;height:40px}
+
+/* Siden Nyheder: liste til venstre, artiklen med stort billede til højre */
+.main>.newspage{flex:1 1 0;min-height:420px}
+.newspage{display:grid;grid-template-columns:minmax(280px,380px) minmax(0,1fr);gap:16px}
+.nside{padding:8px;overflow-y:auto;display:flex;flex-direction:column;gap:2px}
+.nrow{display:flex;gap:12px;align-items:flex-start;text-align:left;border:0;background:none;color:var(--text);padding:10px;border-radius:14px;font:inherit;flex:none}
+.nrow.on{background:var(--bg);box-shadow:inset 3px 0 0 var(--accent)}
+.nthumb{flex:none;width:72px;height:54px;border-radius:10px;background:var(--bg) center/cover no-repeat}
+.ntx{display:flex;flex-direction:column;gap:3px;min-width:0}
+.ntx b{font-size:15px;line-height:1.3;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.npane{padding:0;overflow:hidden;display:flex}
+.npane iframe{flex:1;width:100%;border:0;border-radius:inherit}
+.npane>.empty{margin:20px;align-self:flex-start}
+.npfail{padding:24px;display:flex;flex-direction:column;gap:14px;align-items:flex-start}
+.npfail img{width:100%;max-height:50%;object-fit:cover;border-radius:14px}
+.nfilter{display:flex;gap:6px;overflow-x:auto;min-width:0;flex:1;scrollbar-width:none}
+.nfilter::-webkit-scrollbar{display:none}
+@media (max-width:800px){.newspage{grid-template-columns:1fr}.npane{min-height:60vh}}

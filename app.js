@@ -428,11 +428,21 @@ function pageVejr() {
 
 /* ---------- Nyheder ---------- */
 function pageNyheder() {
-  const src = N.allSources();
-  return `<div class="ptitle"><h1>Nyheder</h1><div class="tools"><button class="btn line" data-act="newsRefresh">${svg('refresh', 18)} Opdater</button></div></div>
-    <div class="row">${src.map((s) => `<button class="pill" data-act="newsToggle" data-id="${esc(s.id)}" aria-pressed="${settings.news.sources.includes(s.id)}">${esc(s.name)}</button>`).join('')}</div>
-    ${D.news && D.news.errors.length ? `<div class="err">${esc(D.news.errors.map((e) => e.source + ': ' + e.msg).join(' · '))}</div>` : ''}
-    <section class="card">${newsList(40, true)}</section>`;
+  const srcs = newsSources();
+  const all = D.news ? D.news.items : [];
+  const items = (ui.newsFilter ? all.filter((i) => i.sourceId === ui.newsFilter) : all).slice(0, 60);
+  if (!items.find((i) => i.link === ui.newsSel)) ui.newsSel = items[0] ? items[0].link : null;
+  const sel = items.find((i) => i.link === ui.newsSel);
+  const chips = `<div class="nfilter">${[{ id: '', name: 'Alle' }].concat(srcs).map((x) => `<button class="chipbtn" data-act="newsFilter" data-id="${esc(x.id)}" aria-pressed="${(ui.newsFilter || '') === x.id}"><span class="cbt">${esc(x.name)}</span></button>`).join('')}</div>`;
+  const list = items.map((i) => `<button class="nrow ${i.link === ui.newsSel ? 'on' : ''}" data-act="newsPick" data-url="${esc(i.link)}">${i.image ? `<span class="nthumb" style="background-image:url('${esc(i.image)}')"></span>` : ''}<span class="ntx"><span class="meta">${esc(i.source)}${i.date ? ' · ' + esc(relTime(i.date)) : ''}</span><b>${esc(i.title)}</b></span></button>`).join('');
+  let pane = '<div class="empty">Vælg en nyhed.</div>';
+  if (sel) {
+    const a = R.cachedArticle(sel.link);
+    pane = a ? R.articleFrame(a) : ui.newsErr === sel.link ? `<div class="npfail">${sel.image ? `<img src="${esc(sel.image)}" alt="">` : ''}<h2>${esc(sel.title)}</h2><a class="btn line" href="${esc(sel.link)}" target="_blank" rel="noopener">Læs på mediets egen side</a></div>` : '<div class="empty">Henter artiklen …</div>';
+    if (!a && ui.newsErr !== sel.link) R.loadArticle(sel.link, sel.source, sel.image).then(() => { if (ui.page === 'nyheder') renderMain(); }).catch(() => { ui.newsErr = sel.link; if (ui.page === 'nyheder') renderMain(); });
+  }
+  return `<div class="ptitle"><h1>Nyheder</h1>${chips}<div class="tools"><button class="btn line" data-act="newsRefresh" aria-label="Opdater nyhederne">${svg('refresh', 18)}</button></div></div>
+    <div class="newspage"><section class="card nside">${list || `<div class="empty">${D.news ? 'Ingen nyheder lige nu.' : 'Henter nyheder …'}</div>`}</section><section class="card npane">${pane}</section></div>`;
 }
 
 /* ---------- Musik ---------- */
@@ -790,6 +800,8 @@ const act = {
   mdToggle: (b) => { b.classList.add('done'); setTimeout(() => MD.toggleItem(b.dataset.id), 350); },
   sShuffle: () => { const m = S.nowPlaying().modes; S.setPlayModes({ shuffle: !m.shuffle }).catch(() => toast('Sonos kunne ikke skifte')); renderMain(); },
   sRepeat: () => { const m = S.nowPlaying().modes; const nx = m.repeatOne ? { repeat: false, repeatOne: false } : m.repeat ? { repeat: false, repeatOne: true } : { repeat: true, repeatOne: false }; S.setPlayModes(nx).catch(() => toast('Sonos kunne ikke skifte')); renderMain(); },
+  newsPick: (b) => { ui.newsSel = b.dataset.url; renderMain(); },
+  newsFilter: (b) => { ui.newsFilter = b.dataset.id; ui.newsSel = null; renderMain(false); },
   pickMe: (b) => { settings.me = settings.me === b.dataset.id ? '' : b.dataset.id; save(); renderHeader(); renderMain(); },
   memAdd: () => { const colors = ['#D0563C', '#4C78D0', '#D9A400', '#2E9D5B', '#7A5AC8', '#C2407E']; const m = settings.family.members; m.push({ id: uid(), name: '', color: colors[m.length % colors.length] }); save(); renderMain(); setTimeout(() => { const el = document.querySelectorAll('[data-mem][data-field=name]'); if (el.length) el[el.length - 1].focus(); }, 50); },
   memRm: (b) => { const [m] = settings.family.members.splice(+b.dataset.i, 1); if (m) { settings.calendars.forEach((c) => { if (c.owner === m.id) c.owner = ''; }); if (settings.me === m.id) settings.me = ''; } save(); renderHeader(); renderMain(); },

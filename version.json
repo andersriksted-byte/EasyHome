@@ -1,5 +1,5 @@
 {
-  "version": "1.18.0",
+  "version": "1.19.0",
   "files": [
     "index.html",
     "app.js",
@@ -20,6 +20,16 @@
     "madro.js"
   ],
   "notes": [
+    {
+      "version": "1.19.0",
+      "date": "24. november 2026",
+      "title": "Ny nyhedsside",
+      "items": [
+        "Siden Nyheder har nu overskrifterne i venstre side og artiklen med et stort billede i højre side.",
+        "Tryk på en overskrift for at læse den – skift frem og tilbage uden at lukke noget.",
+        "Knapperne øverst viser alle nyheder eller kun ét medie."
+      ]
+    },
     {
       "version": "1.18.0",
       "date": "24. november 2026",

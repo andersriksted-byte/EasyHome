@@ -35,6 +35,7 @@ img,video{max-width:100%;height:auto;border-radius:12px}
 figure{margin:18px 0}figcaption{font-size:13px;color:${cssVar('muted')};margin-top:6px}
 a{color:${cssVar('accent')}}
 blockquote{margin:16px 0;padding-left:16px;border-left:4px solid ${cssVar('line')};color:${cssVar('text2')}}
+.hero{display:block;width:calc(100% + 64px);margin:-28px -32px 20px;max-width:none;aspect-ratio:16/9;object-fit:cover;border-radius:0}
 .cut{margin-top:28px;padding:16px;border-radius:12px;background:${cssVar('bg')};font-size:15px}
 </style></head><body>${inner}</body></html>`;
 }
@@ -47,6 +48,28 @@ function close() {
 function onKey(e) { if (e.key === 'Escape') close(); }
 
 export const isOpen = () => !!document.getElementById('reader');
+
+// Henter en artikel og bygger læsevisningen (stort billede øverst). Bruges af både popup-læseren og siden Nyheder.
+const artCache = {};
+export function cachedArticle(url) { return artCache[url] || null; }
+export async function loadArticle(url, source, fallbackImg = '') {
+  if (artCache[url]) return artCache[url];
+  const [html] = await Promise.all([fetchText(url, { allowPublic: settings.news.publicProxyForTest }), loadReadability()]);
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  const base = doc.createElement('base'); base.href = url; doc.head.prepend(base);
+  const ogImg = (doc.querySelector('meta[property="og:image"]') || {}).content || fallbackImg || '';
+  const art = new window.Readability(doc, { charThreshold: 200 }).parse();
+  if (!art || !art.content) throw new Error('Ingen tekst');
+  const body = new DOMParser().parseFromString('<div>' + art.content + '</div>', 'text/html').body.firstChild;
+  const stem = (u) => (u || '').split('?')[0].split('/').pop();
+  if (ogImg) { const dup = [...body.querySelectorAll('img')].find((i) => stem(i.getAttribute('src')) === stem(ogImg)); if (dup) (dup.closest('figure') || dup).remove(); }
+  const short = (art.textContent || '').trim().length < 600;
+  const inner = `${ogImg ? `<img class="hero" src="${esc(ogImg)}" alt="">` : ''}<div class="meta">${esc(source || art.siteName || host(url))}</div><h1>${esc(art.title || '')}</h1>${art.byline ? `<div class="by">${esc(art.byline)}</div>` : ''}${body.innerHTML}
+      ${short ? `<div class="cut">Kun en del af artiklen kunne vises – måske kræver den abonnement. <a href="${esc(url)}">Læs hele artiklen på ${esc(host(url))}</a>.</div>` : ''}`;
+  artCache[url] = { title: art.title || '', doc: frameDoc(inner) };
+  return artCache[url];
+}
+export const articleFrame = (a) => `<iframe sandbox="allow-popups allow-popups-to-escape-sandbox" title="${esc(a.title || 'Nyhed')}" srcdoc="${esc(a.doc)}"></iframe>`;
 
 export async function openReader(url, source) {
   close();
@@ -65,22 +88,10 @@ export async function openReader(url, source) {
 
   const body = m.querySelector('.rdbody');
   try {
-    const [html] = await Promise.all([fetchText(url, { allowPublic: settings.news.publicProxyForTest }), loadReadability()]);
-    const doc = new DOMParser().parseFromString(html, 'text/html');
-    const base = doc.createElement('base'); base.href = url; doc.head.prepend(base);
-    const ogImg = (doc.querySelector('meta[property="og:image"]') || {}).content || '';
-    const art = new window.Readability(doc, { charThreshold: 200 }).parse();
+    const a = await loadArticle(url, source);
     if (!document.getElementById('reader')) return; // lukket imens
-    if (!art || !art.content) throw new Error('Ingen tekst');
-    const short = (art.textContent || '').trim().length < 600;
-    const img = ogImg && !art.content.includes(ogImg.split('?')[0]) ? `<img src="${esc(ogImg)}" alt="">` : '';
-    const inner = `<div class="meta">${esc(source || art.siteName || host(url))}</div><h1>${esc(art.title || '')}</h1>${art.byline ? `<div class="by">${esc(art.byline)}</div>` : ''}${img}${art.content}
-      ${short ? `<div class="cut">Det ser ud til, at kun en del af artiklen kunne vises – måske kræver den abonnement. Tryk <b>Åbn på ${esc(host(url))}</b> øverst for at læse hele artiklen.</div>` : ''}`;
-    const f = document.createElement('iframe');
-    f.setAttribute('sandbox', 'allow-popups allow-popups-to-escape-sandbox');
-    f.setAttribute('title', art.title || 'Nyhed');
-    f.srcdoc = frameDoc(inner);
-    body.innerHTML = ''; body.appendChild(f);
+    body.innerHTML = articleFrame(a);
+
   } catch (e) {
     if (!document.getElementById('reader')) return;
     body.innerHTML = `<div class="empty" style="margin:24px">Artiklen kunne ikke vises her${e.message === 'NO_PROXY' ? ' (forbindelsen er ikke sat op)' : ''}. Tryk <b>Åbn på ${esc(host(url))}</b> øverst for at læse den på mediets egen side.</div>`;
