@@ -1,5 +1,5 @@
 {
-  "version": "1.36.0",
+  "version": "1.37.0",
   "files": [
     "index.html",
     "app.js",
@@ -18,9 +18,21 @@
     "media.js",
     "login.js",
     "madro.js",
-    "somfy.js"
+    "somfy.js",
+    "timer.js"
   ],
   "notes": [
+    {
+      "version": "1.37.0",
+      "date": "24. november 2026",
+      "title": "Køkkentimer",
+      "items": [
+        "Nyt kort: Timer. Tryk på en tid (1 min til 1 time) for at starte – flere timere kan køre på én gang.",
+        "Sæt på pause, læg 1 minut til eller slet. Den korteste timer vises også øverst på skærmen.",
+        "Når tiden er gået, ringer skærmen, og en rød boks med Stop vises på alle sider.",
+        "Tilføj kortet under Tilpas forside."
+      ]
+    },
     {
       "version": "1.36.0",
       "date": "24. november 2026",

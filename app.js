@@ -12,6 +12,7 @@ import * as M from './media.js';
 import * as A from './login.js';
 import * as MD from './madro.js';
 import * as SF from './somfy.js';
+import * as TM from './timer.js';
 import { onAuthLost } from './util.js';
 
 const $ = (s, r = document) => r.querySelector(s);
@@ -48,6 +49,7 @@ const themeLabel = (id) => (id === 'auto' ? 'Automatisk' : THEMES[id].label);
 
 /* ---------- Ikoner ---------- */
 const ICON = {
+  timer: 'M12 8v5l3 2M9 2h6M12 22a8 8 0 1 0 0-16 8 8 0 0 0 0 16z', pause: 'M7 5h4v14H7zM13 5h4v14h-4z',
   blinds: 'M4 4h16M5 4v9M19 4v9M5 13h14M7 7h10M7 10h10M12 13v4M10 19a2 2 0 1 0 4 0 2 2 0 0 0-4 0',
   somfy: 'M4 4h16M5 4v9M19 4v9M5 13h14M7 7h10M7 10h10M12 13v4M10 19a2 2 0 1 0 4 0 2 2 0 0 0-4 0',
   up: 'M6 15l6-6 6 6', down: 'M6 9l6 6 6-6', stop: 'M8 8h8v8H8z',
@@ -83,16 +85,17 @@ const SERVICES = [
   { id: 'nyheder', name: 'Nyheder', icon: 'nyheder', desc: 'Overskrifter fra DR, TV 2, JP og egne kilder.', pages: ['nyheder'], widgets: ['nyheder'], tabs: ['nyheder'] },
   { id: 'musik', name: 'Musik (Sonos)', icon: 'musik', desc: 'Styr Sonos: afspil, rum og lydstyrke.', pages: ['musik'], widgets: ['sonos'], tabs: [] },
   { id: 'tv', name: 'DR TV', icon: 'tv', desc: 'Genveje til DR\'s kanaler.', pages: ['tv'], widgets: ['tv'], tabs: ['tv'] },
+  { id: 'timer', name: 'Timer', icon: 'timer', desc: 'Køkkentimer med alarm – fx til madlavning.', pages: [], widgets: ['timer'], tabs: [] },
   { id: 'nedtaelling', name: 'Nedtællinger', icon: 'cd', desc: 'Dage til juleaften, ferie og fødselsdage.', pages: [], widgets: ['nedtaelling'], tabs: [] }
 ];
 const svcOn = (id) => !settings.services || settings.services[id] !== false;
 const pageOn = (p) => SERVICES.every((x) => !x.pages.includes(p) || svcOn(x.id));
 const widgetOn = (w) => SERVICES.every((x) => !x.widgets.includes(w) || svcOn(x.id));
 const tabOn = (t) => (t === 'somfy' ? svcOn('somfy') : t === 'kalender' ? svcOn('kalender') || svcOn('nedtaelling') : SERVICES.every((x) => !x.tabs.includes(t) || svcOn(x.id)));
-const WIDGETS = { screens: 'Screens (Somfy)', madplan: 'Madplan', indkob: 'Indkøbsliste', inspiration: 'Opskrift-inspiration', uge: 'Familiens uge', vejr: 'Vejret', steder: 'Vejret andre steder', nyheder: 'Nyheder', sonos: 'Musik (Sonos)', tv: 'DR TV', nedtaelling: 'Nedtælling' };
+const WIDGETS = { timer: 'Timer', screens: 'Screens (Somfy)', madplan: 'Madplan', indkob: 'Indkøbsliste', inspiration: 'Opskrift-inspiration', uge: 'Familiens uge', vejr: 'Vejret', steder: 'Vejret andre steder', nyheder: 'Nyheder', sonos: 'Musik (Sonos)', tv: 'DR TV', nedtaelling: 'Nedtælling' };
 // Forsiden er et gitter af ens kvadrater. Et kort fylder w kvadrater i bredden og h i højden.
 const SHAPES = [[1, 1], [2, 1], [3, 1], [4, 1], [1, 2], [1, 3], [1, 4], [2, 2]];
-const DEFAULT_SHAPE = { screens: [2, 1], madplan: [4, 1], indkob: [2, 1], inspiration: [2, 1], uge: [4, 1], vejr: [2, 1], steder: [2, 1], nyheder: [2, 1], sonos: [1, 1], tv: [1, 1], nedtaelling: [1, 1] };
+const DEFAULT_SHAPE = { timer: [1, 1], screens: [2, 1], madplan: [4, 1], indkob: [2, 1], inspiration: [2, 1], uge: [4, 1], vejr: [2, 1], steder: [2, 1], nyheder: [2, 1], sonos: [1, 1], tv: [1, 1], nedtaelling: [1, 1] };
 const LEGACY = { S: [1, 1], M: [2, 1], L: [4, 1] };
 const shapeOf = (x) => (x.w && x.h ? [x.w, x.h] : LEGACY[x.size] || [1, 1]);
 const FIT = ['uge']; // kort der aldrig må skære indhold af – de bliver kompakte og vokser i højden ved behov
@@ -204,7 +207,7 @@ function renderHeader() {
     <div class="clock"><b id="clk">${hhmm(now)}</b><span>${esc(longDate(now))}</span></div>
     ${w && svcOn('vejr') ? wxChip(w) : ''}
     ${next ? `<span class="chip accent">${next.days === 0 ? `I dag: ${esc(next.name)}` : `${next.days} ${next.days === 1 ? 'dag' : 'dage'} til ${esc(next.name.toLowerCase())}`}</span>` : ''}
-    <div class="right">${ui.page === 'forside' ? `<button class="hdredit ${ui.editing ? 'on' : ''}" data-act="edit" aria-pressed="${ui.editing}" aria-label="${ui.editing ? 'Færdig med at tilpasse forsiden' : 'Tilpas forside'}" title="${ui.editing ? 'Færdig' : 'Tilpas forside'}">${ui.editing ? ico('check', 20) : ico('edit', 20)}</button>` : ''}${members().length ? `<div class="profiles" role="group" aria-label="Hvem bruger skærmen?">${members().map((m) => `<button class="avatar" data-act="pickMe" data-id="${esc(m.id)}" aria-pressed="${settings.me === m.id}" aria-label="${esc(m.name)}${settings.me === m.id ? ' (valgt – tryk for alle)' : ''}" style="--c:${esc(m.color)}">${esc(initials(m.name))}</button>`).join('')}</div>` : ''}</div>`;
+    <div class="right">${svcOn('timer') && TM.timers().some((t) => !t.done && !t.paused) ? `<button class="chip tmchip" id="tmChip" data-act="nav" data-page="forside" aria-label="Timer">${svg('timer', 18)}<b>${TM.fmt(Math.min(...TM.timers().filter((t) => !t.done && !t.paused).map(TM.left)))}</b></button>` : ''}${ui.page === 'forside' ? `<button class="hdredit ${ui.editing ? 'on' : ''}" data-act="edit" aria-pressed="${ui.editing}" aria-label="${ui.editing ? 'Færdig med at tilpasse forsiden' : 'Tilpas forside'}" title="${ui.editing ? 'Færdig' : 'Tilpas forside'}">${ui.editing ? ico('check', 20) : ico('edit', 20)}</button>` : ''}${members().length ? `<div class="profiles" role="group" aria-label="Hvem bruger skærmen?">${members().map((m) => `<button class="avatar" data-act="pickMe" data-id="${esc(m.id)}" aria-pressed="${settings.me === m.id}" aria-label="${esc(m.name)}${settings.me === m.id ? ' (valgt – tryk for alle)' : ''}" style="--c:${esc(m.color)}">${esc(initials(m.name))}</button>`).join('')}</div>` : ''}</div>`;
 }
 
 /* ---------- Footer ---------- */
@@ -390,6 +393,39 @@ function wIndkob(size, h = 1, wd = 1) {
   return head + `<div class="shoplist" style="--cols:${cols}">${items.map((x) => `<div class="shopitem"><i aria-hidden="true"></i><span class="si-name">${esc(x.name)}</span>${amt(x) ? `<span class="si-amt">${esc(amt(x))}</span>` : ''}</div>`).join('')}</div>` + add;
 }
 
+// Køkkentimer: tryk på en tid for at starte. Flere timere kan køre samtidig.
+const TM_PRESETS = [1, 3, 5, 10, 15, 20, 30, 45, 60];
+function wTimer(size, h = 1, wd = 1) {
+  const ts = TM.timers();
+  const presets = (n) => `<div class="tmp" style="--c:${n}">${TM_PRESETS.map((m) => `<button data-act="tmStart" data-m="${m}">${m >= 60 ? m / 60 + ' t' : m + ' min'}</button>`).join('')}</div>`;
+  if (!ts.length) return cardHead('Timer') + presets(wd >= 2 && h === 1 ? 5 : 3);
+  const row = (t) => {
+    const l = TM.left(t); const pct = t.total ? Math.max(0, Math.min(100, (l / t.total) * 100)) : 0;
+    return `<div class="tmr${t.done ? ' done' : ''}${t.paused ? ' paused' : ''}">
+      <div class="tmr-top"><span class="tmr-l">${esc(t.label)}</span><b data-tleft="${t.id}">${t.done ? 'Færdig!' : TM.fmt(l)}</b></div>
+      <i class="tmr-bar"><i data-tbar="${t.id}" style="width:${pct}%"></i></i>
+      <div class="tmr-btns">${t.done ? `<button class="tm-stop" data-act="tmRm" data-id="${t.id}">Stop</button><button data-act="tmAdd" data-id="${t.id}" data-m="1">+1 min</button>` : `<button data-act="tmToggle" data-id="${t.id}" aria-label="${t.paused ? 'Fortsæt' : 'Pause'}">${t.paused ? fillSvg('play', 16) : fillSvg('pause', 16)}</button><button data-act="tmAdd" data-id="${t.id}" data-m="1">+1 min</button><button data-act="tmRm" data-id="${t.id}" aria-label="Slet timer">✕</button>`}</div>
+    </div>`;
+  };
+  return cardHead('Timer') + `<div class="tmlist">${ts.map(row).join('')}<div class="tmmore">${presets(Math.min(5, Math.max(3, wd * 3)))}</div></div>`;
+}
+function timerTick() {
+  TM.tick();
+  TM.timers().forEach((t) => {
+    const el = document.querySelector(`[data-tleft="${t.id}"]`); if (el) el.textContent = t.done ? 'Færdig!' : TM.fmt(TM.left(t));
+    const bar = document.querySelector(`[data-tbar="${t.id}"]`); if (bar && t.total) bar.style.width = Math.max(0, Math.min(100, (TM.left(t) / t.total) * 100)) + '%';
+  });
+  const chip = document.getElementById('tmChip'); const run = TM.timers().filter((t) => !t.done && !t.paused);
+  if (chip && run.length) chip.querySelector('b').textContent = TM.fmt(Math.min(...run.map(TM.left)));
+  // Alarm-boks, der kan ses på alle sider
+  const done = TM.timers().filter((t) => t.done);
+  let box = document.getElementById('tmAlarm');
+  if (!done.length) { if (box) box.remove(); return; }
+  if (!box) { box = document.createElement('div'); box.id = 'tmAlarm'; box.className = 'tmalarm'; box.setAttribute('role', 'alert'); document.body.appendChild(box); }
+  const txt = `⏰ ${done.map((t) => t.label).join(', ')} – tiden er gået!`;
+  if (box.dataset.txt !== txt) { box.dataset.txt = txt; box.innerHTML = `<span>${esc(txt)}</span><button data-act="tmStopAll">Stop</button>`; }
+}
+
 // Somfy: screens udenfor – op, stop, "my" og ned for hver, og for alle på én gang
 function wScreens(size, h = 1, wd = 1, x = {}) {
   const st = SF.state;
@@ -442,7 +478,7 @@ function wNed(size, h = 1, wd = 1) {
     <div class="cdw"><div class="cdn">${c.days < 0 ? '✓' : c.days}</div><div class="cdl">${label}</div><div class="cdd">${cap(DAYS_LONG[d.getDay()])} ${d.getDate()}. ${MONTHS[d.getMonth()]} ${d.getFullYear()}</div></div></div></div>`;
 }
 
-const WRENDER = { screens: wScreens, madplan: wMadplan, indkob: wIndkob, inspiration: wInspiration, uge: wUge, vejr: wVejr, steder: wSteder, nyheder: wNyheder, sonos: wSonos, tv: wTv, nedtaelling: wNed };
+const WRENDER = { timer: wTimer, screens: wScreens, madplan: wMadplan, indkob: wIndkob, inspiration: wInspiration, uge: wUge, vejr: wVejr, steder: wSteder, nyheder: wNyheder, sonos: wSonos, tv: wTv, nedtaelling: wNed };
 
 function pageForside() {
   const inLayout = (id) => curLayout().some((x) => x.id === id);
@@ -1041,6 +1077,11 @@ const act = {
     renderAll(); if (svcOn(id)) loadAll();
   },
   wStepSet: (b) => { settings.weather.step = +b.dataset.v; save(); renderMain(); },
+  tmStart: (b) => { TM.start(+b.dataset.m); },
+  tmToggle: (b) => { TM.toggle(b.dataset.id); },
+  tmAdd: (b) => { TM.add(b.dataset.id, +b.dataset.m); },
+  tmRm: (b) => { TM.remove(b.dataset.id); timerTick(); },
+  tmStopAll: () => { TM.stopAll(); timerTick(); },
   sfPreset: (b) => {
     const urls = b.dataset.urls.split('|'); const v = b.dataset.v === 'my' ? 'my' : +b.dataset.v;
     SF.preset(SF.state.devices.filter((d) => urls.includes(d.url)), v).then((skip) => { if (skip) toast(skip === 1 ? 'Én screen kan ikke stille sig på en mellemstilling' : skip + ' screens kan ikke stille sig på en mellemstilling'); }).catch((e) => toast('Somfy: ' + e.message));
@@ -1362,6 +1403,8 @@ function boot() {
   if (settings.cdTop === undefined) { const n = countdowns('top').find((c) => c.days >= 0); settings.cdTop = n ? n.id : ''; save(); }
   if (!settings.weather.stepRev) { settings.weather.step = 60; settings.weather.stepRev = 1; save(); } // vejrkortet viser timer som standard
   M.onMediaLoaded(() => softRender());
+  TM.onTimerChange(() => { renderHeader(); if (ui.page === 'forside') softRender(); });
+  setInterval(timerTick, 1000);
   MD.onMadroChange(() => { if (ui.page === 'forside' || ui.page === 'kalender') softRender(); });
   SF.onSomfyChange(() => { if (ui.page === 'somfy' || (ui.page === 'forside' && curLayout().some((x) => x.id === 'screens'))) softRender(); });
   setInterval(() => { if (svcOn('somfy') && !document.hidden && (ui.page === 'somfy' || curLayout().some((x) => x.id === 'screens'))) SF.refresh(); }, ui.page === 'somfy' ? 20000 : 60000);

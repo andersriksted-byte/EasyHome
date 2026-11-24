@@ -898,3 +898,27 @@ button.w7r.sel{background:color-mix(in srgb,var(--accent) 16%,transparent);box-s
 .mdmeal.note.has-img{padding:8px}
 .mdday .mdmeal.note{background-color:transparent}
 .mdmeal.note.has-img{background-color:initial}
+
+/* Timer */
+.tmp{display:grid;grid-template-columns:repeat(var(--c),minmax(0,1fr));gap:8px;flex:1;min-height:0;grid-auto-rows:minmax(44px,1fr)}
+.tmp button{border:0;border-radius:14px;background:var(--bg);color:var(--text);font-weight:800;font-size:clamp(14px,5cqmin,20px)}
+.tmp button:active{background:var(--accent);color:var(--onAccent)}
+.tmlist{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:10px}
+.tmr{display:flex;flex-direction:column;gap:6px;padding:10px 12px;border-radius:16px;background:var(--bg)}
+.tmr-top{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.tmr-l{font-size:13px;font-weight:800;color:var(--muted)}
+.tmr-top b{font-size:clamp(26px,12cqmin,44px);font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-1px}
+.tmr-bar{height:6px;border-radius:99px;background:color-mix(in srgb,var(--text) 10%,transparent);overflow:hidden;display:block}
+.tmr-bar i{display:block;height:100%;background:var(--accent);border-radius:99px;transition:width 1s linear}
+.tmr-btns{display:flex;gap:6px}
+.tmr-btns button{flex:1;height:42px;border:0;border-radius:12px;background:var(--card);color:var(--text);font-weight:800;display:grid;place-items:center}
+.tmr.paused b{opacity:.5}
+.tmr.done{background:#d9473a;color:#fff;animation:pendingPulse 1s ease-in-out infinite}
+.tmr.done .tmr-l{color:rgba(255,255,255,.85)}
+.tmr.done .tm-stop{background:#fff;color:#b3261e}
+.tmmore .tmp{grid-auto-rows:40px}
+.tmmore .tmp button{font-size:13px}
+.tmchip b{font-variant-numeric:tabular-nums}
+.tmalarm{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);z-index:1000;display:flex;align-items:center;gap:16px;padding:14px 16px 14px 22px;border-radius:20px;background:#d9473a;color:#fff;font-weight:800;font-size:18px;box-shadow:0 20px 50px rgba(0,0,0,.3);animation:pendingPulse 1s ease-in-out infinite;max-width:calc(100vw - 40px)}
+.tmalarm button{height:48px;padding:0 24px;border:0;border-radius:14px;background:#fff;color:#b3261e;font-weight:800;font-size:17px}
+.tmp{grid-auto-rows:minmax(0,1fr)}.tmp button{min-height:0;padding:0}
