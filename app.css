@@ -1218,3 +1218,18 @@ button.w7r.sel{background:color-mix(in srgb,var(--accent) 16%,transparent);box-s
 .fb-tile .fb-when{grid-column:1/-1;grid-row:2;align-items:center;font-size:11px;min-height:14px}
 .fb-tile .fb-t img{width:36px;height:36px}
 .fb-tile .fb-mid{min-width:44px;font-size:18px}
+
+/* Fodbold-stilling */
+.st-wrap{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;display:flex;flex-direction:column}
+.st-row{display:grid;grid-template-columns:24px minmax(0,1fr) 28px 36px 30px;align-items:center;gap:6px;padding:5px 6px;border-radius:8px;font-size:14px;font-variant-numeric:tabular-nums;flex:none}
+.st-row.wide{grid-template-columns:26px minmax(0,1fr) 30px 30px 30px 30px 40px 34px}
+.st-row>span:not(.st-tm){text-align:right}
+.st-row:nth-child(even):not(.st-h){background:var(--dayBg)}
+.st-h{font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;position:sticky;top:0;background:var(--card);z-index:1}
+.st-rk{color:var(--muted);font-weight:700}
+.st-tm{display:flex;align-items:center;gap:8px;min-width:0}
+.st-tm img{width:22px;height:22px;object-fit:contain;flex:none}
+.st-tm b{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.st-p{font-weight:800}
+.st-row.st-fav{box-shadow:inset 0 0 0 2px var(--accent)}
+.st-row.st-fav b{font-weight:800}

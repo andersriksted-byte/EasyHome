@@ -363,11 +363,13 @@ export default {
       if (path.startsWith('/espn/')) {
         // Fodbold: kampe og resultater fra ESPN's offentlige data (kun læsning, kun fodbold, kort cache)
         const sub = path.slice(6);
-        if (!/^[a-z0-9._]+\/(scoreboard|teams|teams\/\d+\/schedule)$/.test(sub)) return json(env, { error: 'Ukendt' }, 404);
+        if (!/^[a-z0-9._]+\/(scoreboard|standings|teams|teams\/\d+\/schedule)$/.test(sub)) return json(env, { error: 'Ukendt' }, 404);
         const q = new URL(req.url).searchParams; const qs = new URLSearchParams();
         for (const k of ['dates', 'fixture', 'limit']) if (q.get(k)) qs.set(k, q.get(k).slice(0, 40));
-        const url = 'https://site.api.espn.com/apis/site/v2/sports/soccer/' + sub + (qs.toString() ? '?' + qs : '');
-        const ttl = sub.endsWith('/teams') ? 86400 : 60;
+        // Stillinger ligger under ESPN's v2-adresse, resten under site/v2
+        const base = sub.endsWith('/standings') ? 'https://site.api.espn.com/apis/v2/sports/soccer/' : 'https://site.api.espn.com/apis/site/v2/sports/soccer/';
+        const url = base + sub + (qs.toString() ? '?' + qs : '');
+        const ttl = sub.endsWith('/teams') ? 86400 : sub.endsWith('/standings') ? 600 : 60;
         const up = await fetch(url, { cf: { cacheTtl: ttl, cacheEverything: true } });
         if (!up.ok) return json(env, { error: 'ESPN svarede ' + up.status }, 502);
         return new Response(up.body, { headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'max-age=' + ttl, ...cors(env) } });

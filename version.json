@@ -1,5 +1,5 @@
 {
-  "version": "1.58.0",
+  "version": "1.59.0",
   "files": [
     "index.html",
     "app.js",
@@ -24,6 +24,16 @@
     "football.js"
   ],
   "notes": [
+    {
+      "version": "1.59.0",
+      "date": "25. november 2026",
+      "title": "Fodbold-stilling",
+      "items": [
+        "Nyt kort: Fodbold-stilling – tabellen i dine ligaer",
+        "Swipe eller brug pilene for at skifte liga; den foretrukne liga står først",
+        "Dine favorithold er markeret i tabellen"
+      ]
+    },
     {
       "version": "1.58.0",
       "date": "25. november 2026",

@@ -90,17 +90,17 @@ const SERVICES = [
   { id: 'musik', name: 'Musik (Sonos)', icon: 'musik', desc: 'Styr Sonos: afspil, rum og lydstyrke.', pages: ['musik'], widgets: ['sonos'], tabs: [] },
   { id: 'tv', name: 'DR TV', icon: 'tv', desc: 'Genveje til DR\'s kanaler.', pages: ['tv'], widgets: ['tv'], tabs: ['tv'] },
   { id: 'timer', name: 'Timer nedtælling', icon: 'timer', desc: 'Køkkentimer med alarm – fx til madlavning.', pages: [], widgets: ['timer'], tabs: [] },
-  { id: 'fodbold', name: 'Fodbold', icon: 'ball', desc: 'Favoritholdenes kampe og resultater.', pages: [], widgets: ['fodbold'], tabs: ['fodbold'] },
+  { id: 'fodbold', name: 'Fodbold', icon: 'ball', desc: 'Kampe, resultater og stillinger.', pages: [], widgets: ['fodbold', 'stilling'], tabs: ['fodbold'] },
   { id: 'nedtaelling', name: 'Nedtællinger', icon: 'cd', desc: 'Dage til juleaften, ferie og fødselsdage.', pages: [], widgets: ['nedtaelling'], tabs: [] }
 ];
 const svcOn = (id) => !settings.services || settings.services[id] !== false;
 const pageOn = (p) => SERVICES.every((x) => !x.pages.includes(p) || svcOn(x.id));
 const widgetOn = (w) => SERVICES.every((x) => !x.widgets.includes(w) || svcOn(x.id));
 const tabOn = (t) => (t === 'musik' ? svcOn('musik') : t === 'somfy' ? svcOn('somfy') : t === 'kalender' ? svcOn('kalender') || svcOn('nedtaelling') : SERVICES.every((x) => !x.tabs.includes(t) || svcOn(x.id)));
-const WIDGETS = { fodbold: 'Fodbold', naeste: 'Næste i kalenderen', dagensret: 'Dagens ret', nyhed1: 'Én nyhed ad gangen', timer: 'Timer nedtælling', screens: 'Screens (Somfy)', madplan: 'Madplan', indkob: 'Indkøbsliste', inspiration: 'Opskrift-inspiration', uge: 'Familiens uge', vejr: 'Vejret', steder: 'Vejret andre steder', nyheder: 'Nyheder', sonos: 'Musik (Sonos)', tv: 'DR TV', nedtaelling: 'Nedtælling' };
+const WIDGETS = { fodbold: 'Fodbold', stilling: 'Fodbold-stilling', naeste: 'Næste i kalenderen', dagensret: 'Dagens ret', nyhed1: 'Én nyhed ad gangen', timer: 'Timer nedtælling', screens: 'Screens (Somfy)', madplan: 'Madplan', indkob: 'Indkøbsliste', inspiration: 'Opskrift-inspiration', uge: 'Familiens uge', vejr: 'Vejret', steder: 'Vejret andre steder', nyheder: 'Nyheder', sonos: 'Musik (Sonos)', tv: 'DR TV', nedtaelling: 'Nedtælling' };
 // Forsiden er et gitter af ens kvadrater. Et kort fylder w kvadrater i bredden og h i højden.
 const SHAPES = [[1, 1], [2, 1], [3, 1], [4, 1], [1, 2], [1, 3], [1, 4], [2, 2]];
-const DEFAULT_SHAPE = { fodbold: [2, 1], naeste: [1, 1], dagensret: [2, 1], nyhed1: [2, 1], timer: [1, 1], screens: [2, 1], madplan: [4, 1], indkob: [2, 1], inspiration: [2, 1], uge: [4, 1], vejr: [2, 1], steder: [2, 1], nyheder: [2, 1], sonos: [1, 1], tv: [1, 1], nedtaelling: [1, 1] };
+const DEFAULT_SHAPE = { stilling: [1, 2], fodbold: [2, 1], naeste: [1, 1], dagensret: [2, 1], nyhed1: [2, 1], timer: [1, 1], screens: [2, 1], madplan: [4, 1], indkob: [2, 1], inspiration: [2, 1], uge: [4, 1], vejr: [2, 1], steder: [2, 1], nyheder: [2, 1], sonos: [1, 1], tv: [1, 1], nedtaelling: [1, 1] };
 const LEGACY = { S: [1, 1], M: [2, 1], L: [4, 1] };
 const shapeOf = (x) => (x.w && x.h ? [x.w, x.h] : LEGACY[x.size] || [1, 1]);
 const FIT = ['uge']; // kort der aldrig må skære indhold af – de bliver kompakte og vokser i højden ved behov
@@ -529,6 +529,26 @@ function wFodbold(size, h = 1, wd = 1) {
   const blocks = keys.map((k) => `<div class="fb-grp"><div class="fb-sub">${esc(k)}</div>${groups.get(k).map(row).join('')}</div>`);
   return head + `<div class="fb-days">${blocks.join('')}</div>`;
 }
+// Stilling: én liga ad gangen (den foretrukne først) – swipe eller pile skifter liga
+function stLeagues() {
+  const fb = settings.football || {};
+  const ids = [...new Set([fb.pref, ...(fb.follow || []), ...(fb.leagues || [])])].filter((id) => id && id !== 'nat' && FB.LEAGUES.some((L) => L.id === id));
+  return ids.map((id) => FB.LEAGUES.find((L) => L.id === id));
+}
+function wStilling(size, h = 1, wd = 1) {
+  const lgs = stLeagues();
+  if (!lgs.length) return cardHead('Stilling') + '<div class="empty">Vælg ligaer under Indstillinger → Fodbold.</div>';
+  const n = lgs.length; const idx = (((ui.stIdx || 0) % n) + n) % n; const L = lgs[idx];
+  const head = cardHead(L.name, pageArrows('st', idx, n, 'liga'));
+  const T = FB.tables[L.id];
+  if (!T || !T.at) { if (!T && hasProxy()) FB.loadTable(L.id).then(() => setTimeout(softRender, 0)); return head + '<div class="empty">Henter stillingen …</div>'; }
+  if (!T.groups.length) return head + '<div class="empty">Ingen stilling lige nu.</div>';
+  const favIds = ((settings.football || {}).teams || []).map((t) => t.id);
+  const wide = wd >= 2; const num = (v) => (v === null || v === undefined ? '' : v);
+  const hdr = `<div class="st-row st-h${wide ? ' wide' : ''}"><span>#</span><span></span>${wide ? '<span>K</span><span>V</span><span>U</span><span>T</span>' : '<span>K</span>'}<span>+/-</span><span>P</span></div>`;
+  const row = (t) => `<div class="st-row${wide ? ' wide' : ''}${favIds.includes(t.id) ? ' st-fav' : ''}"><span class="st-rk">${num(t.rank)}</span><span class="st-tm">${t.logo ? `<img src="${esc(t.logo)}" alt="" loading="lazy">` : ''}<b data-abbr="${esc(t.abbr)}">${esc(wide ? t.name : t.abbr || t.name)}</b></span>${wide ? `<span>${num(t.gp)}</span><span>${num(t.w)}</span><span>${num(t.d)}</span><span>${num(t.l)}</span>` : `<span>${num(t.gp)}</span>`}<span>${t.gd > 0 ? '+' : ''}${num(t.gd)}</span><span class="st-p">${num(t.pts)}</span></div>`;
+  return head + `<div class="st-wrap">${T.groups.map((g) => `${T.groups.length > 1 && g.name ? `<div class="fb-sub">${esc(g.name)}</div>` : ''}${hdr}${g.rows.map(row).join('')}`).join('')}</div>`;
+}
 function fodboldSettings() {
   const fb = settings.football || { leagues: [], teams: [] };
   const lgs = fb.leagues || []; const favIds = (fb.teams || []).map((t) => t.id);
@@ -680,7 +700,7 @@ function wNed(size, h = 1, wd = 1) {
     <div class="cdw"><div class="cdn">${c.days < 0 ? '✓' : c.days}</div><div class="cdl">${label}</div><div class="cdd">${cap(DAYS_LONG[d.getDay()])} ${d.getDate()}. ${MONTHS[d.getMonth()]} ${d.getFullYear()}</div></div></div></div>`;
 }
 
-const WRENDER = { fodbold: wFodbold, naeste: wNaeste, dagensret: wDagensRet, nyhed1: wNyhed1, timer: wTimer, screens: wScreens, madplan: wMadplan, indkob: wIndkob, inspiration: wInspiration, uge: wUge, vejr: wVejr, steder: wSteder, nyheder: wNyheder, sonos: wSonos, tv: wTv, nedtaelling: wNed };
+const WRENDER = { stilling: wStilling, fodbold: wFodbold, naeste: wNaeste, dagensret: wDagensRet, nyhed1: wNyhed1, timer: wTimer, screens: wScreens, madplan: wMadplan, indkob: wIndkob, inspiration: wInspiration, uge: wUge, vejr: wVejr, steder: wSteder, nyheder: wNyheder, sonos: wSonos, tv: wTv, nedtaelling: wNed };
 
 function pageForside() {
   const inLayout = (id) => curLayout().some((x) => x.id === id);
@@ -1286,6 +1306,8 @@ function trimCards() {
     while (guard-- > 0 && list.children.length > 1 && list.scrollHeight > list.clientHeight + 1) list.lastElementChild.remove();
     while (list.lastElementChild && list.lastElementChild.classList.contains('fb-sub')) list.lastElementChild.remove(); // ingen overskrift uden kampe under
   });
+  // Stilling: er der ikke plads til hele klubnavnet, bruges forkortelsen (aldrig halve navne)
+  document.querySelectorAll('#grid .st-tm b').forEach((b) => { if (b.scrollWidth > b.clientWidth + 1 && b.dataset.abbr) b.textContent = b.dataset.abbr; });
   // Lister, der må fylde resten af kortet: fjern de sidste, til hele kortet kan ses
   document.querySelectorAll('#grid .w [data-trimcard]').forEach((list) => {
     const card = list.closest('.w'); let guard = 20;
@@ -1339,7 +1361,8 @@ async function loadSonos(full = false) {
   renderFooter();
   if (ui.page === 'musik' || (ui.page === 'forside' && curLayout().some((x) => x.id === 'sonos'))) softRender();
 }
-function loadFootball(force = false) { if (!svcOn('fodbold') || !hasProxy()) return; FB.load(force).then(() => { if (ui.page === 'forside' && curLayout().some((x) => x.id === 'fodbold')) softRender(); }); }
+function loadFootball(force = false) { if (!svcOn('fodbold') || !hasProxy()) return;
+  if (curLayout().some((x) => x.id === 'stilling')) stLeagues().forEach((L) => FB.loadTable(L.id).then(() => { if (ui.page === 'forside') softRender(); })); FB.load(force).then(() => { if (ui.page === 'forside' && curLayout().some((x) => x.id === 'fodbold')) softRender(); }); }
 function loadAll() { loadFootball(); loadWeather(); loadNews(); loadCal(); loadSonos(true); if (svcOn('madro')) MD.start(); if (svcOn('somfy')) SF.refresh(); }
 
 /* ---------- Handlinger ---------- */
@@ -1496,6 +1519,7 @@ const act = {
     const n = settings.places.length; const dir = +b.dataset.dir;
     if (b.dataset.scope === 'n1') { const m = Math.max(1, mixedNews().length); ui.n1Idx = (((ui.n1Idx + dir) % m) + m) % m; ui.n1At = Date.now(); renderMain(); return; }
     if (b.dataset.scope === 'insp') { const m = Math.max(1, MD.state.all.length); /* indekset tages modulo den filtrerede liste */ ui.inspIdx = (((ui.inspIdx + dir) % m) + m) % m; ui.inspAt = Date.now(); renderMain(); return; }
+    if (b.dataset.scope === 'st') { const m = Math.max(1, stLeagues().length); ui.stIdx = ((((ui.stIdx || 0) + dir) % m) + m) % m; ui.stTouched = Date.now(); renderMain(); return; }
     if (b.dataset.scope === 'fb') { const { days, today } = fbDays(); let i = days.findIndex((d) => dkey(d) === ui.fbDay); if (i < 0) i = days.findIndex((d) => +d === +today); const n = days[Math.max(0, Math.min(days.length - 1, i + dir))]; ui.fbDay = n ? dkey(n) : null; ui.fbTouched = Date.now(); renderMain(); return; }
     if (b.dataset.scope === 'cd') { const m = Math.max(1, countdowns().length); ui.cdIdx = (((ui.cdIdx + dir) % m) + m) % m; ui.cdAt = Date.now(); renderMain(); return; }
     if (b.dataset.scope === 'cal') { ui.calWeek += dir; renderMain(); return; }
@@ -1619,7 +1643,7 @@ document.addEventListener('change', (e) => {
 window.addEventListener('hashchange', () => { const p = pageFromHash(); if (p !== ui.page) { ui.page = p; renderNav(); renderMain(false); } });
 
 /* ---------- Swipe i kort med flere sider (vejr, nyheder) ---------- */
-const SWIPE_SCOPE = { fodbold: 'fb', nyhed1: 'n1', vejr: 'fp', nyheder: 'news', nedtaelling: 'cd', inspiration: 'insp' };
+const SWIPE_SCOPE = { stilling: 'st', fodbold: 'fb', nyhed1: 'n1', vejr: 'fp', nyheder: 'news', nedtaelling: 'cd', inspiration: 'insp' };
 let swipe = null; let swipedAt = 0;
 document.addEventListener('pointerdown', (e) => {
   if (ui.editing || e.target.closest('.hours, input, .handle')) return; // timeoversigten scroller selv vandret
@@ -1786,6 +1810,7 @@ function boot() {
     if (Date.now() - ui.cdAt >= 10000) act.wStep({ dataset: { scope: 'cd', dir: '1' } });
   }, 1000);
   setInterval(() => { if (ui.fpPlace !== 0 && Date.now() - ui.fpTouched > 3 * 60000) { ui.fpPlace = 0; softRender(); } }, 30000);
+  setInterval(() => { if (ui.stIdx && Date.now() - (ui.stTouched || 0) > 45000) { ui.stIdx = 0; softRender(); } }, 15000); // stilling: tilbage til den foretrukne liga
   setInterval(() => { if (ui.fbDay && Date.now() - (ui.fbTouched || 0) > 45000) { ui.fbDay = null; softRender(); } }, 15000); // i dag er altid standard: tilbage efter under et minut
   setInterval(loadNews, 5 * 60000);
   setInterval(() => { if (!document.hidden) loadFootball(); }, 60000); // FB.load bestemmer selv: hvert minut under kampe, ellers hvert 10. minut

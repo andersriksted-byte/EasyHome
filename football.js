@@ -109,3 +109,20 @@ export function leagueView() {
     return { lg, name, round };
   });
 }
+
+// Stillinger pr. liga (hentes højst hvert 10. minut)
+export const tables = {};
+export async function loadTable(lg) {
+  const t = tables[lg];
+  if (t && (t.loading || Date.now() - t.at < 10 * 60000)) return;
+  tables[lg] = { ...(t || {}), loading: true };
+  try {
+    const j = await (await workerFetch('/espn/' + lg + '/standings')).json();
+    const groups = (j.children || [{ standings: j.standings, name: '' }]).filter((c) => c.standings);
+    const stat = (e, n) => { const x = (e.stats || []).find((y) => y.name === n); return x ? x.value ?? Number(x.displayValue) : null; };
+    const rows = (g) => (g.standings.entries || []).map((e) => { const t = e.team || {}; return { id: String(t.id), name: dk(t.shortDisplayName || t.displayName || ''), abbr: t.abbreviation || '', logo: (t.logos && t.logos[0] && t.logos[0].href) || '',
+      rank: stat(e, 'rank'), gp: stat(e, 'gamesPlayed'), w: stat(e, 'wins'), d: stat(e, 'ties'), l: stat(e, 'losses'), gd: stat(e, 'pointDifferential'), pts: stat(e, 'points') }; })
+      .sort((a, b) => (a.rank || 99) - (b.rank || 99) || b.pts - a.pts);
+    tables[lg] = { at: Date.now(), groups: groups.map((g) => ({ name: g.name || '', rows: rows(g) })), error: '' };
+  } catch (e) { tables[lg] = { at: Date.now(), groups: (t && t.groups) || [], error: e.message }; }
+}
