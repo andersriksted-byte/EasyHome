@@ -1,5 +1,5 @@
 {
-  "version": "1.20.0",
+  "version": "1.21.0",
   "files": [
     "index.html",
     "app.js",
@@ -20,6 +20,15 @@
     "madro.js"
   ],
   "notes": [
+    {
+      "version": "1.21.0",
+      "date": "24. november 2026",
+      "title": "Styr Sonos fra bunden",
+      "items": [
+        "Nederst på skærmen kan I nu skifte til forrige og næste nummer.",
+        "Skru op og ned med − og + ved siden af sangen – tallet viser lydstyrken."
+      ]
+    },
     {
       "version": "1.20.0",
       "date": "24. november 2026",

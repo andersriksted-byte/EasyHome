@@ -173,8 +173,9 @@ function renderFooter() {
   const top = items.length ? items[ui.tick % items.length] : null;
   let music;
   if (S.state.connected) {
-    music = `<button class="pp" data-act="sPlay" aria-label="${np.playing ? 'Pause' : 'Afspil'}">${fillSvg(np.playing ? 'pause' : 'play', 18)}</button>
-      ${np.image ? `<span class="npart" style="background-image:url('${esc(np.image)}')" aria-hidden="true"></span>` : ''}<button class="np" data-act="nav" data-page="musik" aria-label="Gå til Musik"><b>${esc(np.title || 'Intet spiller')}</b><span>Sonos · ${esc(np.group || '')}</span></button>`;
+    music = `<span class="fctl"><button class="fbtn" data-act="sPrev" aria-label="Forrige nummer">${fillSvg('prev', 14)}</button><button class="pp" data-act="sPlay" aria-label="${np.playing ? 'Pause' : 'Afspil'}">${fillSvg(np.playing ? 'pause' : 'play', 18)}</button><button class="fbtn" data-act="sNext" aria-label="Næste nummer">${fillSvg('next', 14)}</button></span>
+      ${np.image ? `<span class="npart" style="background-image:url('${esc(np.image)}')" aria-hidden="true"></span>` : ''}<button class="np" data-act="nav" data-page="musik" aria-label="Gå til Musik"><b>${esc(np.title || 'Intet spiller')}</b><span>${esc(np.artist || 'Sonos')} · ${esc(np.group || '')}</span></button>
+      ${np.volume !== null ? `<span class="fvol"><button class="fbtn" data-act="sVol" data-d="-5" aria-label="Skru ned">−</button><b aria-live="polite" aria-label="Lydstyrke">${np.volume}</b><button class="fbtn" data-act="sVol" data-d="5" aria-label="Skru op">+</button></span>` : ''}`;
   } else {
     music = `<button class="pp" data-act="nav" data-page="musik" aria-label="Musik">${svg('musik', 20)}</button><button class="np" data-act="nav" data-page="musik" aria-label="Gå til Musik"><b>Sonos</b><span>Ikke forbundet endnu</span></button>`;
   }
@@ -804,6 +805,12 @@ const act = {
   sRepeat: () => { const m = S.nowPlaying().modes; const nx = m.repeatOne ? { repeat: false, repeatOne: false } : m.repeat ? { repeat: false, repeatOne: true } : { repeat: true, repeatOne: false }; S.setPlayModes(nx).catch(() => toast('Sonos kunne ikke skifte')); renderMain(); },
   newsPick: (b) => { ui.newsSel = b.dataset.url; renderMain(); },
   newsFilter: (b) => { ui.newsFilter = b.dataset.id; ui.newsSel = null; renderMain(false); },
+  sVol: (b) => {
+    if (!S.state.volume) return;
+    const v = Math.max(0, Math.min(100, (S.state.volume.volume || 0) + +b.dataset.d));
+    S.state.volume.volume = v; renderFooter();
+    clearTimeout(volTimer); volTimer = setTimeout(() => sonosDo(() => S.setVolume(v)), 350);
+  },
   pickMe: (b) => { settings.me = settings.me === b.dataset.id ? '' : b.dataset.id; save(); renderHeader(); renderMain(); },
   memAdd: () => { const colors = ['#D0563C', '#4C78D0', '#D9A400', '#2E9D5B', '#7A5AC8', '#C2407E']; const m = settings.family.members; m.push({ id: uid(), name: '', color: colors[m.length % colors.length] }); save(); renderMain(); setTimeout(() => { const el = document.querySelectorAll('[data-mem][data-field=name]'); if (el.length) el[el.length - 1].focus(); }, 50); },
   memRm: (b) => { const [m] = settings.family.members.splice(+b.dataset.i, 1); if (m) { settings.calendars.forEach((c) => { if (c.owner === m.id) c.owner = ''; }); if (settings.me === m.id) settings.me = ''; } save(); renderHeader(); renderMain(); },
@@ -915,6 +922,7 @@ function toggleNews(id) {
   if (i >= 0) s.splice(i, 1); else s.push(id);
   save(); N.clearNewsCache(); loadNews();
 }
+let volTimer = null;
 async function sonosDo(fn) { try { await fn(); setTimeout(() => loadSonos(), 400); } catch (e) { toast('Sonos: ' + e.message); } }
 
 document.addEventListener('click', (e) => {

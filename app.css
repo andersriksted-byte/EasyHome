@@ -568,3 +568,9 @@ span.avatar{opacity:1}
 .shopadd input{min-height:44px;flex:1;min-width:0}
 .shopadd .btn{width:44px;padding:0;font-size:22px}
 .shoplist{grid-auto-rows:36px}
+
+/* Footer: skift nummer og lydstyrke */
+.fctl{display:flex;align-items:center;gap:6px;flex:none}
+.ftr .fbtn{width:40px;height:40px;flex:none;border:0;border-radius:50%;background:var(--bg);color:var(--text);font-size:20px;font-weight:800;display:grid;place-items:center;line-height:1}
+.fvol{display:flex;align-items:center;gap:6px;flex:none}
+.fvol b{min-width:30px;text-align:center;font-size:14px}
