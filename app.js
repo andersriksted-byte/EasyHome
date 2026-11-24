@@ -87,14 +87,14 @@ const SERVICES = [
   { id: 'nyheder', name: 'Nyheder', icon: 'nyheder', desc: 'Overskrifter fra DR, TV 2, JP og egne kilder.', pages: ['nyheder'], widgets: ['nyheder', 'nyhed1'], tabs: ['nyheder'] },
   { id: 'musik', name: 'Musik (Sonos)', icon: 'musik', desc: 'Styr Sonos: afspil, rum og lydstyrke.', pages: ['musik'], widgets: ['sonos'], tabs: [] },
   { id: 'tv', name: 'DR TV', icon: 'tv', desc: 'Genveje til DR\'s kanaler.', pages: ['tv'], widgets: ['tv'], tabs: ['tv'] },
-  { id: 'timer', name: 'Timer', icon: 'timer', desc: 'Køkkentimer med alarm – fx til madlavning.', pages: [], widgets: ['timer'], tabs: [] },
+  { id: 'timer', name: 'Timer nedtælling', icon: 'timer', desc: 'Køkkentimer med alarm – fx til madlavning.', pages: [], widgets: ['timer'], tabs: [] },
   { id: 'nedtaelling', name: 'Nedtællinger', icon: 'cd', desc: 'Dage til juleaften, ferie og fødselsdage.', pages: [], widgets: ['nedtaelling'], tabs: [] }
 ];
 const svcOn = (id) => !settings.services || settings.services[id] !== false;
 const pageOn = (p) => SERVICES.every((x) => !x.pages.includes(p) || svcOn(x.id));
 const widgetOn = (w) => SERVICES.every((x) => !x.widgets.includes(w) || svcOn(x.id));
 const tabOn = (t) => (t === 'musik' ? svcOn('musik') : t === 'somfy' ? svcOn('somfy') : t === 'kalender' ? svcOn('kalender') || svcOn('nedtaelling') : SERVICES.every((x) => !x.tabs.includes(t) || svcOn(x.id)));
-const WIDGETS = { naeste: 'Næste i kalenderen', dagensret: 'Dagens ret', nyhed1: 'Én nyhed ad gangen', timer: 'Timer', screens: 'Screens (Somfy)', madplan: 'Madplan', indkob: 'Indkøbsliste', inspiration: 'Opskrift-inspiration', uge: 'Familiens uge', vejr: 'Vejret', steder: 'Vejret andre steder', nyheder: 'Nyheder', sonos: 'Musik (Sonos)', tv: 'DR TV', nedtaelling: 'Nedtælling' };
+const WIDGETS = { naeste: 'Næste i kalenderen', dagensret: 'Dagens ret', nyhed1: 'Én nyhed ad gangen', timer: 'Timer nedtælling', screens: 'Screens (Somfy)', madplan: 'Madplan', indkob: 'Indkøbsliste', inspiration: 'Opskrift-inspiration', uge: 'Familiens uge', vejr: 'Vejret', steder: 'Vejret andre steder', nyheder: 'Nyheder', sonos: 'Musik (Sonos)', tv: 'DR TV', nedtaelling: 'Nedtælling' };
 // Forsiden er et gitter af ens kvadrater. Et kort fylder w kvadrater i bredden og h i højden.
 const SHAPES = [[1, 1], [2, 1], [3, 1], [4, 1], [1, 2], [1, 3], [1, 4], [2, 2]];
 const DEFAULT_SHAPE = { naeste: [1, 1], dagensret: [2, 1], nyhed1: [2, 1], timer: [1, 1], screens: [2, 1], madplan: [4, 1], indkob: [2, 1], inspiration: [2, 1], uge: [4, 1], vejr: [2, 1], steder: [2, 1], nyheder: [2, 1], sonos: [1, 1], tv: [1, 1], nedtaelling: [1, 1] };
@@ -511,7 +511,7 @@ const TM_PRESETS = [1, 3, 5, 10, 15, 20, 30, 45, 60];
 function wTimer(size, h = 1, wd = 1) {
   const ts = TM.timers();
   const presets = (n) => `<div class="tmp" style="--c:${n}">${TM_PRESETS.slice(0, n * 3 - 1).map((m) => `<button data-act="tmStart" data-m="${m}">${m >= 60 ? m / 60 + ' t' : m + ' min'}</button>`).join('')}<button class="tm-any" data-act="tmPickOpen" aria-label="Vælg en anden tid">${svg('timer', 18)}<span>Andet</span></button></div>`;
-  if (!ts.length) return cardHead('Timer') + presets(wd >= 2 && h === 1 ? 5 : 3);
+  if (!ts.length) return cardHead('Timer nedtælling') + presets(wd >= 2 && h === 1 ? 5 : 3);
   const row = (t) => {
     const l = TM.left(t); const pct = t.total ? Math.max(0, Math.min(100, (l / t.total) * 100)) : 0;
     return `<div class="tmr${t.done ? ' done' : ''}${t.paused ? ' paused' : ''}">
@@ -520,7 +520,7 @@ function wTimer(size, h = 1, wd = 1) {
       <div class="tmr-btns">${t.done ? `<button class="tm-stop" data-act="tmRm" data-id="${t.id}">Stop</button><button data-act="tmAdd" data-id="${t.id}" data-m="1">+1 min</button>` : `<button data-act="tmToggle" data-id="${t.id}" aria-label="${t.paused ? 'Fortsæt' : 'Pause'}">${t.paused ? fillSvg('play', 16) : fillSvg('pause', 16)}</button><button data-act="tmAdd" data-id="${t.id}" data-m="1">+1 min</button><button data-act="tmRm" data-id="${t.id}" aria-label="Slet timer">✕</button>`}</div>
     </div>`;
   };
-  return cardHead('Timer') + `<div class="tmlist">${ts.map(row).join('')}<div class="tmmore">${presets(Math.min(5, Math.max(3, wd * 3)))}</div></div>`;
+  return cardHead('Timer nedtælling') + `<div class="tmlist">${ts.map(row).join('')}<div class="tmmore">${presets(Math.min(5, Math.max(3, wd * 3)))}</div></div>`;
 }
 // Vælg en vilkårlig tid: tast cifre som på et telefon-ur (fx 1-2-3-0 = 12 min 30 sek)
 function tmPickDigits() { return (ui.tmPick || '').replace(/^0+/, '').slice(-6); }

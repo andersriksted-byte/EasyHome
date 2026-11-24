@@ -1,5 +1,5 @@
 {
-  "version": "1.52.0",
+  "version": "1.52.1",
   "files": [
     "index.html",
     "app.js",
@@ -23,6 +23,14 @@
     "mcats.js"
   ],
   "notes": [
+    {
+      "version": "1.52.1",
+      "date": "24. november 2026",
+      "title": "Nyt navn",
+      "items": [
+        "Timer-kortet hedder nu \"Timer nedtælling\""
+      ]
+    },
     {
       "version": "1.52.0",
       "date": "24. november 2026",
