@@ -48,7 +48,6 @@ export const DEFAULTS = {
   layout: [
     { id: 'uge', size: 'L' },
     { id: 'vejr', size: 'M' },
-    { id: 'steder', size: 'M' },
     { id: 'nyheder', size: 'M' },
     { id: 'sonos', size: 'S' },
     { id: 'nedtaelling', size: 'S' }
