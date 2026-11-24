@@ -76,7 +76,7 @@ function load() {
 
 export const settings = load();
 // Felter der kun gælder for den enkelte skærm – alt andet deles mellem skærmene via workeren
-export const LOCAL_ONLY = ['proxy', 'navOpen', 'me', 'gridCols', 'timers', 'keepAwake', 'calHidden']; // gridCols: kortstørrelse pr. skærm (iPad og Mac er forskellige)
+export const LOCAL_ONLY = ['proxy', 'navOpen', 'me', 'gridCols', 'gridColsBy', 'timers', 'keepAwake', 'calHidden']; // gridCols: kortstørrelse pr. skærm (iPad og Mac er forskellige)
 let savedHook = null;
 export function onSaved(fn) { savedHook = fn; }
 function write() { try { localStorage.setItem(KEY, JSON.stringify(settings)); } catch (e) { /* fx privat tilstand */ } }

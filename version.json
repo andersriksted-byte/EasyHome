@@ -1,5 +1,5 @@
 {
-  "version": "1.51.2",
+  "version": "1.52.0",
   "files": [
     "index.html",
     "app.js",
@@ -23,6 +23,15 @@
     "mcats.js"
   ],
   "notes": [
+    {
+      "version": "1.52.0",
+      "date": "24. november 2026",
+      "title": "Kortstørrelse pr. person",
+      "items": [
+        "Hver person kan nu have sin egen kortstørrelse (Store, Mellem eller Små) på forsiden",
+        "Vælg personen øverst, tryk på blyanten og vælg størrelse"
+      ]
+    },
     {
       "version": "1.51.2",
       "date": "24. november 2026",

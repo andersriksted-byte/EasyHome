@@ -125,6 +125,8 @@ const evStyle = (e) => `background:${lighten(e.color)};border-left-color:${esc(e
 // Forsiden pr. person: har den valgte person sin egen forside, vises den – ellers familiens
 const curLayout = () => { const own = settings.me && settings.layouts && settings.layouts[settings.me]; return own || settings.layout; };
 // Tilpasses forsiden, mens en person er valgt, får personen sin egen forside (kopi af familiens første gang)
+// Kortstørrelse (Store/Mellem/Små) pr. profil – og pr. skærm, da iPad og Mac er forskellige
+const gcols = () => (settings.gridColsBy || {})[settings.me || ''] || settings.gridCols || 4;
 function editLayout() {
   if (!settings.me || !members().some((m) => m.id === settings.me)) return settings.layout;
   settings.layouts = settings.layouts || {};
@@ -611,7 +613,7 @@ const WRENDER = { naeste: wNaeste, dagensret: wDagensRet, nyhed1: wNyhed1, timer
 function pageForside() {
   const inLayout = (id) => curLayout().some((x) => x.id === id);
   const edit = ui.editing ? `<section class="card editpanel">
-      <div class="row" style="justify-content:space-between"><span class="lab">${meMember() ? `${esc(meMember().name)}s forside${settings.layouts && settings.layouts[settings.me] ? ` · <button class="linkbtn" data-act="resetMyLayout">brug familiens forside</button>` : ''}` : 'Familiens forside'}</span><span class="wopt" role="group" aria-label="Størrelse på kortene">${[[4, 'Store'], [5, 'Mellem'], [6, 'Små']].map(([v, l]) => `<button data-act="gridCols" data-v="${v}" aria-pressed="${(settings.gridCols || 4) === v}">${l}</button>`).join('')}</span></div>
+      <div class="row" style="justify-content:space-between"><span class="lab">${meMember() ? `${esc(meMember().name)}s forside${settings.layouts && settings.layouts[settings.me] ? ` · <button class="linkbtn" data-act="resetMyLayout">brug familiens forside</button>` : ''}` : 'Familiens forside'}</span><span class="wopt" role="group" aria-label="Størrelse på kortene">${[[4, 'Store'], [5, 'Mellem'], [6, 'Små']].map(([v, l]) => `<button data-act="gridCols" data-v="${v}" aria-pressed="${gcols() === v}">${l}</button>`).join('')}</span></div>
       <div class="choices">${Object.entries(WIDGETS).filter(([id]) => widgetOn(id)).map(([id, name]) => `<button class="pill" data-act="toggleW" data-id="${id}" aria-pressed="${inLayout(id)}">${inLayout(id) ? '✓' : '+'} ${esc(name)}</button>`).join('')}</div>
     </section>` : '';
   const cards = curLayout().filter((x) => WIDGETS[x.id] && widgetOn(x.id)).map((x) => {
@@ -630,7 +632,7 @@ function pageForside() {
     </section>`;
   }).join('');
   const me = meMember();
-  return `${edit}<div class="gridwrap"><div class="grid ${ui.editing ? 'editing' : ''}" id="grid" style="--gcols:${settings.gridCols || 4}">${cards || '<div class="empty">Forsiden er tom. Tryk "Tilpas forside" og vælg kort.</div>'}</div></div>`;
+  return `${edit}<div class="gridwrap"><div class="grid ${ui.editing ? 'editing' : ''}" id="grid" style="--gcols:${gcols()}">${cards || '<div class="empty">Forsiden er tom. Tryk "Tilpas forside" og vælg kort.</div>'}</div></div>`;
 }
 function themePicker() {
   return `<div class="themes">${THEME_ORDER.map((id) => {
@@ -1189,7 +1191,7 @@ function fitCards() {
 // så tekst, ikoner og afstande bliver mindre i samme forhold som kortene.
 function scaleGrid() {
   const wrap = document.querySelector('.gridwrap'); if (!wrap) return;
-  const cols = settings.gridCols || 4;
+  const cols = gcols();
   const narrow = window.matchMedia('(max-width:900px)').matches;
   wrap.style.zoom = ''; wrap.style.width = '';
   const grid = document.getElementById('grid'); if (grid) grid.style.gridAutoRows = '';
@@ -1271,7 +1273,7 @@ const act = {
   },
   sizeFor: (b) => { ui.sizeFor = ui.sizeFor === b.dataset.id ? null : b.dataset.id; renderMain(); },
   resetMyLayout: () => { if (settings.layouts) delete settings.layouts[settings.me]; save(); renderMain(); },
-  gridCols: (b) => { settings.gridCols = +b.dataset.v; save(); renderMain(); },
+  gridCols: (b) => { settings.gridColsBy = { ...(settings.gridColsBy || {}), [settings.me || '']: +b.dataset.v }; save(); renderMain(); },
   wOpt: (b) => { const x = editLayout().find((y) => y.id === b.dataset.id); if (x) { x[b.dataset.k] = +b.dataset.v; save(); renderMain(); } },
   shape: (b) => { const x = editLayout().find((y) => y.id === b.dataset.id); if (x) { x.w = +b.dataset.w; x.h = +b.dataset.h; delete x.size; ui.sizeFor = null; save(); renderMain(); } },
   calPrev: () => { ui.calWeek--; renderMain(); }, calNext: () => { ui.calWeek++; renderMain(); }, calToday: () => { ui.calWeek = 0; renderMain(); },
