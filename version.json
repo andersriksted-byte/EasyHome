@@ -1,0 +1,37 @@
+{
+  "version": "1.2.0",
+  "files": ["index.html", "app.js", "app.css", "util.js", "updater.js", "weather.js", "news.js", "calendar.js", "sonos.js", "icon-180.png"],
+  "notes": [
+    {
+      "version": "1.2.0",
+      "date": "24. november 2026",
+      "title": "Besked om nye opdateringer",
+      "items": [
+        "Når der ligger en ny version, kommer der en besked nederst med knappen Opdater.",
+        "Efter en opdatering vises denne side med, hvad der er nyt.",
+        "Dashboardet tjekker selv for opdateringer hvert andet minut."
+      ]
+    },
+    {
+      "version": "1.1.0",
+      "date": "24. november 2026",
+      "title": "Flere steder i vejret",
+      "items": [
+        "Tilføj fx sommerhuset under Indstillinger → Steder og giv det et navn.",
+        "Skift mellem stederne med pilene ‹ › i vejrkortet på forsiden. Kortet går selv tilbage til Hjem efter 3 minutter.",
+        "Siden Vejret har de samme pile, og Sammenlign kilder følger det valgte sted.",
+        "Nyt kort til forsiden: Vejret andre steder (tilføj det under Tilpas forside)."
+      ]
+    },
+    {
+      "version": "1.0.0",
+      "date": "24. november 2026",
+      "title": "Første version af easyHome",
+      "items": [
+        "Forside med kort, du selv vælger, flytter og giver størrelse.",
+        "Kalender, vejr (DMI, Yr, DWD, ECMWF), nyheder, Sonos og DR TV.",
+        "Fem farvetemaer og automatisk skift til mørkt om aftenen."
+      ]
+    }
+  ]
+}

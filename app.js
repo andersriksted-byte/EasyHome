@@ -4,6 +4,7 @@ import * as W from './weather.js';
 import * as N from './news.js';
 import * as C from './calendar.js';
 import * as S from './sonos.js';
+import { startUpdater } from './updater.js';
 
 const $ = (s, r = document) => r.querySelector(s);
 
@@ -556,6 +557,7 @@ function boot() {
   if (q.get('sonos') === 'fejl') { toast('Sonos-login mislykkedes – prøv igen'); history.replaceState(null, '', location.pathname + '#musik'); ui.page = 'musik'; }
   renderAll();
   loadAll();
+  startUpdater();
   setInterval(() => { const c = $('#clk'); const n = new Date(); if (c) c.textContent = hhmm(n); if (n.getSeconds() === 0) { renderHeader(); applyTheme(); } }, 1000);
   setInterval(() => { ui.tick++; renderFooter(); }, 8000);
   setInterval(loadWeather, 15 * 60000);
