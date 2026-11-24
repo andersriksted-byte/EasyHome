@@ -1,5 +1,5 @@
 {
-  "version": "1.39.0",
+  "version": "1.40.0",
   "files": [
     "index.html",
     "app.js",
@@ -22,6 +22,16 @@
     "timer.js"
   ],
   "notes": [
+    {
+      "version": "1.40.0",
+      "date": "24. november 2026",
+      "title": "Dagens ret",
+      "items": [
+        "Nyt kort: Dagens ret med stort billede, type, tid, antal personer og om der er handlet ind.",
+        "Efter kl. 20 viser kortet morgendagens ret. Tryk for at åbne opskriften i Madro.",
+        "Tilføj kortet under Tilpas forside."
+      ]
+    },
     {
       "version": "1.39.0",
       "date": "24. november 2026",

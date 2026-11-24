@@ -967,3 +967,21 @@ button.w7r.sel{background:color-mix(in srgb,var(--accent) 16%,transparent);box-s
 .n1-txt .meta{font-size:12px;opacity:.85}
 .n1-txt b{font-size:clamp(18px,7cqmin,32px);line-height:1.2;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
 .n1.has-img .n1-txt b{text-shadow:0 2px 12px rgba(0,0,0,.4)}
+
+/* Dagens ret */
+.w[data-wid=dagensret]{padding:0}
+.dret{flex:1;min-height:0;display:flex;border:0;padding:0;border-radius:20px;overflow:hidden;background:var(--card) center/cover no-repeat;color:#fff;text-align:left;font:inherit}
+.dret.empty-day{color:var(--text)}
+.dret-in{flex:1;display:flex;flex-direction:column;padding:16px 20px 18px;background:linear-gradient(180deg,rgba(0,0,0,.4),rgba(0,0,0,0) 35%,rgba(0,0,0,.75));min-height:0}
+.dret.empty-day .dret-in{background:none}
+.dret-top{display:flex;align-items:center;justify-content:space-between;gap:8px;height:36px}
+.dret-lab{font-size:14px;font-weight:800;opacity:.9}
+.dret-stw{display:flex;align-items:center;gap:6px}
+.dret-stw .mdst{position:static;width:26px;height:26px}
+.dret-st{font-size:12px;font-weight:800;background:rgba(0,0,0,.35);padding:4px 8px;border-radius:99px}
+.dret-txt{margin-top:auto;display:flex;flex-direction:column;gap:4px;min-width:0}
+.dret-kick{font-size:12px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dret-txt b{font-size:clamp(20px,9cqmin,40px);line-height:1.1;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;text-shadow:0 2px 14px rgba(0,0,0,.4)}
+.dret-intro{font-size:14px;opacity:.9;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.dret-more{font-size:12px;opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@container (max-height:260px){.dret-intro{display:none}}
