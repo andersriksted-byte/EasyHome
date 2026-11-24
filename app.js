@@ -1,5 +1,5 @@
 // easyHome – hovedprogram
-import { esc, pad, DAYS, MONTHS, cap, hhmm, startOfDay, addDays, sameDay, longDate, relTime, uid, settings, save, setPath, replaceSettings, hasProxy, workerFetch } from './util.js';
+import { esc, pad, DAYS, DAYS_LONG, MONTHS, cap, hhmm, startOfDay, addDays, sameDay, longDate, relTime, uid, settings, save, setPath, replaceSettings, hasProxy, workerFetch } from './util.js';
 import * as W from './weather.js';
 import * as N from './news.js';
 import * as C from './calendar.js';
@@ -60,9 +60,13 @@ const PAGES = [
   { id: 'nyheder', label: 'Nyheder' }, { id: 'musik', label: 'Musik' }, { id: 'tv', label: 'DR TV' }
 ];
 const WIDGETS = { uge: 'Familiens uge', vejr: 'Vejret', steder: 'Vejret andre steder', nyheder: 'Nyheder', sonos: 'Musik (Sonos)', tv: 'DR TV', nedtaelling: 'Nedtælling' };
-const DEFAULT_SIZE = { uge: 'L', vejr: 'M', steder: 'M', nyheder: 'M', sonos: 'S', tv: 'S', nedtaelling: 'S' };
-const SPAN = { S: 1, M: 2, L: 4 };
-const SIZE_NAME = { S: 'Lille', M: 'Mellem', L: 'Stor' };
+// Forsiden er et gitter af ens kvadrater. Et kort fylder w kvadrater i bredden og h i højden.
+const SHAPES = [[1, 1], [2, 1], [3, 1], [4, 1], [1, 2], [1, 3], [1, 4], [2, 2]];
+const DEFAULT_SHAPE = { uge: [4, 1], vejr: [2, 1], steder: [2, 1], nyheder: [2, 1], sonos: [1, 1], tv: [1, 1], nedtaelling: [1, 1] };
+const LEGACY = { S: [1, 1], M: [2, 1], L: [4, 1] };
+const shapeOf = (x) => (x.w && x.h ? [x.w, x.h] : LEGACY[x.size] || [1, 1]);
+const sizeKey = (w) => (w >= 4 ? 'L' : w >= 2 ? 'M' : 'S');
+const shapeIcon = (w, h) => `<svg aria-hidden="true" width="26" height="26" viewBox="0 0 26 26"><rect x="1" y="1" width="24" height="24" rx="3" fill="none" stroke="currentColor" stroke-opacity=".3"/><rect x="2" y="2" width="${w * 5.5}" height="${h * 5.5}" rx="1.5" fill="currentColor"/></svg>`;
 
 /* ---------- Tilstand ---------- */
 const D = { weather: null, weatherErr: null, wx: {}, wxErr: {}, compare: null, news: null, cal: null };
@@ -70,7 +74,7 @@ const D = { weather: null, weatherErr: null, wx: {}, wxErr: {}, compare: null, n
 const home = () => settings.places[0];
 const placeLabel = (p) => p.label || p.name;
 const placeById = (id) => settings.places.find((p) => p.id === id) || home();
-const ui = { newsIdx: 0, feedMsg: null, feedDraft: null, page: pageFromHash(), setTab: 'vejr', wPlace: null, fpPlace: 0, fpTouched: 0, editing: false, calWeek: 0, geo: null, geoMsg: '', tick: 0, connMsg: '' };
+const ui = { sizeFor: null, newsIdx: 0, newsAt: Date.now(), feedMsg: null, feedDraft: null, page: pageFromHash(), setTab: 'vejr', wPlace: null, fpPlace: 0, fpTouched: 0, editing: false, calWeek: 0, geo: null, geoMsg: '', tick: 0, connMsg: '' };
 function pageFromHash() { const h = location.hash.slice(1); return [...PAGES.map((p) => p.id), 'indstillinger'].includes(h) ? h : 'forside'; }
 
 function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), 2600); }
@@ -144,21 +148,27 @@ function renderFooter() {
 }
 
 /* ---------- Forside-widgets ---------- */
-function wUge(size) {
+function wUge(size, h = 1, w = 1) {
   const today = startOfDay(new Date());
   const demo = D.cal && D.cal.demo ? '<div class="small muted">Eksempel – tilføj jeres kalendere i Indstillinger</div>' : '';
   if (!D.cal) return '<div class="lab">Familiens uge</div><div class="empty">Henter kalender …</div>';
+  if (size === 'S' && h >= 2) {
+    const n = h * 2;
+    return `<div class="lab">Familien · ${n} dage</div><div style="display:flex;flex-direction:column;gap:8px;overflow:hidden">${Array.from({ length: n }, (_, i) => addDays(today, i)).map((d) => `<div><div class="small" style="font-weight:800">${i0(d, today)}</div><div style="display:flex;flex-direction:column;gap:4px;margin-top:4px">${eventsOn(d).slice(0, 3).map((e) => evHtml(e, d, false)).join('') || '<span class="small muted">–</span>'}</div></div>`).join('')}</div>${demo}`;
+  }
   if (size === 'S') {
     const t = eventsOn(today); const m = eventsOn(addDays(today, 1));
     return `<div class="lab">I dag</div><div class="evlist" style="display:flex;flex-direction:column;gap:6px">${t.length ? t.map((e) => evHtml(e, today)).join('') : '<div class="small muted">Ingen aftaler</div>'}</div>
       <div style="margin-top:auto;border-top:2px dashed var(--line);padding-top:8px;display:flex;flex-direction:column;gap:6px"><div class="lab">I morgen</div>${m.slice(0, 3).map((e) => evHtml(e, addDays(today, 1), false)).join('') || '<div class="small muted">Ingen aftaler</div>'}</div>${demo}`;
   }
-  const days = size === 'M' ? [0, 1, 2].map((i) => addDays(today, i)) : [0, 1, 2, 3, 4, 5, 6].map((i) => addDays(weekStart(0), i));
-  return `<div class="row" style="justify-content:space-between"><span class="lab">${size === 'M' ? 'Næste 3 dage' : 'Familiens uge'}</span>${demo}</div>
+  const nd = size === 'L' ? 7 : w >= 3 ? 5 : 3;
+  const days = nd === 7 ? [0, 1, 2, 3, 4, 5, 6].map((i) => addDays(weekStart(0), i)) : Array.from({ length: nd }, (_, i) => addDays(today, i));
+  return `<div class="row" style="justify-content:space-between"><span class="lab">${nd === 7 ? 'Familiens uge' : 'Næste ' + nd + ' dage'}</span>${demo}</div>
     <div class="days" style="grid-template-columns:repeat(${days.length},minmax(0,1fr))">${days.map((d) => `
       <div class="day ${sameDay(d, today) ? 'today' : ''}"><h3>${cap(DAYS[d.getDay()])} <span>${d.getDate()}.</span></h3>
-      ${eventsOn(d).slice(0, size === 'M' ? 5 : 4).map((e) => evHtml(e, d, false)).join('')}</div>`).join('')}</div>`;
+      ${eventsOn(d).slice(0, 2 + h * 3).map((e) => evHtml(e, d, false)).join('')}</div>`).join('')}</div>`;
 }
+const i0 = (d, today) => (sameDay(d, today) ? 'I dag' : sameDay(d, addDays(today, 1)) ? 'I morgen' : cap(DAYS_LONG[d.getDay()]) + ' ' + d.getDate() + '.');
 function pageArrows(scope, idx, n, what) {
   if (n < 2) return '';
   return `<span class="parrows"><button class="arr" data-act="wStep" data-scope="${scope}" data-dir="-1" aria-label="Forrige ${what}">‹</button>
@@ -166,7 +176,7 @@ function pageArrows(scope, idx, n, what) {
     <button class="arr" data-act="wStep" data-scope="${scope}" data-dir="1" aria-label="Næste ${what}">›</button></span>`;
 }
 const placeArrows = (scope, idx) => pageArrows(scope, idx, settings.places.length, 'sted');
-function wVejr(size) {
+function wVejr(size, h = 1) {
   const n = settings.places.length;
   const idx = ((ui.fpPlace % n) + n) % n;
   const place = settings.places[idx];
@@ -175,9 +185,11 @@ function wVejr(size) {
   if (!w) return `${title}<div class="empty">${D.wxErr[place.id] ? esc(D.wxErr[place.id]) : 'Henter vejret …'}</div>`;
   const head = `${title}
     <div class="wnow">${W.weatherIcon(w.now.code, w.now.isDay, size === 'S' ? 48 : 56)}<div><div class="t">${fmtTemp(w.now.temp)}</div><div class="small muted">${esc(W.codeText(w.now.code))} · føles som ${fmtTemp(w.now.feels)}</div></div></div>`;
-  if (size === 'S') return head + `<div class="small" style="margin-top:auto">I dag ${fmtTemp(w.days[0].max)} / ${fmtTemp(w.days[0].min)} · vind ${num(w.now.wind, 0)} m/s</div>`;
+  const week = h >= 2 ? `<div class="dlist" style="margin-top:4px">${w.days.slice(0, Math.min(7, 2 + h * 2)).map((d, i) => `<div class="drow" style="grid-template-columns:56px 34px 1fr;min-height:40px"><b>${i === 0 ? 'I dag' : cap(DAYS[d.date.getDay()])}</b>${W.weatherIcon(d.code, 1, 26)}<span style="font-weight:700;white-space:nowrap;text-align:right">${fmtTemp(d.min)} / ${fmtTemp(d.max)}${d.rain > 0 ? ` <span class="small" style="color:var(--accent)">${num(d.rain)} mm</span>` : ''}</span></div>`).join('')}</div>` : '';
+  if (size === 'S') return head + (week || `<div class="small" style="margin-top:auto">I dag ${fmtTemp(w.days[0].max)} / ${fmtTemp(w.days[0].min)} · vind ${num(w.now.wind, 0)} m/s</div>`);
   const hours = `<div class="hours">${w.hours.slice(0, size === 'M' ? 8 : 12).map((h) => `<div class="hour"><span>${pad(h.time.getHours())}</span>${W.weatherIcon(h.code, h.isDay, 26)}<span>${fmtTemp(h.temp)}</span><span class="r">${h.rain > 0 ? num(h.rain) + ' mm' : '&nbsp;'}</span></div>`).join('')}</div>`;
-  if (size === 'M') return head + hours;
+  if (size === 'M') return head + hours + week;
+  if (week) return head + hours + week;
   return head + hours + `<div class="row" style="gap:8px">${w.days.slice(1, 6).map((d) => `<div class="hour" style="flex:1"><span>${cap(DAYS[d.date.getDay()])}</span>${W.weatherIcon(d.code, 1, 26)}<span>${fmtTemp(d.max)} / ${fmtTemp(d.min)}</span></div>`).join('')}</div>`;
 }
 function wSteder(size) {
@@ -201,14 +213,18 @@ function newsList(n, big = false) {
   if (!items.length) return `<div class="empty">Ingen nyheder lige nu.${D.news.errors.length ? ' ' + esc(D.news.errors.map((e) => e.source + ': ' + e.msg).join(' · ')) : ''}</div>`;
   return `<div class="news ${big ? 'big-news' : ''}">${items.map((i) => `<a href="${esc(i.link)}" target="_blank" rel="noopener"><span class="meta"><span class="src">${esc(i.source)}</span>${i.date ? ' · ' + esc(relTime(i.date)) : ''}</span><b>${esc(i.title)}</b>${big && i.summary ? `<p>${esc(i.summary)}</p>` : ''}</a>`).join('')}</div>`;
 }
+const NEWS_SECS = 20;
+const newsLeft = () => Math.max(0, Math.ceil(NEWS_SECS - (Date.now() - ui.newsAt) / 1000));
 function newsSources() { return N.allSources().filter((src) => settings.news.sources.includes(src.id)); }
-function wNyheder(size) {
-  const count = { S: 3, M: 5, L: 8 }[size];
+function wNyheder(size, h = 1) {
+  const count = 3 + (h - 1) * 4;
   const srcs = newsSources();
   if (!hasProxy() && !settings.news.publicProxyForTest) return `<div class="lab">Nyheder</div>${needProxyMsg('Nyheder')}`;
   if (!srcs.length) return '<div class="lab">Nyheder</div><div class="empty">Vælg nyhedskilder under Indstillinger → Nyheder.</div>';
   const n = srcs.length; const idx = ((ui.newsIdx % n) + n) % n; const src = srcs[idx];
-  const head = `<div class="row" style="justify-content:space-between;flex-wrap:nowrap"><span class="lab" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(src.name)}</span>${pageArrows('news', idx, n, 'nyhedskilde')}</div>`;
+  const left = n > 1 ? newsLeft() : 0;
+  const head = `<div class="row" style="justify-content:space-between;flex-wrap:nowrap"><span class="lab" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(src.name)}</span><span class="row" style="gap:8px;flex-wrap:nowrap">${n > 1 ? `<span class="ncount" id="newsCount" aria-label="Skifter om ${left} sekunder">${left}</span>` : ''}${pageArrows('news', idx, n, 'nyhedskilde')}</span></div>
+    ${n > 1 ? `<div class="nbar" aria-hidden="true"><i id="newsBar" style="width:${(left / NEWS_SECS) * 100}%"></i></div>` : ''}`;
   if (!D.news) return head + '<div class="empty">Henter nyheder …</div>';
   const items = D.news.items.filter((i) => i.sourceId === src.id).slice(0, count);
   const err = D.news.errors.find((e) => e.source === src.name);
@@ -236,19 +252,23 @@ const WRENDER = { uge: wUge, vejr: wVejr, steder: wSteder, nyheder: wNyheder, so
 function pageForside() {
   const inLayout = (id) => settings.layout.some((x) => x.id === id);
   const edit = ui.editing ? `<section class="card editpanel">
-      <div class="lab">Vælg hvad der skal være på forsiden. Træk i <b style="color:var(--text)">Flyt</b> for at ændre rækkefølgen, og vælg <b style="color:var(--text)">S, M eller L</b> for størrelsen.</div>
+      <div class="lab">Vælg hvad der skal være på forsiden. Træk i <b style="color:var(--text)">Flyt</b> for at ændre rækkefølgen, og tryk på <b style="color:var(--text)">størrelsen</b> (fx 2×1) for at vælge, hvor mange kvadrater kortet skal fylde – i bredden, i højden eller begge dele. For størrelsen.</div>
       <div class="choices">${Object.entries(WIDGETS).map(([id, name]) => `<button class="pill" data-act="toggleW" data-id="${id}" aria-pressed="${inLayout(id)}">${inLayout(id) ? '✓' : '+'} ${esc(name)}</button>`).join('')}</div>
       <div class="lab" style="margin-top:6px">Farvetema</div>${themePicker()}
     </section>` : '';
-  const cards = settings.layout.filter((x) => WIDGETS[x.id]).map((x) => `
-    <section class="card w" data-wid="${x.id}" style="--span:${SPAN[x.size] || 1}">
+  const cards = settings.layout.filter((x) => WIDGETS[x.id]).map((x) => {
+    const [w, h] = shapeOf(x);
+    const picker = ui.editing && ui.sizeFor === x.id ? `<div class="shapes" role="group" aria-label="Størrelse på ${esc(WIDGETS[x.id])}">${SHAPES.map(([sw, sh]) => `<button class="shape" data-act="shape" data-id="${x.id}" data-w="${sw}" data-h="${sh}" aria-pressed="${sw === w && sh === h}" aria-label="${sw} gange ${sh} kvadrater">${shapeIcon(sw, sh)}<span>${sw}×${sh}</span></button>`).join('')}</div>` : '';
+    return `
+    <section class="card w" data-wid="${x.id}" style="--w:${w};--h:${h}">
       ${ui.editing ? `<div class="wbar"><button class="handle" aria-label="Træk for at flytte ${esc(WIDGETS[x.id])}">${GRIP}Flyt</button><span class="nm">${esc(WIDGETS[x.id])}</span>
-        ${['S', 'M', 'L'].map((z) => `<button class="sz" data-act="size" data-id="${x.id}" data-size="${z}" aria-pressed="${x.size === z}" aria-label="${SIZE_NAME[z]}">${z}</button>`).join('')}
-        <button class="x" data-act="toggleW" data-id="${x.id}" aria-label="Fjern ${esc(WIDGETS[x.id])}">×</button></div>` : ''}
-      ${WRENDER[x.id](x.size)}
-    </section>`).join('');
+        <button class="sz" data-act="sizeFor" data-id="${x.id}" aria-expanded="${ui.sizeFor === x.id}" aria-label="Vælg størrelse (nu ${w} gange ${h})">${shapeIcon(w, h)}<span>${w}×${h}</span></button>
+        <button class="x" data-act="toggleW" data-id="${x.id}" aria-label="Fjern ${esc(WIDGETS[x.id])}">×</button></div>${picker}` : ''}
+      ${WRENDER[x.id](sizeKey(w), h, w)}
+    </section>`;
+  }).join('');
   return `<div class="ptitle"><h1>Forside</h1><div class="tools"><button class="btn ${ui.editing ? 'dark' : 'line'}" data-act="edit">${ui.editing ? 'Færdig' : 'Tilpas forside'}</button></div></div>
-    ${edit}<div class="grid ${ui.editing ? 'editing' : ''}" id="grid">${cards || '<div class="empty">Forsiden er tom. Tryk "Tilpas forside" og vælg kort.</div>'}</div>`;
+    ${edit}<div class="gridwrap"><div class="grid ${ui.editing ? 'editing' : ''}" id="grid">${cards || '<div class="empty">Forsiden er tom. Tryk "Tilpas forside" og vælg kort.</div>'}</div></div>`;
 }
 function themePicker() {
   return `<div class="themes">${THEME_ORDER.map((id) => {
@@ -535,10 +555,11 @@ const act = {
   edit: () => { ui.editing = !ui.editing; renderMain(); },
   toggleW: (b) => {
     const id = b.dataset.id; const i = settings.layout.findIndex((x) => x.id === id);
-    if (i >= 0) settings.layout.splice(i, 1); else settings.layout.push({ id, size: DEFAULT_SIZE[id] || 'S' });
+    if (i >= 0) settings.layout.splice(i, 1); else { const [w, h] = DEFAULT_SHAPE[id] || [1, 1]; settings.layout.push({ id, w, h }); }
     save(); renderMain();
   },
-  size: (b) => { const x = settings.layout.find((y) => y.id === b.dataset.id); if (x) { x.size = b.dataset.size; save(); renderMain(); } },
+  sizeFor: (b) => { ui.sizeFor = ui.sizeFor === b.dataset.id ? null : b.dataset.id; renderMain(); },
+  shape: (b) => { const x = settings.layout.find((y) => y.id === b.dataset.id); if (x) { x.w = +b.dataset.w; x.h = +b.dataset.h; delete x.size; ui.sizeFor = null; save(); renderMain(); } },
   calPrev: () => { ui.calWeek--; renderMain(); }, calNext: () => { ui.calWeek++; renderMain(); }, calToday: () => { ui.calWeek = 0; renderMain(); },
   wModel: (b) => { settings.weather.model = b.dataset.model; save(); D.wx = {}; renderMain(); loadWeather(); },
   compare: () => { D.compare = D.compare || []; renderMain(); loadCompare(); },
@@ -583,7 +604,7 @@ const act = {
   setTab: (b) => { ui.setTab = b.dataset.tab; ui.geo = null; renderMain(false); },
   wStep: (b) => {
     const n = settings.places.length; const dir = +b.dataset.dir;
-    if (b.dataset.scope === 'news') { const m = Math.max(1, newsSources().length); ui.newsIdx = (((ui.newsIdx + dir) % m) + m) % m; renderMain(); return; }
+    if (b.dataset.scope === 'news') { const m = Math.max(1, newsSources().length); ui.newsIdx = (((ui.newsIdx + dir) % m) + m) % m; ui.newsAt = Date.now(); renderMain(); return; }
     if (b.dataset.scope === 'fp') { ui.fpPlace = (((ui.fpPlace + dir) % n) + n) % n; ui.fpTouched = Date.now(); }
     else { const i = settings.places.indexOf(placeById(ui.wPlace)); ui.wPlace = settings.places[(((i + dir) % n) + n) % n].id; D.compare = null; }
     renderMain();
@@ -698,6 +719,7 @@ document.addEventListener('pointercancel', endDrag);
 
 /* ---------- Start ---------- */
 function boot() {
+  if (settings.layout.some((x) => !x.w)) { settings.layout = settings.layout.map((x) => { const [w, h] = shapeOf(x); return { id: x.id, w, h }; }); save(); }
   if (settings.navOpen) { settings.navOpen = false; }
   // Engangsoprydning: 'Vejret andre steder' blev sat på forsiden automatisk i 1.1.0 – fjern det igen
   if ((settings.layoutRev || 1) < 2) { settings.layout = settings.layout.filter((x) => x.id !== 'steder'); settings.layoutRev = 2; save(); }
@@ -712,6 +734,15 @@ function boot() {
   setInterval(() => { const c = $('#clk'); const n = new Date(); if (c) c.textContent = hhmm(n); if (n.getSeconds() === 0) { renderHeader(); applyTheme(); } }, 1000);
   setInterval(() => { ui.tick++; renderFooter(); }, 8000);
   setInterval(loadWeather, 15 * 60000);
+  // Nyhedskortet: tæl ned og skift til næste medie efter 20 sekunder
+  setInterval(() => {
+    const el = document.getElementById('newsCount');
+    if (!el || ui.editing || ui.page !== 'forside' || drag) { ui.newsAt = Date.now(); return; }
+    const left = newsLeft();
+    if (left <= 0) { act.wStep({ dataset: { scope: 'news', dir: '1' } }); return; }
+    el.textContent = left; el.setAttribute('aria-label', 'Skifter om ' + left + ' sekunder');
+    const bar = document.getElementById('newsBar'); if (bar) bar.style.width = (left / NEWS_SECS) * 100 + '%';
+  }, 1000);
   setInterval(() => { if (ui.fpPlace !== 0 && Date.now() - ui.fpTouched > 3 * 60000) { ui.fpPlace = 0; softRender(); } }, 30000);
   setInterval(loadNews, 5 * 60000);
   setInterval(loadCal, 10 * 60000);

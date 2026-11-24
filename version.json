@@ -1,5 +1,5 @@
 {
-  "version": "1.7.0",
+  "version": "1.8.0",
   "files": [
     "index.html",
     "app.js",
@@ -15,6 +15,17 @@
     "sync.js"
   ],
   "notes": [
+    {
+      "version": "1.8.0",
+      "date": "24. november 2026",
+      "title": "Forsiden i kvadrater",
+      "items": [
+        "Forsiden er nu et gitter af ens kvadrater. Hvert kort kan fylde 1–4 kvadrater i bredden, i højden eller 2×2.",
+        "Tryk Tilpas forside og derefter på størrelsen (fx 2×1) på et kort for at vælge formen.",
+        "Høje kort viser mere: fx får vejret hele ugen med, og nyhederne flere overskrifter.",
+        "Nyhedskortet tæller ned fra 20 sekunder og skifter så selv til næste medie."
+      ]
+    },
     {
       "version": "1.7.0",
       "date": "24. november 2026",

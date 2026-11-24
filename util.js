@@ -46,11 +46,11 @@ export const DEFAULTS = {
     ]
   },
   layout: [
-    { id: 'uge', size: 'L' },
-    { id: 'vejr', size: 'M' },
-    { id: 'nyheder', size: 'M' },
-    { id: 'sonos', size: 'S' },
-    { id: 'nedtaelling', size: 'S' }
+    { id: 'uge', w: 4, h: 1 },
+    { id: 'vejr', w: 2, h: 1 },
+    { id: 'nyheder', w: 2, h: 1 },
+    { id: 'sonos', w: 1, h: 1 },
+    { id: 'nedtaelling', w: 1, h: 1 }
   ]
 };
 
