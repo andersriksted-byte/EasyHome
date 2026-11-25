@@ -1,5 +1,5 @@
 {
-  "version": "1.63.3",
+  "version": "1.63.4",
   "files": [
     "index.html",
     "app.js",
@@ -25,6 +25,15 @@
     "el.js"
   ],
   "notes": [
+    {
+      "version": "1.63.4",
+      "date": "25. november 2026",
+      "title": "Elpriser fra ny kilde",
+      "items": [
+        "Elpriserne hentes nu fra elprisenligenu.dk, som ikke afviser jeres skærme",
+        "Det retter fejlene \"har travlt\" og \"Load failed\" på Strøm-siden"
+      ]
+    },
     {
       "version": "1.63.3",
       "date": "25. november 2026",

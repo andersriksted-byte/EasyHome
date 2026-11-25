@@ -377,24 +377,22 @@ async function el(req, env, path, ctx) {
       await env.DASH_KV.put(key, JSON.stringify(saved));
       return json(env, { ok: true, n: saved.records.length });
     }
+    // Priserne hentes fra elprisenligenu.dk (én fil pr. dag, ingen strenge grænser). Kun manglende dage og i går–i morgen hentes.
     const lastT = saved.records.length ? Date.parse(saved.records[saved.records.length - 1].t) : 0;
     const needTomorrow = lastT < Date.now() + 12 * 3600000; // morgendagens priser kommer ved 13-tiden
-    if (Date.now() - saved.at > (needTomorrow ? 20 : 120) * 60000) {
-      const day = (d) => d.toISOString().slice(0, 10);
-      const from = saved.records.length ? day(new Date(Date.now() - 2 * 86400000)) : day(new Date(Date.now() - 40 * 86400000));
-      const url = 'https://api.energidataservice.dk/dataset/DayAheadPrices?' + new URLSearchParams({ start: from, end: day(new Date(Date.now() + 2 * 86400000)), filter: JSON.stringify({ PriceArea: [area] }), sort: 'TimeUTC asc', limit: '10000' });
-      try {
-        const up = await fetch(url);
-        if (up.ok) {
-          const j = await up.json(); const m = new Map(saved.records.map((r) => [r.t, r]));
-          (j.records || []).forEach((r) => { const p = r.DayAheadPriceDKK ?? r.SpotPriceDKK; if (p !== null && p !== undefined) { const t = new Date((r.TimeUTC || r.HourUTC) + 'Z').toISOString(); m.set(t, { t, p }); } });
-          const cut = Date.now() - 40 * 86400000;
-          saved.records = [...m.values()].filter((r) => Date.parse(r.t) > cut).sort((a, b) => Date.parse(a.t) - Date.parse(b.t));
-          saved.at = Date.now();
-          await env.DASH_KV.put(key, JSON.stringify(saved));
-        } else if (!saved.records.length) return json(env, { error: up.status === 429 ? 'Energi Data Service har travlt – prøver igen om lidt' : 'Energi Data Service svarede ' + up.status }, 502);
-        else { saved.at = Date.now() - 15 * 60000; await env.DASH_KV.put(key, JSON.stringify(saved)); } // prøv igen om ca. 5 min
-      } catch (e) { if (!saved.records.length) throw e; }
+    if (Date.now() - saved.at > (needTomorrow ? 15 : 120) * 60000) {
+      const have = new Set(saved.records.map((r) => r.t.slice(0, 10)));
+      const dk = (d) => new Date(d.toLocaleString('en-US', { timeZone: 'Europe/Copenhagen' }));
+      const days = [];
+      for (let k = -35; k <= 1; k++) { const d = dk(new Date(Date.now() + k * 86400000)); const key = `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; if (k >= -1 || !have.has(key.replace('/', '-'))) days.push(key); }
+      const m = new Map(saved.records.map((r) => [r.t, r]));
+      const res = await Promise.all(days.slice(-40).map((d) => fetch(`https://www.elprisenligenu.dk/api/v1/prices/${d}_${area}.json`, { cf: { cacheTtl: 600 } }).then((r) => (r.ok ? r.json() : [])).catch(() => [])));
+      res.flat().forEach((x) => { if (x && typeof x.DKK_per_kWh === 'number') { const t = new Date(x.time_start).toISOString(); m.set(t, { t, p: x.DKK_per_kWh * 1000 }); } });
+      const cut = Date.now() - 40 * 86400000;
+      saved.records = [...m.values()].filter((r) => Date.parse(r.t) > cut).sort((a, b) => Date.parse(a.t) - Date.parse(b.t));
+      saved.at = Date.now();
+      if (saved.records.length) await env.DASH_KV.put(key, JSON.stringify(saved));
+      else return json(env, { error: 'Kunne ikke hente elpriser lige nu' }, 502);
     }
     return json(env, { area, records: saved.records, at: saved.at });
   }

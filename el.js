@@ -24,25 +24,20 @@ let backoffUntil = 0;
 // Energi Data Service tillader kun 1 kald i minuttet pr. adresse. Skærmen henter derfor først fra jeres server
 // (som deler priserne mellem skærmene). Har serveren ingen priser, henter skærmen selv – højst én gang i minuttet,
 // også på tværs af genindlæsninger – og deler resultatet med serveren.
-const LAST = 'easyhome.elprices.last';
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-async function direct(ar, from, to) {
-  const wait = (+localStorage.getItem(LAST) || 0) + 65000 - Date.now();
-  if (wait > 0) await sleep(wait);
-  try { localStorage.setItem(LAST, String(Date.now())); } catch (e) { /* ingen lagring */ }
-  const url = 'https://api.energidataservice.dk/dataset/DayAheadPrices?' + new URLSearchParams({ start: from, end: to, filter: JSON.stringify({ PriceArea: [ar] }), sort: 'TimeUTC asc', limit: '10000' });
-  const r = await fetch(url); if (!r.ok) throw new Error('Energi Data Service svarede ' + r.status);
-  const recs = ((await r.json()).records || []).map((x) => ({ t: x.TimeUTC + 'Z', p: x.DayAheadPriceDKK }));
+async function direct(ar) {
+  // Reserve uden server: elprisenligenu.dk – én fil pr. dag (i går, i dag og i morgen)
+  const dayFile = (d) => `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const res = await Promise.all([-1, 0, 1].map((k) => fetch(`https://www.elprisenligenu.dk/api/v1/prices/${dayFile(addD(new Date(), k))}_${ar}.json`).then((r) => (r.ok ? r.json() : [])).catch(() => [])));
+  const recs = res.flat().filter((x) => x && typeof x.DKK_per_kWh === 'number').map((x) => ({ t: new Date(x.time_start).toISOString(), p: x.DKK_per_kWh * 1000 }));
+  if (!recs.length) throw new Error('Kunne ikke hente elpriser lige nu');
   workerFetch(`/el/prices?area=${ar}`, { method: 'POST', body: JSON.stringify({ records: recs }) }).catch(() => {});
   return recs;
 }
-async function fetchRange(ar, from, to) {
-  let fromServer = null;
-  try { const j = await (await workerFetch(`/el/prices?area=${ar}`)).json(); if (!j.error) fromServer = j.records || []; } catch (e) { /* ingen server eller fejl */ }
-  // Serverens priser er gode nok, hvis de dækker i dag (og i morgen efter kl. 13)
-  const need = Date.now() + (new Date().getHours() >= 14 ? 30 : 6) * 3600000;
-  if (fromServer && fromServer.length && Date.parse(fromServer[fromServer.length - 1].t) >= need) return fromServer;
-  try { return await direct(ar, from, to); } catch (e) { if (fromServer && fromServer.length) return fromServer; throw e; }
+async function fetchRange(ar) {
+  let fromServer = null; let err = null;
+  try { const j = await (await workerFetch(`/el/prices?area=${ar}`)).json(); if (!j.error) fromServer = j.records || []; else err = j.error; } catch (e) { err = e.message; }
+  if (fromServer && fromServer.length) return fromServer;
+  try { return await direct(ar); } catch (e) { throw new Error(err && err !== 'NO_PROXY' ? err : e.message); }
 }
 let inflight = null;
 export async function loadPrices(force = false) {
@@ -58,9 +53,8 @@ async function loadPricesNow(force) {
   if (!state.prices.length && have.length) { state.prices = have.map((r) => ({ t: new Date(r.t), spot: r.p / 1000 })); state.area = ar; }
   // Hent fra i går (eller fra hullet i det gemte) til og med i morgen
   const lastDay = have.length ? new Date(have[have.length - 1].t) : null;
-  const start = lastDay && lastDay > addD(new Date(), -35) ? addD(day0(new Date()), -1) : addD(new Date(), -35);
   try {
-    const fresh = await fetchRange(ar, ymd(start), ymd(addD(new Date(), 2)));
+    const fresh = await fetchRange(ar);
     const m = new Map(have.map((r) => [r.t, r])); fresh.filter((r) => r.p !== null && r.p !== undefined).forEach((r) => m.set(new Date(r.t).toISOString(), { t: new Date(r.t).toISOString(), p: r.p }));
     have = [...m.values()].sort((a, b) => Date.parse(a.t) - Date.parse(b.t)); store(ar, have);
     state.prices = have.map((r) => ({ t: new Date(r.t), spot: r.p / 1000 })); // kr/kWh uden moms
