@@ -210,3 +210,13 @@ export function weekPattern(n = 2, win = [0, 24]) {
     return best;
   }).filter(Boolean);
 }
+
+// ---------- Kroner for perioder uden kendte timepriser ----------
+// Gennemsnitlig pris pr. kWh (alt inkl.) for de dage, hvor både forbrug og timepriser kendes
+export function avgPrice() {
+  const ds = days(40).filter((d) => d.cost !== null && d.kwh > 0);
+  const k = ds.reduce((s, d) => s + d.kwh, 0); return k ? ds.reduce((s, d) => s + d.cost, 0) / k : null;
+}
+// Præcis pris for en dag hvis kendt, ellers et skøn (kWh × gennemsnitspris)
+export function dayCost(t) { const d = days(40).find((x) => +x.t === +day0(t)); return d && d.cost !== null ? { kr: d.cost, est: false } : null; }
+export const hourCost = (u) => { const p = priceAtHour(u.t); return p === null ? null : p * u.kwh; };

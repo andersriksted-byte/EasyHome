@@ -1327,3 +1327,26 @@ button.w7r.sel{background:color-mix(in srgb,var(--accent) 16%,transparent);box-s
 
 .elyrs{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 .elyrs .pill{min-height:36px;padding:4px 14px}
+
+/* Strøm-siden: forbruget i centrum, priserne kompakt */
+.eltiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:12px}
+.elt{display:flex;flex-direction:column;gap:4px;padding:16px 18px 16px 22px;border-radius:18px;background:var(--dayBg);min-width:0;position:relative;overflow:hidden}
+.elt::before{content:'';position:absolute;left:0;top:0;bottom:0;width:6px;background:var(--tc,var(--accent))}
+.elt.t1{--tc:#0EA5E9}.elt.t2{--tc:#16A34A}.elt.t3{--tc:#A855F7}.elt.t4{--tc:#F59E0B}
+.elt>span{font-size:13px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.elt>div{display:flex;align-items:baseline;gap:6px}
+.elt>div b{font-size:clamp(30px,3.6vw,46px);font-weight:800;line-height:1;letter-spacing:-1px;font-variant-numeric:tabular-nums}
+.elt>div i{font-style:normal;font-size:16px;font-weight:700;color:var(--muted)}
+.elt small{font-size:14px;font-weight:700;line-height:1.35;opacity:.85}
+.elt small b.up{color:#DC2626}.elt small b.down{color:#16A34A}
+.eluse .elx{margin-top:18px}
+.eluse .elg{height:260px}
+.elprice{display:grid;grid-template-columns:auto auto minmax(0,1fr);gap:22px;align-items:center}
+.elp-now{display:flex;flex-direction:column}
+.elp-now span,.elp-info span{font-size:12px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.elp-now b{font-size:38px;font-weight:800;line-height:1.05}
+.elp-now.lo b{color:#16A34A}.elp-now.mid b{color:#D97706}.elp-now.hi b{color:#DC2626}
+.elp-now small{font-size:12px;font-weight:700;color:var(--muted)}
+.elp-info{display:flex;flex-direction:column;gap:6px}.elp-info>div{display:flex;flex-direction:column}.elp-info b{font-size:16px}
+.elp-bars .elbars{height:90px;min-height:0;padding-bottom:16px}
+@media (max-width:900px){.eltiles{grid-template-columns:repeat(2,minmax(0,1fr))}.elprice{grid-template-columns:1fr 1fr}.elp-bars{grid-column:1/-1}}

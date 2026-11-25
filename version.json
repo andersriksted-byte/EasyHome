@@ -1,5 +1,5 @@
 {
-  "version": "1.63.7",
+  "version": "1.64.0",
   "files": [
     "index.html",
     "app.js",
@@ -25,6 +25,16 @@
     "el.js"
   ],
   "notes": [
+    {
+      "version": "1.64.0",
+      "date": "25. november 2026",
+      "title": "Ny Strøm-side",
+      "items": [
+        "Strøm-siden har fået nyt udseende: forbruget i kWh og kroner står øverst og stort",
+        "Skift mellem kWh og kr på graferne",
+        "Elpriserne står nu kompakt nederst"
+      ]
+    },
     {
       "version": "1.63.7",
       "date": "25. november 2026",
