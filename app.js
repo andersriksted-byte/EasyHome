@@ -571,15 +571,17 @@ function wElpris(size, h = 1, wd = 1) {
 function wVasketid(size, h = 1, wd = 1, x = null) {
   const w = elWait('Billig strøm'); if (w) return w;
   const n = Math.max(1, Math.min(4, +(x && x.hours) || 2)); const now = new Date(); const today0 = startOfDay(now);
+  // Standard: kun dagtimer (kl. 7–22), så man rent faktisk kan sætte vasken over
+  const win = (x && x.win) === 'all' ? [0, 24] : (x && x.win) === 'eve' ? [16, 23] : [7, 22];
   const tTom = addDays(today0, 1), tEnd = addDays(today0, 2);
-  const today = EL.cheapestBetween(now, tTom, n); const tom = EL.cheapestBetween(tTom, tEnd, n);
+  const today = EL.cheapestBetween(now, tTom, n, win); const tom = EL.cheapestBetween(tTom, tEnd, n, win);
   const cur = EL.now(); const tt = (b) => `kl. ${pad(b.from.getHours())}–${pad(b.to.getHours())}`;
   const kwh = n * 0.5; // en vask bruger typisk ca. 1 kWh på 2 timer
   const save = (b) => (cur !== null && b && cur > b.avg ? `<small>Spar ${kr((cur - b.avg) * kwh)} kr pr. vask</small>` : b && cur !== null ? '<small>Billigst lige nu</small>' : '');
   const slot = (lab, b, cls = '', mini = false) => `<div class="vt-slot ${cls}"><span>${lab}</span>${b ? `<b>${tt(b)}</b>${mini ? '' : `<em>${kr(b.avg)} kr/kWh</em>${save(b)}`}` : `<b class="muted">${lab === 'I morgen' ? 'Kommer ved 13-tiden' : 'Ikke flere timer i dag'}</b>`}</div>`;
-  const wk = EL.weekPattern(n); const bestW = wk.length ? wk.reduce((a, b) => (b.avg < a.avg ? b : a)) : null;
+  const wk = EL.weekPattern(n, win); const bestW = wk.length ? wk.reduce((a, b) => (b.avg < a.avg ? b : a)) : null;
   const week = bestW ? `<div class="vt-week"><span>Typisk i ugen</span><b>${esc(cap(DAYS_LONG[bestW.day]))} kl. ${pad(bestW.h)}–${pad(bestW.h + n)}</b>${wd >= 3 ? `<div class="vt-days">${wk.map((d) => `<div class="vt-d${d === bestW ? ' best' : ''}"><span>${esc(cap(DAYS[d.day]).slice(0, 3))}</span><b>${pad(d.h)}</b></div>`).join('')}</div>` : ''}</div>` : '';
-  const head = cardHead('Billig strøm', `<span class="small muted">${n} ${n === 1 ? 'time' : 'timer'}</span>`);
+  const head = cardHead('Billig strøm', `<span class="small muted">kl. ${pad(win[0])}–${pad(win[1] % 24)} · ${n} ${n === 1 ? 'time' : 'timer'}</span>`);
   if (wd === 1) return head + `<div class="vt">${slot('I dag', today, 'main', h < 2)}${h >= 2 ? slot('I morgen', tom, '', true) + week : ''}</div>`;
   return head + `<div class="vt row">${slot('I dag', today, 'main')}${slot('I morgen', tom)}${week}</div>`;
 }
@@ -883,6 +885,7 @@ function pageForside() {
     <section class="card w" data-wid="${x.id}" ${FIT.includes(x.id) ? `data-fit data-h="${h}"` : ''} style="--w:${w};--h:${h}">
       ${ui.editing ? `<div class="wbar"><button class="handle" aria-label="Træk for at flytte ${esc(WIDGETS[x.id])}">${GRIP}Flyt</button><span class="nm">${esc(WIDGETS[x.id])}</span>
         ${x.id === 'screens' ? `<span class="wopt" role="group" aria-label="Betjening">${[[1, 'Alle samlet'], [2, 'Hver for sig'], [3, 'Begge']].map(([v, l]) => `<button data-act="wOpt" data-id="screens" data-k="mode" data-v="${v}" aria-pressed="${(x.mode || 3) === v}">${l}</button>`).join('')}</span>` : ''}
+        ${x.id === 'vasketid' ? `<select class="wsel" data-wsel="vasketid" data-k="win" aria-label="Tidsrum">${[['', 'Dagtimer 7–22'], ['eve', 'Eftermiddag/aften 16–23'], ['all', 'Hele døgnet']].map(([v, l]) => `<option value="${v}"${(x.win || '') === v ? ' selected' : ''}>${l}</option>`).join('')}</select>` : ''}
         ${x.id === 'vasketid' ? `<select class="wsel" data-wsel="vasketid" data-k="hours" aria-label="Varighed">${[1, 2, 3, 4].map((v) => `<option value="${v}"${String(x.hours || 2) === String(v) ? ' selected' : ''}>${v} ${v === 1 ? 'time' : 'timer'}</option>`).join('')}</select>` : ''}
         ${x.id === 'naeste' ? `<select class="wsel" data-wsel="naeste" data-k="count" aria-label="Antal aftaler">${[1, 2, 3, 4, 5, 6].map((v) => `<option value="${v}"${String(x.count || 1) === String(v) ? ' selected' : ''}>${v === 1 ? 'Kun den næste' : v + ' aftaler'}</option>`).join('')}</select>` : ''}
         ${x.id === 'uge' ? `<select class="wsel" data-wsel="uge" data-k="days" aria-label="Antal dage">${[['', 'Automatisk'], ...[1, 2, 3, 4, 5, 6, 7].map((v) => [String(v), v === 1 ? '1 dag' : v + ' dage'])].map(([v, l]) => `<option value="${v}"${String(x.days || '') === v ? ' selected' : ''}>${l}</option>`).join('')}</select>` : ''}

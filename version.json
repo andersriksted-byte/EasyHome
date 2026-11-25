@@ -1,5 +1,5 @@
 {
-  "version": "1.63.0",
+  "version": "1.63.1",
   "files": [
     "index.html",
     "app.js",
@@ -25,6 +25,15 @@
     "el.js"
   ],
   "notes": [
+    {
+      "version": "1.63.1",
+      "date": "25. november 2026",
+      "title": "Billig strøm i dagtimerne",
+      "items": [
+        "Billig strøm viser nu den billigste tid i dagtimerne (kl. 7–22) – ikke om natten",
+        "Vælg et andet tidsrum (fx eftermiddag/aften eller hele døgnet) under Tilpas forside"
+      ]
+    },
     {
       "version": "1.63.0",
       "date": "25. november 2026",
