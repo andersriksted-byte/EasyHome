@@ -1463,4 +1463,12 @@ button.w7r.sel{background:color-mix(in srgb,var(--accent) 16%,transparent);box-s
 .elbars{padding-top:16px}
 .elbar .elmid.first{left:0}
 .elw>.elleft{flex:0 1 auto;max-width:44%}
-@container (max-width:560px){.elgauge{width:64px;height:40px}.elhero{gap:8px}.elhero-n b{font-size:34px}.elbadge{font-size:10px;padding:2px 6px}.eladv{font-size:12px;padding:6px 8px}}
+
+
+/* Elpris: måleren og prisen vokser og fylder den ledige højde i venstre side */
+.elw>.elleft{display:flex;flex-direction:column;justify-content:space-between}
+.elleft .elhero{flex:1;min-height:0;align-items:center;gap:clamp(8px,2cqw,16px)}
+.elleft .elgauge{width:auto;height:clamp(40px,34cqh,130px);aspect-ratio:120/70;flex:none}
+.elleft .elhero-n b{font-size:clamp(30px,19cqh,72px)}
+.elleft .elhero-n span{font-size:clamp(12px,4.5cqh,17px)}
+@container (max-width:560px){.elleft .elgauge{height:clamp(36px,26cqh,96px)}.elleft .elhero-n b{font-size:clamp(28px,15cqh,56px)}.eladv{font-size:12px;padding:6px 8px}.elbadge{font-size:10px;padding:2px 6px}}
