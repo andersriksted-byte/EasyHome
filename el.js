@@ -67,10 +67,11 @@ async function loadPricesNow(force) {
 }
 
 export async function loadEloverblik(force = false) {
-  if (!state.status || force) { try { state.status = await (await workerFetch('/el/status')).json(); } catch (e) { state.status = { configured: false }; } }
+  // Tjek igen hver gang, indtil Eloverblik er forbundet (så en ny token i Cloudflare opdages uden genstart)
+  if (!state.status || force || !state.status.configured) { try { state.status = await (await workerFetch('/el/status')).json(); } catch (e) { state.status = { configured: false, error: e.message }; } }
   if (!state.status.configured) return;
   try {
-    if (!state.charges || Date.now() - state.chargesAt > 12 * 3600000) { const c = await (await workerFetch('/el/charges')).json(); if (!c.error) { state.charges = c; state.chargesAt = Date.now(); } }
+    if (!state.charges || Date.now() - state.chargesAt > 12 * 3600000) { const c = await (await workerFetch('/el/charges')).json(); if (!c.error) { state.charges = c; state.chargesAt = Date.now(); } else state.usageError = c.error; }
     if (force || Date.now() - state.usageAt > 3 * 3600000) {
       // Eloverblik har data til og med i går (nogle gange i forgårs)
       const u = await (await workerFetch(`/el/usage?from=${ymd(addD(new Date(), -32))}&to=${ymd(new Date())}`)).json();
