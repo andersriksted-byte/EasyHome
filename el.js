@@ -15,24 +15,44 @@ export function area() {
   return home && home.lon > 10.95 ? 'DK2' : 'DK1';
 }
 
-export async function loadPrices(force = false) {
-  const ar = area();
-  if (!force && ar === state.area && Date.now() - state.pricesAt < 30 * 60000) return;
-  // 35 dage tilbage (til at regne forbrugets pris ud) og til og med i morgen
-  const from = ymd(addD(new Date(), -35)); const to = ymd(addD(new Date(), 2));
-  // Energi Data Service er åben og må hentes direkte fra skærmen; workeren bruges kun som reserve
-  let recs;
+// Priser gemmes på skærmen: gamle dage ændrer sig aldrig, så kun de nyeste dage hentes igen.
+// Det holder antallet af kald nede – Energi Data Service afviser for mange kald (429).
+const PKEY = (ar) => 'easyhome.elprices.' + ar;
+function cached(ar) { try { return JSON.parse(localStorage.getItem(PKEY(ar)) || '[]'); } catch (e) { return []; } }
+function store(ar, recs) { try { localStorage.setItem(PKEY(ar), JSON.stringify(recs)); } catch (e) { /* fuld eller blokeret */ } }
+let backoffUntil = 0;
+async function fetchRange(ar, from, to) {
+  const url = 'https://api.energidataservice.dk/dataset/DayAheadPrices?' + new URLSearchParams({ start: from, end: to, filter: JSON.stringify({ PriceArea: [ar] }), sort: 'TimeUTC asc', limit: '10000' });
   try {
-    const url = 'https://api.energidataservice.dk/dataset/DayAheadPrices?' + new URLSearchParams({ start: from, end: to, filter: JSON.stringify({ PriceArea: [ar] }), sort: 'TimeUTC asc', limit: '10000' });
-    const r = await fetch(url); if (!r.ok) throw new Error('Energi Data Service svarede ' + r.status);
-    recs = ((await r.json()).records || []).map((x) => ({ t: x.TimeUTC + 'Z', p: x.DayAheadPriceDKK }));
+    const r = await fetch(url); if (!r.ok) throw Object.assign(new Error('Energi Data Service svarede ' + r.status), { status: r.status });
+    return ((await r.json()).records || []).map((x) => ({ t: x.TimeUTC + 'Z', p: x.DayAheadPriceDKK }));
   } catch (e) {
+    if (e.status === 429) throw e; // for mange kald – workeren ville få samme svar
     const j = await (await workerFetch(`/el/prices?area=${ar}&from=${from}&to=${to}`)).json();
     if (j.error) throw new Error(j.error);
-    recs = j.records || [];
+    return j.records || [];
   }
-  state.prices = recs.filter((r) => r.p !== null && r.p !== undefined).map((r) => ({ t: new Date(r.t), spot: r.p / 1000 })); // kr/kWh uden moms
-  state.area = ar; state.pricesAt = Date.now(); state.error = '';
+}
+export async function loadPrices(force = false) {
+  const ar = area();
+  if (Date.now() < backoffUntil) return;
+  if (!force && ar === state.area && Date.now() - state.pricesAt < 30 * 60000) return;
+  let have = cached(ar).filter((r) => Date.parse(r.t) > Date.now() - 36 * 86400000); // 35 dage tilbage til at regne forbrugets pris ud
+  if (!state.prices.length && have.length) { state.prices = have.map((r) => ({ t: new Date(r.t), spot: r.p / 1000 })); state.area = ar; }
+  // Hent fra i går (eller fra hullet i det gemte) til og med i morgen
+  const lastDay = have.length ? new Date(have[have.length - 1].t) : null;
+  const start = lastDay && lastDay > addD(new Date(), -35) ? addD(day0(new Date()), -1) : addD(new Date(), -35);
+  try {
+    const fresh = await fetchRange(ar, ymd(start), ymd(addD(new Date(), 2)));
+    const m = new Map(have.map((r) => [r.t, r])); fresh.filter((r) => r.p !== null && r.p !== undefined).forEach((r) => m.set(new Date(r.t).toISOString(), { t: new Date(r.t).toISOString(), p: r.p }));
+    have = [...m.values()].sort((a, b) => Date.parse(a.t) - Date.parse(b.t)); store(ar, have);
+    state.prices = have.map((r) => ({ t: new Date(r.t), spot: r.p / 1000 })); // kr/kWh uden moms
+    state.area = ar; state.pricesAt = Date.now(); state.error = '';
+  } catch (e) {
+    if (/429/.test(e.message)) { backoffUntil = Date.now() + 3 * 60000; state.error = 'Energi Data Service har travlt – prøver igen om få minutter'; }
+    else state.error = e.message;
+    if (!state.prices.length) throw new Error(state.error);
+  }
 }
 
 export async function loadEloverblik(force = false) {
