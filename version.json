@@ -1,5 +1,5 @@
 {
-  "version": "1.71.2",
+  "version": "1.71.3",
   "files": [
     "index.html",
     "app.js",
@@ -26,11 +26,11 @@
   ],
   "notes": [
     {
-      "version": "1.71.2",
+      "version": "1.71.3",
       "date": "25. november 2026",
-      "title": "Større prismåler",
+      "title": "Prismåleren øverst",
       "items": [
-        "Prismåleren og prisen i Elpris vokser nu med kortets højde og udnytter pladsen"
+        "Elpris har nu måleren stort øverst og prisen nedenunder"
       ]
     },
     {

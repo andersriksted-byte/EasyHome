@@ -586,7 +586,8 @@ function wElpris(size, h = 1, wd = 1) {
   const head = cardHead('⚡ Elpris', `<span class="small muted">${EL.hasTariffs() ? 'inkl. alt' : 'spot + moms'} · ${EL.area()}</span>`);
   const trend = nx !== null && p !== null ? (nx > p + 0.05 ? '↗' : nx < p - 0.05 ? '↘' : '→') : '';
   const adv = priceAdvice(p, lvl);
-  const big = `<div class="elhero ${lvl}">${lo && hi ? priceGauge(p, lo.price, hi.price, lvl) : ''}<div class="elhero-n"><b>${kr(p)}</b><span>kr/kWh ${trend}</span></div><span class="elbadge ${lvl}">${LVL_TXT[lvl]}</span></div>`;
+  // Måleren øverst, prisen og mærket nedenunder
+  const big = `<div class="elhero ${lvl}">${lo && hi ? priceGauge(p, lo.price, hi.price, lvl) : ''}<div class="elhero-row"><div class="elhero-n"><b>${kr(p)}</b><span>kr/kWh ${trend}</span></div><span class="elbadge ${lvl}">${LVL_TXT[lvl]}</span></div></div>`;
   const advice = `<div class="eladv ${lvl}"><i>${adv.ico}</i><span>${esc(adv.txt)}</span></div>`;
   const mm = lo && hi ? `<div class="elmm"><div><span class="dot lo"></span>Lavest <b>${kr(lo.price)}</b> kl. ${pad(lo.t.getHours())}</div><div><span class="dot hi"></span>Højest <b>${kr(hi.price)}</b> kl. ${pad(hi.t.getHours())}</div></div>` : '';
   if (wd === 1 && h === 1) return head + big + advice;
