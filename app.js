@@ -681,7 +681,9 @@ function elExplorer() {
   let body = '', head = '';
   if (!ys.length && v !== 'time') body = `<div class="empty">${EL.state.histError ? esc(EL.state.histError) : 'Henter historik …'}</div>`;
   else if (v === 'time') {
-    const d = startOfDay(ref); const hs = EL.hourly(d);
+    // Uden valgt dag: den seneste dag, Eloverblik har timer for (i dag og ofte i går mangler endnu)
+    const lastU = EL.state.usage.length ? EL.state.usage[EL.state.usage.length - 1].t : null;
+    const d = startOfDay(ui.elRef ? ref : lastU || ref); const hs = EL.hourly(d);
     head = nav(`${cap(DAYS_LONG[d.getDay()])} ${d.getDate()}. ${MONTHS[d.getMonth()]}`);
     let acc = 0; const cum = hs.map((x) => (acc += x.kwh));
     body = hs.length ? groupBars(hs.map((x) => pad(x.t.getHours())), [{ name: 'Forbrug', color: YEAR_COL[0], values: hs.map((x) => (unitKr ? EL.hourCost(x) : x.kwh)) }], { showLab: (l, i) => (i % 3 === 0 ? l : '') }) + `<div class="eltots">${tot(acc, 'I alt')}${tot(Math.max(...hs.map((x) => x.kwh)), 'Højeste time')}</div><div class="small muted">Akkumuleret: ${cum.filter((_, i) => i % 6 === 5).map((c, i) => `kl. ${pad(i * 6 + 6)}: ${kr(c, 1)}`).join(' · ')} kWh</div>` : '<div class="empty">Ingen timedata for denne dag (Eloverblik har kun de seneste ca. 30 dage time for time).</div>';
@@ -1766,7 +1768,7 @@ const act = {
   elUnit: (b) => { ui.elUnit = b.dataset.v; renderMain(); },
   elYear: (b) => { const y = +b.dataset.y; let p = ui.elYears || []; if (!p.length && ui.elView === 'akk') { const cy = new Date().getFullYear(); p = EL.years().filter((x) => x < cy).slice(-3); } ui.elYears = p.includes(y) ? p.filter((x) => x !== y) : p.concat(y); renderMain(); },
   elNav: (b) => { const d = ui.elRef ? new Date(ui.elRef) : new Date(); const dir = +b.dataset.dir; const v = ui.elView || 'maaned';
-    if (v === 'time') d.setDate(d.getDate() + dir); else if (v === 'dag') { d.setDate(1); d.setMonth(d.getMonth() + dir); } else d.setFullYear(d.getFullYear() + dir);
+    if (v === 'time') { if (!ui.elRef && EL.state.usage.length) d.setTime(+EL.state.usage[EL.state.usage.length - 1].t); d.setDate(d.getDate() + dir); const lastU = EL.state.usage.length ? +startOfDay(EL.state.usage[EL.state.usage.length - 1].t) : Date.now(); if (+startOfDay(d) > lastU) return; } else if (v === 'dag') { d.setDate(1); d.setMonth(d.getMonth() + dir); } else d.setFullYear(d.getFullYear() + dir);
     if (d > new Date()) return; ui.elRef = +d; renderMain(); },
   fbFollow: (b) => { const fb = settings.football = settings.football || { leagues: [], teams: [] }; const f = fb.follow || []; const id = b.dataset.id; fb.follow = f.includes(id) ? f.filter((x) => x !== id) : f.concat(id); save(); renderMain(); loadFootball(true); },
   fbTeam: (b) => { const fb = settings.football = settings.football || { leagues: [], teams: [] }; fb.teams = fb.teams || []; const id = b.dataset.id; const lg = b.dataset.lg;
