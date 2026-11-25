@@ -1426,3 +1426,6 @@ button.w7r.sel{background:color-mix(in srgb,var(--accent) 16%,transparent);box-s
 .elprog i{font-style:normal;font-size:18px}
 .vt-apps{overflow:hidden}
 .elstats{gap:6px}.elstats b{font-size:24px}
+
+.eldays.val .elday i b small{font-size:9px;font-weight:700;color:var(--muted);margin-left:2px}
+.eldays.val .elday i em{position:absolute;left:0;right:0;bottom:4px;text-align:center;font-style:normal;font-size:11px;font-weight:800;color:#fff;white-space:nowrap;overflow:hidden;text-shadow:0 1px 2px rgba(0,0,0,.3)}

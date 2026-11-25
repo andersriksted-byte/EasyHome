@@ -1,5 +1,5 @@
 {
-  "version": "1.66.0",
+  "version": "1.66.1",
   "files": [
     "index.html",
     "app.js",
@@ -25,6 +25,14 @@
     "el.js"
   ],
   "notes": [
+    {
+      "version": "1.66.1",
+      "date": "25. november 2026",
+      "title": "kWh og kroner på søjlerne",
+      "items": [
+        "Elforbrug viser nu både kWh og kroner for hver dag"
+      ]
+    },
     {
       "version": "1.66.0",
       "date": "25. november 2026",
