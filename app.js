@@ -86,7 +86,7 @@ const PAGES = [
   { id: 'nyheder', label: 'Nyheder' }, { id: 'musik', label: 'Musik' }, { id: 'somfy', label: 'Screens' }, { id: 'stroem', label: 'Strøm' }, { id: 'sport', label: 'Sport' }, { id: 'tv', label: 'DR TV' }
 ];
 // Tjenester ("app store"): hver tjeneste kan slås til og fra under Indstillinger → Tjenester.
-// Slås en tjeneste fra, skjules dens side, kort, faner og felter. Kortene på forsiden huskes til den slås til igen.
+// Slås en tjeneste fra, skjules kun dens side i menuen. Kort og indstillinger er der stadig.
 const SERVICES = [
   { id: 'madro', name: 'Madro', icon: 'madro', desc: 'Madplan, indkøbsliste og opskrifter.', pages: ['madro'], widgets: ['madplan', 'dagensret', 'indkob', 'inspiration'], tabs: [] },
   { id: 'somfy', name: 'Somfy', icon: 'blinds', desc: 'Styr screens, markiser og gardiner.', pages: ['somfy'], widgets: ['screens'], tabs: [] },
@@ -103,8 +103,12 @@ const SERVICES = [
 ];
 const svcOn = (id) => !settings.services || settings.services[id] !== false;
 const pageOn = (p) => SERVICES.every((x) => !x.pages.includes(p) || svcOn(x.id));
-const widgetOn = (w) => SERVICES.every((x) => !x.widgets.includes(w) || svcOn(x.id));
-const tabOn = (t) => (t === 'musik' ? svcOn('musik') : t === 'somfy' ? svcOn('somfy') : t === 'kalender' ? svcOn('kalender') || svcOn('nedtaelling') : SERVICES.every((x) => !x.tabs.includes(t) || svcOn(x.id)));
+// En tjeneste, der er slået fra, skjuler kun sin side i menuen – kort og indstillinger er der stadig
+const widgetOn = () => true;
+const tabOn = () => true;
+// Bruges tjenesten (side i menuen eller et kort på en forside)? Så hentes dens data.
+const svcUsed = (id) => { const x = SERVICES.find((y) => y.id === id); if (!x || svcOn(id)) return true;
+  return [settings.layout || []].concat(Object.values(settings.layouts || {})).some((l) => (l || []).some((w) => x.widgets.includes(w.id))); };
 const WIDGETS = { todo: 'To do', vasketid: 'Billig strøm', elpris: 'Elpris', elforbrug: 'Elforbrug', fodbold: 'Fodbold', stilling: 'Fodbold-stilling', naeste: 'Næste i kalenderen', dagensret: 'Dagens ret', nyhed1: 'Én nyhed ad gangen', timer: 'Timer nedtælling', screens: 'Screens (Somfy)', madplan: 'Madplan', indkob: 'Indkøbsliste', inspiration: 'Opskrift-inspiration', uge: 'Familiens uge', vejr: 'Vejret', steder: 'Vejret andre steder', nyheder: 'Nyheder', sonos: 'Musik (Sonos)', tv: 'DR TV', nedtaelling: 'Nedtælling' };
 // Forsiden er et gitter af ens kvadrater. Et kort fylder w kvadrater i bredden og h i højden.
 const SHAPES = [[1, 1], [2, 1], [3, 1], [4, 1], [1, 2], [1, 3], [1, 4], [2, 2]];
@@ -161,7 +165,7 @@ function eventsOn(day, page = false) {
 const evTime = (ev, day) => (ev.allDay ? 'Hele dagen' : (ev.start < startOfDay(day) ? 'Fortsat' : hhmm(ev.start)));
 // Dagens menu fra Madro nederst i hver dag i kalenderen
 function dayMenu(d) {
-  if (!svcOn('madro') || MD.state.status !== 'ok') return '';
+  if (MD.state.status !== 'ok') return '';
   const ms = MD.mealsOn(d); if (!ms.length) return '';
   return `<button class="daymenu" data-act="mdOpen" data-sub="madplan" title="${esc(ms.map((m) => m.title).join(', '))}"><span aria-hidden="true">🍽️</span><span>${esc(ms.map((m) => m.title).join(' · '))}</span></button>`;
 }
@@ -232,12 +236,12 @@ function wxChip(w) {
 function renderHeader() {
   const now = new Date();
   const w = D.weather;
-  const next = svcOn('nedtaelling') && settings.cdTop ? countdowns('all').find((c) => c.id === settings.cdTop && c.days >= 0) : null;
+  const next = settings.cdTop ? countdowns('all').find((c) => c.id === settings.cdTop && c.days >= 0) : null;
   $('#hdr').innerHTML = `
     <div class="clock"><b id="clk">${hhmm(now)}</b><span>${esc(longDate(now))}</span></div>
-    ${w && svcOn('vejr') ? wxChip(w) : ''}
+    ${w ? wxChip(w) : ''}
     ${next ? `<span class="chip accent">${next.days === 0 ? `I dag: ${esc(next.name)}` : `${next.days} ${next.days === 1 ? 'dag' : 'dage'} til ${esc(next.name.toLowerCase())}`}</span>` : ''}
-    <div class="right">${svcOn('timer') && TM.timers().some((t) => !t.done && !t.paused) ? `<button class="chip tmchip" id="tmChip" data-act="nav" data-page="forside" aria-label="Timer">${svg('timer', 18)}<b>${TM.fmt(Math.min(...TM.timers().filter((t) => !t.done && !t.paused).map(TM.left)))}</b></button>` : ''}${ui.page === 'forside' ? `<button class="hdredit ${ui.editing ? 'on' : ''}" data-act="edit" aria-pressed="${ui.editing}" aria-label="${ui.editing ? 'Færdig med at tilpasse forsiden' : 'Tilpas forside'}" title="${ui.editing ? 'Færdig' : 'Tilpas forside'}">${ui.editing ? ico('check', 20) : ico('edit', 20)}</button>` : ''}${members().length ? `<div class="profiles${settings.me ? ' picked' : ''}" role="group" aria-label="Hvem bruger skærmen?">${members().map((m) => `<button class="avatar" data-act="pickMe" data-id="${esc(m.id)}" aria-pressed="${settings.me === m.id}" aria-label="${esc(m.name)}${settings.me === m.id ? ' (valgt – tryk for alle)' : ''}" style="--c:${esc(m.color)}">${esc(initials(m.name))}</button>`).join('')}</div>` : ''}</div>`;
+    <div class="right">${TM.timers().some((t) => !t.done && !t.paused) ? `<button class="chip tmchip" id="tmChip" data-act="nav" data-page="forside" aria-label="Timer">${svg('timer', 18)}<b>${TM.fmt(Math.min(...TM.timers().filter((t) => !t.done && !t.paused).map(TM.left)))}</b></button>` : ''}${ui.page === 'forside' ? `<button class="hdredit ${ui.editing ? 'on' : ''}" data-act="edit" aria-pressed="${ui.editing}" aria-label="${ui.editing ? 'Færdig med at tilpasse forsiden' : 'Tilpas forside'}" title="${ui.editing ? 'Færdig' : 'Tilpas forside'}">${ui.editing ? ico('check', 20) : ico('edit', 20)}</button>` : ''}${members().length ? `<div class="profiles${settings.me ? ' picked' : ''}" role="group" aria-label="Hvem bruger skærmen?">${members().map((m) => `<button class="avatar" data-act="pickMe" data-id="${esc(m.id)}" aria-pressed="${settings.me === m.id}" aria-label="${esc(m.name)}${settings.me === m.id ? ' (valgt – tryk for alle)' : ''}" style="--c:${esc(m.color)}">${esc(initials(m.name))}</button>`).join('')}</div>` : ''}</div>`;
 }
 
 /* ---------- Footer ---------- */
@@ -253,8 +257,7 @@ function renderFooter() {
   } else {
     music = `<button class="pp" data-act="nav" data-page="musik" aria-label="Musik">${svg('musik', 20)}</button><button class="np" data-act="nav" data-page="musik" aria-label="Gå til Musik"><b>Sonos</b><span>Ikke forbundet endnu</span></button>`;
   }
-  if (!svcOn('musik')) music = '';
-  const showNews = svcOn('nyheder');
+  const showNews = true;
   $('#ftr').hidden = !music && !showNews;
   $('#ftr').innerHTML = `${music}${music && showNews ? '<div class="sep"></div>' : ''}
     ${!showNews ? '' : top ? `<a class="ticker" href="${esc(top.link)}" data-read="${esc(top.source)}" target="_blank" rel="noopener"><b>${esc(top.source)}</b><span>${esc(top.title)}</span></a>`
@@ -667,7 +670,7 @@ const spRef = (it) => { if (spRefs.length > 3000) spRefs = []; spRefs.push(it); 
 const spDay = () => addDays(startOfDay(new Date()), ui.spOff || 0);
 const dayWord = (day) => { const t = startOfDay(new Date()); return sameDay(day, t) ? 'I dag' : sameDay(day, addDays(t, 1)) ? 'I morgen' : sameDay(day, addDays(t, -1)) ? 'I går' : cap(DAYS_LONG[day.getDay()]); };
 function spLoad(day = spDay(), force = false) {
-  if (!hasProxy() || !svcOn('fodbold')) return;
+  if (!hasProxy() || !svcUsed('fodbold')) return;
   SP.followed().forEach((sp) => { const before = (SP.dayData(sp.id, day) || {}).at;
     SP.loadDay(sp, day, force).then((c) => { if (c && c.at !== before && ui.page === 'sport') softRender(); spModalRefresh(); }); });
 }
@@ -1736,7 +1739,7 @@ function pageIndstillinger() {
   const tab = tabs.some((t) => t.id === ui.setTab) ? ui.setTab : 'familie';
   const needsConn = ['nyheder', 'kalender', 'musik'].includes(tab) && !hasProxy();
   const T = {
-    tjenester: () => `<section class="card wide"><div class="store">${SERVICES.map((x) => { const on = svcOn(x.id); return `<button class="svc ${on ? 'on' : ''}" data-act="svcToggle" data-id="${x.id}" role="switch" aria-checked="${on}">
+    tjenester: () => `<section class="card wide"><div class="store">${SERVICES.filter((x) => x.pages.length).map((x) => { const on = svcOn(x.id); return `<button class="svc ${on ? 'on' : ''}" data-act="svcToggle" data-id="${x.id}" role="switch" aria-checked="${on}">
       <span class="appico">${svg(x.icon, 30)}</span><span class="appmain"><b>${esc(x.name)}</b><span>${esc(x.desc)}</span></span><span class="tgl" aria-hidden="true"><i></i></span></button>`; }).join('')}</div></section>`,
     vejr: () => vejrSettings(),
     fodbold: () => fodboldSettings(),
@@ -1749,8 +1752,8 @@ function pageIndstillinger() {
       ${ui.feedMsg ? `<div class="small ${ui.feedMsg.err ? 'err' : 'muted'}">${esc(ui.feedMsg.text)}</div>` : ''}
       ${D.news && D.news.errors.length ? `<div class="err small">Virker ikke lige nu: ${esc(D.news.errors.map((e) => e.source + ' (' + e.msg + ')').join(' · '))}</div>` : ''}</section>`,
     kalender: () => `
-    ${svcOn('kalender') ? calSection(s) : ''}
-    ${svcOn('nedtaelling') ? cdSection(s) : ''}`,
+    ${calSection(s)}
+    ${cdSection(s)}`,
     tv: () => `
     <section class="card"><b>DR TV-knapper</b>${s.tv.channels.map((c, i) => `<div class="calrow" style="grid-template-columns:1fr 2fr auto"><input type="text" data-tv="${i}" data-field="name" value="${esc(c.name)}" aria-label="Navn"><input type="url" data-tv="${i}" data-field="url" value="${esc(c.url)}" aria-label="Adresse"><button class="btn" data-act="tvRm" data-i="${i}">Fjern</button></div>`).join('')}
       <div><button class="btn" data-act="tvAdd">+ Tilføj knap</button></div></section>`,
@@ -1796,8 +1799,8 @@ function pageIndstillinger() {
       <div class="row"><button class="btn primary" data-act="testConn">Test forbindelse</button><span class="small" id="connMsg">${esc(ui.connMsg)}</span></div>
       ${hasProxy() ? `<div class="small ${syncState.ok === false ? 'err' : 'muted'}"><b>Deling mellem skærme:</b> ${syncState.ok === false ? esc(syncState.msg) : syncState.last ? 'aktiv ✓ – senest ' + hhmm(syncState.last) : 'starter …'}</div>` : ''}
 </section>
-      ${svcOn('musik') ? sonosConnSection() : ''}
-      ${svcOn('somfy') ? `<section class="card"><b>Somfy</b>
+      ${sonosConnSection()}
+      ${true ? `<section class="card"><b>Somfy</b>
         <div class="muted">${SF.state.configured === false ? 'Ikke sat op.' : SF.state.error ? esc(SF.state.error) : SF.state.checked ? `Forbundet · ${SF.state.devices.length} enheder` : 'Ikke tjekket endnu.'}</div>
         <div class="row"><button class="btn primary" data-act="sfTest">Test Somfy</button>${ui.sfMsg ? `<span class="small muted">${esc(ui.sfMsg)}</span>` : ''}</div>
         <details class="howto"><summary>Sådan sætter du Somfy op</summary><p class="note">Cloudflare → <b>Workers &amp; Pages</b> → <b>easyhome</b> → <b>Settings</b> → <b>Variables and Secrets</b> → <b>Add</b>. Tilføj to af typen <b>Secret</b>: <code>SOMFY_USER</code> (mailen I logger ind i TaHoma-appen med) og <code>SOMFY_PASSWORD</code> (adgangskoden). Tryk <b>Deploy</b>, og tryk derefter <b>Test Somfy</b> her.</p></details></section>` : ''}`
@@ -1912,36 +1915,34 @@ async function loadCompare() {
   softRender();
 }
 async function loadNews() {
-  if (!svcOn('nyheder')) return;
   if (!hasProxy() && !settings.news.publicProxyForTest) { D.news = null; renderFooter(); return; }
   try { D.news = await N.getNews(); } catch (e) { D.news = { items: [], errors: [{ source: 'Nyheder', msg: e.message }] }; }
   renderFooter(); softRender();
 }
 async function loadCal() {
-  if (!svcOn('kalender')) return;
+  if (!svcUsed('kalender')) return;
   try { D.cal = await C.getEvents(); } catch (e) { D.cal = { events: [], errors: [{ cal: 'Kalender', msg: e.message }] }; }
   softRender();
 }
 async function loadSonos(full = false) {
-  if (!svcOn('musik')) { renderFooter(); return; }
   if (full || !S.state.checked) await S.status();
   if (S.state.connected) { if (full) S.state.household = null; await S.refresh(); }
   renderFooter();
   if (ui.page === 'musik' || (ui.page === 'forside' && curLayout().some((x) => x.id === 'sonos'))) softRender();
 }
-function loadFootball(force = false) { if (!svcOn('fodbold') || !hasProxy()) return;
+function loadFootball(force = false) { if (!svcUsed('fodbold') || !hasProxy()) return;
   if (curLayout().some((x) => x.id === 'stilling')) stLeagues().forEach((L) => FB.loadTable(L.id).then(() => { if (ui.page === 'forside') softRender(); })); FB.load(force).then(() => { if ((ui.page === 'forside' && curLayout().some((x) => x.id === 'fodbold')) || ui.page === 'sport') softRender(); spModalRefresh(); }); }
 function loadEl(force = false) {
   // Engangs-opsætning: Energi Fyn FynskSupportEl – 8,75 øre/kWh i handels- og administrationstillæg (energifyn.dk, nov. 2026)
   if (settings.el && !settings.el.mk1) { if (!settings.el.markup) { settings.el.markup = '8,75'; settings.el.supplier = 'Energi Fyn · FynskSupportEl'; } settings.el.mk1 = true; save(); }
   // Varslet prisændring fra Energi Fyn: 10 øre/kWh og 20 kr./md. fra 1. marts 2027
   if (settings.el && !settings.el.mk2) { settings.el.sub = settings.el.sub || '15'; if (!settings.el.change) settings.el.change = { from: '2027-03-01', markup: '10', sub: '20' }; settings.el.mk2 = true; save(); }
-  if (!svcOn('el') || !hasProxy()) return;
+  if (!svcUsed('el') || !hasProxy()) return;
   const show = () => { if (ui.page === 'stroem' || (ui.page === 'forside' && curLayout().some((x) => ['elpris', 'elforbrug', 'vasketid'].includes(x.id)))) softRender(); };
   EL.loadPrices(force).then(show).catch((e) => { EL.state.error = e.message; show(); clearTimeout(loadEl.retry); loadEl.retry = setTimeout(() => loadEl(), 75000); });
   EL.loadEloverblik(force).then(() => { show(); if (ui.page === 'stroem') return EL.loadHistory(force).then(show); });
 }
-function loadAll() { loadEl(); loadFootball(); loadWeather(); loadNews(); loadCal(); loadSonos(true); if (svcOn('madro')) MD.start(); if (svcOn('somfy')) SF.refresh(); }
+function loadAll() { loadEl(); loadFootball(); loadWeather(); loadNews(); loadCal(); loadSonos(true); if (svcUsed('madro')) MD.start(); if (svcUsed('somfy')) SF.refresh(); }
 
 /* ---------- Handlinger ---------- */
 const act = {
@@ -1953,7 +1954,7 @@ const act = {
   toggleW: (b) => {
     const id = b.dataset.id; const i = editLayout().findIndex((x) => x.id === id);
     if (i >= 0) editLayout().splice(i, 1); else { const [w, h] = DEFAULT_SHAPE[id] || [1, 1]; editLayout().push({ id, w, h }); }
-    save(); renderMain();
+    save(); renderMain(); if (i < 0) loadAll(); // et nyt kort kan kræve data, der ikke blev hentet før
   },
   sizeFor: (b) => { ui.sizeFor = ui.sizeFor === b.dataset.id ? null : b.dataset.id; renderMain(); },
   resetMyLayout: () => { if (settings.layouts) delete settings.layouts[settings.me]; save(); renderMain(); },
@@ -2368,7 +2369,7 @@ function boot() {
   applyWakeLock(); document.addEventListener('pointerdown', () => { if (settings.keepAwake && !wakeLock) applyWakeLock(); }, { passive: true });
   MD.onMadroChange(() => { if (ui.page === 'forside' || ui.page === 'kalender') softRender(); });
   SF.onSomfyChange(() => { if (ui.page === 'somfy' || (ui.page === 'forside' && curLayout().some((x) => x.id === 'screens'))) softRender(); });
-  setInterval(() => { if (svcOn('somfy') && !document.hidden && (ui.page === 'somfy' || curLayout().some((x) => x.id === 'screens'))) SF.refresh(); }, ui.page === 'somfy' ? 20000 : 60000);
+  setInterval(() => { if (svcUsed('somfy') && !document.hidden && (ui.page === 'somfy' || curLayout().some((x) => x.id === 'screens'))) SF.refresh(); }, ui.page === 'somfy' ? 20000 : 60000);
   // Madplan og indkøbsliste på forsiden – brugeren bad selv om dem (én gang)
   if ((settings.layoutRev || 1) < 3) { const have = new Set(settings.layout.map((x) => x.id)); settings.layout = [{ id: 'madplan', w: 4, h: 1 }, { id: 'indkob', w: 2, h: 1 }].filter((x) => !have.has(x.id)).concat(settings.layout); settings.layoutRev = 3; save(); }
   S.onArtLoaded(() => { renderFooter(); if (['forside', 'musik'].includes(ui.page)) softRender(); });
@@ -2415,7 +2416,7 @@ function boot() {
   }, 1000);
   // Nedtællingskortet: skift til næste nedtælling hvert 10. sekund, når der er flere
   setInterval(() => {
-    if (ui.page !== 'forside' || ui.editing || drag || R.isOpen() || !svcOn('nedtaelling') || !widgetOn('nedtaelling') || !curLayout().some((x) => x.id === 'nedtaelling') || countdowns().length < 2) { ui.cdAt = Date.now(); return; }
+    if (ui.page !== 'forside' || ui.editing || drag || R.isOpen() || !curLayout().some((x) => x.id === 'nedtaelling') || countdowns().length < 2) { ui.cdAt = Date.now(); return; }
     if (Date.now() - ui.cdAt >= 10000) act.wStep({ dataset: { scope: 'cd', dir: '1' } });
   }, 1000);
   setInterval(() => { if (ui.fpPlace !== 0 && Date.now() - ui.fpTouched > 3 * 60000) { ui.fpPlace = 0; softRender(); } }, 30000);

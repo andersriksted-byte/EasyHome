@@ -1,5 +1,5 @@
 {
-  "version": "1.74.2",
+  "version": "1.74.3",
   "files": [
     "index.html",
     "app.js",
@@ -27,6 +27,15 @@
     "todo.js"
   ],
   "notes": [
+    {
+      "version": "1.74.3",
+      "date": "25. november 2026",
+      "title": "Tjenester skjuler kun menupunktet",
+      "items": [
+        "Slår I en tjeneste fra under Indstillinger → Tjenester, forsvinder den kun fra menuen i siden.",
+        "Kortene på forsiden og indstillingerne er der stadig – fx kan I have fodboldkortet uden Sport-siden."
+      ]
+    },
     {
       "version": "1.74.2",
       "date": "25. november 2026",
