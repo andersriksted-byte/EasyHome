@@ -1,5 +1,5 @@
 {
-  "version": "1.69.0",
+  "version": "1.69.1",
   "files": [
     "index.html",
     "app.js",
@@ -25,6 +25,15 @@
     "el.js"
   ],
   "notes": [
+    {
+      "version": "1.69.1",
+      "date": "25. november 2026",
+      "title": "Brusebad i minutter",
+      "items": [
+        "Vælg brusebadets længde (0–60 min) under Indstillinger → Strøm",
+        "Et Billig strøm-kort på 1×2 felter viser nu alle apparater i tætte rækker"
+      ]
+    },
     {
       "version": "1.69.0",
       "date": "25. november 2026",

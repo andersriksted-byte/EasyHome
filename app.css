@@ -1443,3 +1443,11 @@ button.w7r.sel{background:color-mix(in srgb,var(--accent) 16%,transparent);box-s
 .vt-save{font-style:normal;font-size:12px;font-weight:800;color:#16A34A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .vt-txt span{text-transform:none;font-size:12px}
 .vt-save .vt-hi{color:var(--muted);font-weight:700}
+
+.vt-apps.compact{gap:5px;grid-auto-rows:1fr;align-content:stretch}
+.vt-apps.compact .vt-app{padding:5px 8px;gap:8px;min-height:0;border-radius:12px}
+.vt-apps.compact .vt-ico{width:32px;height:32px;font-size:18px;border-radius:9px}
+.vt-apps.compact .vt-txt{flex:1;display:grid;grid-template-columns:1fr auto;align-items:center;column-gap:6px}
+.vt-apps.compact .vt-txt span{grid-column:1/-1;font-size:11px}
+.vt-apps.compact .vt-txt b{font-size:17px}
+.vt-apps.compact .vt-save{font-size:12px;text-align:right}

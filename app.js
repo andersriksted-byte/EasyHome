@@ -601,7 +601,10 @@ const APPLIANCES = [
 // Apparaterne med familiens egne valg (Indstillinger → Strøm): til/fra, tidsrum, varighed og forbrug
 function elApps() {
   const own = (settings.el && settings.el.apps) || {};
-  return APPLIANCES.map((a) => { const o = own[a.id] || {}; return { ...a, on: o.on !== false, win: [o.from ?? a.win[0], o.to ?? a.win[1]].map(Number), n: +(o.n ?? a.n), kwh: +String(o.kwh ?? a.kwh).replace(',', '.') || a.kwh }; });
+  return APPLIANCES.map((a) => { const o = own[a.id] || {}; const x = { ...a, on: o.on !== false, win: [o.from ?? a.win[0], o.to ?? a.win[1]].map(Number), n: +(o.n ?? a.n), kwh: +String(o.kwh ?? a.kwh).replace(',', '.') || a.kwh };
+    // Brusebad: forbruget angives pr. 10 min og ganges med det valgte antal minutter
+    if (a.id === 'bad') { x.min = Math.max(0, Math.min(60, +(o.min ?? 10))); x.kwh10 = x.kwh; x.kwh = (x.kwh10 * x.min) / 10; x.name = `Brusebad ${x.min} min`; x.short = `Bad ${x.min} min`; }
+    return x; });
 }
 function wVasketid(size, h = 1, wd = 1, x = null) {
   const w = elWait('Billig strøm'); if (w) return w;
@@ -617,13 +620,16 @@ function wVasketid(size, h = 1, wd = 1, x = null) {
   const isBest = (t) => best && t >= best.from && t < best.to;
   const line = hs.length ? `<div class="vt-line">${hs.map((x2) => `<i class="${priceLevel(x2.price, hs)}${isBest(x2.t) ? ' pick' : ''}" title="kl. ${pad(x2.t.getHours())}: ${kr(x2.price)} kr"></i>`).join('')}</div><div class="vt-ticks">${hs.map((x2, k) => (k % 6 === 0 ? `<span style="left:${((k + 0.5) / hs.length) * 100}%">${pad(x2.t.getHours())}</span>` : '')).join('')}${best ? `<span class="vt-star" style="left:${(((hs.findIndex((x2) => isBest(x2.t)) + 1.5) / hs.length) * 100)}%">★ billigst ${pad(best.from.getHours())}–${pad(best.to.getHours())}</span>` : ''}</div>` : '';
   // Ens for alle: hvornår I bør starte (billigste tidspunkt i jeres tidsrum) og hvad det så koster
-  let tight = false;
+  let tight = false; let narrow = false;
   const card = (r) => { const go = r.b.from <= now; const c = r.b.avg * r.a.kwh;
-    return `<div class="vt-app${go ? ' go' : ''}"><div class="vt-ico">${r.a.ico}</div><div class="vt-txt"><span>${tight ? esc(r.a.short) : `${esc(r.a.name)} · ${go ? 'nu' : until(r.b.from)}`}</span><b>${go ? 'Start nu' : `kl. ${pad(r.b.from.getHours())}`}</b><em class="vt-save">💰 ${kr(c, c >= 10 ? 0 : 2)} kr</em></div></div>`; };
+    return `<div class="vt-app${go ? ' go' : ''}"><div class="vt-ico">${r.a.ico}</div><div class="vt-txt"><span>${tight ? esc(r.a.short) : `${esc(narrow ? r.a.short : r.a.name)} · ${go ? 'nu' : until(r.b.from)}`}</span><b>${go ? 'Start nu' : `kl. ${pad(r.b.from.getHours())}`}</b><em class="vt-save">💰 ${kr(c, c >= 10 ? 0 : 2)} kr</em></div></div>`; };
   const head = cardHead('🔌 Billig strøm', '<span class="small muted">næste 24 timer</span>');
   if (!list.length) return head + '<div class="empty">Priserne for i morgen kommer ved 13-tiden.</div>';
   const cols = wd >= 3 ? Math.min(6, list.length) : wd === 2 ? 2 : 1; tight = cols >= 5; // mange ved siden af hinanden: korte navne const rows = Math.max(1, h * (wd === 1 ? 2 : 1));
-  return head + `<div class="vt2">${line}<div class="vt-apps" style="grid-template-columns:repeat(${cols},minmax(0,1fr))">${list.slice(0, cols * (h >= 2 ? 2 : 1) * (wd === 1 ? h : 1)).map(card).join('')}</div></div>`;
+  // Smalle kort: alle apparater som tætte rækker (ikon · navn og starttid · pris), så de kan være der på et 1×2-felt
+  const compact = wd === 1 && list.length > h * 2; narrow = compact;
+  const shown = compact ? list : list.slice(0, cols * (h >= 2 ? 2 : 1) * (wd === 1 ? h : 1));
+  return head + `<div class="vt2">${line}<div class="vt-apps${compact ? ' compact' : ''}" style="grid-template-columns:repeat(${cols},minmax(0,1fr))">${shown.map(card).join('')}</div></div>`;
 }
 function wElforbrug(size, h = 1, wd = 1) {
   const head = cardHead('🏠 Elforbrug');
@@ -762,8 +768,9 @@ function elSettings() {
   const apps = `<section class="card wide"><b>Billig strøm – hvornår vil I bruge apparaterne?</b>
     <div class="elapps">${elApps().map((a) => `<div class="elapp${a.on ? '' : ' off'}"><label class="elapp-on"><input type="checkbox" data-elapp="${a.id}" data-k="on"${a.on ? ' checked' : ''}><span class="vt-ico">${a.ico}</span><b>${esc(a.name)}</b></label>
       <label class="inl">Fra kl. ${hrs(a.win[0], 'from', a.id)}</label><label class="inl">til kl. ${hrs(a.win[1], 'to', a.id)}</label>
-      <label class="inl">Varighed<select data-elapp="${a.id}" data-k="n">${[1, 2, 3, 4, 5, 6, 8].map((v) => `<option value="${v}"${a.n === v ? ' selected' : ''}>${v} t</option>`).join('')}</select></label>
-      <label class="inl">kWh<input type="text" inputmode="decimal" data-elapp="${a.id}" data-k="kwh" value="${esc(String(a.kwh).replace('.', ','))}" style="width:60px" aria-label="Forbrug i kWh"></label></div>`).join('')}</div></section>`;
+      ${a.id === 'bad' ? `<label class="inl">Minutter<select data-elapp="bad" data-k="min">${Array.from({ length: 61 }, (_, v) => `<option value="${v}"${a.min === v ? ' selected' : ''}>${v} min</option>`).join('')}</select></label>
+      <label class="inl">kWh pr. 10 min<input type="text" inputmode="decimal" data-elapp="bad" data-k="kwh" value="${esc(String(a.kwh10).replace('.', ','))}" style="width:60px" aria-label="Forbrug i kWh pr. 10 minutter"></label>` : `<label class="inl">Varighed<select data-elapp="${a.id}" data-k="n">${[1, 2, 3, 4, 5, 6, 8].map((v) => `<option value="${v}"${a.n === v ? ' selected' : ''}>${v} t</option>`).join('')}</select></label>
+      <label class="inl">kWh<input type="text" inputmode="decimal" data-elapp="${a.id}" data-k="kwh" value="${esc(String(a.kwh).replace('.', ','))}" style="width:60px" aria-label="Forbrug i kWh"></label>`}</div>`).join('')}</div></section>`;
   return apps + `<section class="card"><b>Elpris</b>
       <label class="inl">Prisområde<select data-set="el.area" aria-label="Prisområde"><option value="auto"${!e.area || e.area === 'auto' ? ' selected' : ''}>Automatisk (${EL.area() === 'DK1' ? 'Vest' : 'Øst'})</option><option value="DK1"${e.area === 'DK1' ? ' selected' : ''}>Vestdanmark (DK1)</option><option value="DK2"${e.area === 'DK2' ? ' selected' : ''}>Østdanmark (DK2)</option></select></label>
        ${e.supplier ? `<div class="small muted">${esc(e.supplier)}</div>` : ''}
