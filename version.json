@@ -1,5 +1,5 @@
 {
-  "version": "1.73.0",
+  "version": "1.74.0",
   "files": [
     "index.html",
     "app.js",
@@ -23,9 +23,21 @@
     "mcats.js",
     "football.js",
     "el.js",
-    "sport.js"
+    "sport.js",
+    "todo.js"
   ],
   "notes": [
+    {
+      "version": "1.74.0",
+      "date": "25. november 2026",
+      "title": "To do og faste pligter",
+      "items": [
+        "Ny side og nyt kort: To do. Skriv gøremål med hvem og evt. en deadline – kryds af, når det er gjort.",
+        "Faste pligter på skift, fx gåtur med hunden, køkkentjans, støvsugning og gulvvask. Sættes op under Indstillinger → To do, og ugeplanen viser, hvis tur det er.",
+        "Har man valgt sig selv øverst til højre, viser To do-kortet kun ens egne opgaver.",
+        "Sport: vinderens mål forsvandt, og lange klubnavne blev delt midt i ordet – det er rettet."
+      ]
+    },
     {
       "version": "1.73.0",
       "date": "25. november 2026",

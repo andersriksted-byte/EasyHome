@@ -14,6 +14,7 @@ import * as MD from './madro.js';
 import * as MC from './mcats.js';
 import * as FB from './football.js';
 import * as SP from './sport.js';
+import * as TD from './todo.js';
 import * as EL from './el.js';
 import * as SF from './somfy.js';
 import * as TM from './timer.js';
@@ -55,6 +56,7 @@ const themeLabel = (id) => (id === 'auto' ? 'Automatisk' : THEMES[id].label);
 const ICON = {
   sunon: 'M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10zM12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4', sunoff: 'M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z',
   stroem: 'M13 2 4 14h7l-1 8 9-12h-7l1-8z', bolt: 'M13 2 4 14h7l-1 8 9-12h-7l1-8z',
+  todo: 'M10 6h10M10 12h10M10 18h10M3.5 6l1.5 1.5L7.5 5M3.5 12l1.5 1.5 2.5-2.5M3.5 18l1.5 1.5 2.5-2.5',
   sport: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 7.5l3.8 2.8-1.5 4.4H9.7l-1.5-4.4L12 7.5zM12 3v4.5M15.8 10.3l4.3-1.4M14.3 14.7l2.7 3.7M9.7 14.7 7 18.4M8.2 10.3 3.9 8.9',
   ball: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 7.5l3.8 2.8-1.5 4.4H9.7l-1.5-4.4L12 7.5zM12 3v4.5M15.8 10.3l4.3-1.4M14.3 14.7l2.7 3.7M9.7 14.7 7 18.4M8.2 10.3 3.9 8.9',
   timer: 'M12 8v5l3 2M9 2h6M12 22a8 8 0 1 0 0-16 8 8 0 0 0 0 16z', pause: 'M7 5h4v14H7zM13 5h4v14h-4z',
@@ -80,7 +82,7 @@ const fillSvg = (name, size = 20) => `<svg aria-hidden="true" width="${size}" he
 const GRIP = '<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg>';
 
 const PAGES = [
-  { id: 'forside', label: 'Forside' }, { id: 'kalender', label: 'Kalender' }, { id: 'madro', label: 'Madro' }, { id: 'vejr', label: 'Vejret' },
+  { id: 'forside', label: 'Forside' }, { id: 'kalender', label: 'Kalender' }, { id: 'todo', label: 'To do' }, { id: 'madro', label: 'Madro' }, { id: 'vejr', label: 'Vejret' },
   { id: 'nyheder', label: 'Nyheder' }, { id: 'musik', label: 'Musik' }, { id: 'somfy', label: 'Screens' }, { id: 'stroem', label: 'Strøm' }, { id: 'sport', label: 'Sport' }, { id: 'tv', label: 'DR TV' }
 ];
 // Tjenester ("app store"): hver tjeneste kan slås til og fra under Indstillinger → Tjenester.
@@ -96,16 +98,17 @@ const SERVICES = [
   { id: 'timer', name: 'Timer nedtælling', icon: 'timer', desc: 'Køkkentimer med alarm – fx til madlavning.', pages: [], widgets: ['timer'], tabs: [] },
   { id: 'el', name: 'Strøm', icon: 'bolt', desc: 'Elpriser time for time og jeres elforbrug.', pages: ['stroem'], widgets: ['elpris', 'elforbrug', 'vasketid'], tabs: ['el'] },
   { id: 'fodbold', name: 'Sport', icon: 'ball', desc: 'Fodbold, Formel 1, tennis m.m. – kampe, resultater og stillinger.', pages: ['sport'], widgets: ['fodbold', 'stilling'], tabs: ['fodbold'] },
+  { id: 'todo', name: 'To do', icon: 'todo', desc: 'Gøremål og faste pligter på skift.', pages: ['todo'], widgets: ['todo'], tabs: ['todo'] },
   { id: 'nedtaelling', name: 'Nedtællinger', icon: 'cd', desc: 'Dage til juleaften, ferie og fødselsdage.', pages: [], widgets: ['nedtaelling'], tabs: [] }
 ];
 const svcOn = (id) => !settings.services || settings.services[id] !== false;
 const pageOn = (p) => SERVICES.every((x) => !x.pages.includes(p) || svcOn(x.id));
 const widgetOn = (w) => SERVICES.every((x) => !x.widgets.includes(w) || svcOn(x.id));
 const tabOn = (t) => (t === 'musik' ? svcOn('musik') : t === 'somfy' ? svcOn('somfy') : t === 'kalender' ? svcOn('kalender') || svcOn('nedtaelling') : SERVICES.every((x) => !x.tabs.includes(t) || svcOn(x.id)));
-const WIDGETS = { vasketid: 'Billig strøm', elpris: 'Elpris', elforbrug: 'Elforbrug', fodbold: 'Fodbold', stilling: 'Fodbold-stilling', naeste: 'Næste i kalenderen', dagensret: 'Dagens ret', nyhed1: 'Én nyhed ad gangen', timer: 'Timer nedtælling', screens: 'Screens (Somfy)', madplan: 'Madplan', indkob: 'Indkøbsliste', inspiration: 'Opskrift-inspiration', uge: 'Familiens uge', vejr: 'Vejret', steder: 'Vejret andre steder', nyheder: 'Nyheder', sonos: 'Musik (Sonos)', tv: 'DR TV', nedtaelling: 'Nedtælling' };
+const WIDGETS = { todo: 'To do', vasketid: 'Billig strøm', elpris: 'Elpris', elforbrug: 'Elforbrug', fodbold: 'Fodbold', stilling: 'Fodbold-stilling', naeste: 'Næste i kalenderen', dagensret: 'Dagens ret', nyhed1: 'Én nyhed ad gangen', timer: 'Timer nedtælling', screens: 'Screens (Somfy)', madplan: 'Madplan', indkob: 'Indkøbsliste', inspiration: 'Opskrift-inspiration', uge: 'Familiens uge', vejr: 'Vejret', steder: 'Vejret andre steder', nyheder: 'Nyheder', sonos: 'Musik (Sonos)', tv: 'DR TV', nedtaelling: 'Nedtælling' };
 // Forsiden er et gitter af ens kvadrater. Et kort fylder w kvadrater i bredden og h i højden.
 const SHAPES = [[1, 1], [2, 1], [3, 1], [4, 1], [1, 2], [1, 3], [1, 4], [2, 2]];
-const DEFAULT_SHAPE = { vasketid: [2, 1], elpris: [2, 1], elforbrug: [2, 1], stilling: [1, 2], fodbold: [2, 1], naeste: [1, 1], dagensret: [2, 1], nyhed1: [2, 1], timer: [1, 1], screens: [2, 1], madplan: [4, 1], indkob: [2, 1], inspiration: [2, 1], uge: [4, 1], vejr: [2, 1], steder: [2, 1], nyheder: [2, 1], sonos: [1, 1], tv: [1, 1], nedtaelling: [1, 1] };
+const DEFAULT_SHAPE = { todo: [1, 2], vasketid: [2, 1], elpris: [2, 1], elforbrug: [2, 1], stilling: [1, 2], fodbold: [2, 1], naeste: [1, 1], dagensret: [2, 1], nyhed1: [2, 1], timer: [1, 1], screens: [2, 1], madplan: [4, 1], indkob: [2, 1], inspiration: [2, 1], uge: [4, 1], vejr: [2, 1], steder: [2, 1], nyheder: [2, 1], sonos: [1, 1], tv: [1, 1], nedtaelling: [1, 1] };
 const LEGACY = { S: [1, 1], M: [2, 1], L: [4, 1] };
 const shapeOf = (x) => (x.w && x.h ? [x.w, x.h] : LEGACY[x.size] || [1, 1]);
 const FIT = ['uge']; // kort der aldrig må skære indhold af – de bliver kompakte og vokser i højden ved behov
@@ -546,7 +549,7 @@ function wFodbold(size, h = 1, wd = 1) {
   const favIn = (id, comp) => (fb.teams || []).some((t) => t.id === id && (t.lg === 'nat' || lgOf(t.lg) === comp));
   const row = (m) => {
     const pend = FB.pending(m); const fav = favIn(m.home.id, m.comp) ? m.home.id : favIn(m.away.id, m.comp) ? m.away.id : '';
-    const mid = pend ? '<span class="fb-mid">–</span>' : m.state === 'pre' ? `<span class="fb-mid time">${hhmm(m.date)}</span>` : `<span class="fb-mid"><b class="${m.home.win ? 'w' : ''}">${esc(m.home.score)}</b>–<b class="${m.away.win ? 'w' : ''}">${esc(m.away.score)}</b></span>`;
+    const mid = pend ? '<span class="fb-mid">–</span>' : m.state === 'pre' ? `<span class="fb-mid time">${hhmm(m.date)}</span>` : `<span class="fb-mid"><b class="${m.home.win ? 'won' : ''}">${esc(m.home.score)}</b>–<b class="${m.away.win ? 'won' : ''}">${esc(m.away.score)}</b></span>`;
     const when = m.state === 'in' ? `<span class="fb-live">● ${esc(m.clock || m.detail || 'Live')}</span>` : pend ? 'Afventer' : m.state === 'post' ? 'Slut' : '';
     return `<div class="fb-row ${m.state}" ${spRef({ kind: 'fb', m })}><span class="fb-when">${when}</span>${side(m.home, fav)}${mid}${side(m.away, fav)}</div>`;
   };
@@ -561,6 +564,86 @@ function wFodbold(size, h = 1, wd = 1) {
   }
   const blocks = keys.map((k) => `<div class="fb-grp"><div class="fb-sub">${esc(k)}</div>${groups.get(k).map(row).join('')}</div>`);
   return head + `<div class="fb-days">${blocks.join('')}</div>`;
+}
+// ---------- To do: gøremål og faste pligter på skift ----------
+const memberOf = (id) => members().find((m) => m.id === id);
+const tdAv = (id, big) => { const m = memberOf(id); return m ? `<span class="tdav${big ? ' big' : ''}" style="--c:${esc(m.color)}" title="${esc(m.name)}">${esc(initials(m.name))}</span>` : `<span class="tdav none${big ? ' big' : ''}" title="Alle">👪</span>`; };
+const tdDue = (s) => { if (!s) return ''; const d = TD.fromIso(s); const t = startOfDay(new Date());
+  const txt = sameDay(d, t) ? 'I dag' : sameDay(d, addDays(t, 1)) ? 'I morgen' : d < t ? `${d.getDate()}. ${MONTHS[d.getMonth()].slice(0, 3)}` : dayDiffTxt(d);
+  return `<span class="tddue${d < t ? ' late' : sameDay(d, t) ? ' today' : ''}">${d < t ? '⚠️ ' : ''}${esc(txt)}</span>`; };
+const dayDiffTxt = (d) => { const n = Math.round((d - startOfDay(new Date())) / 86400000); return n < 7 ? cap(DAYS_LONG[d.getDay()]) : `${d.getDate()}. ${MONTHS[d.getMonth()].slice(0, 3)}`; };
+const choreWhen = (x) => { const e = x.c.every; if (e === 'day') return ''; if (e === 'month') return 'Denne måned'; return `Denne uge · senest ${DAYS_LONG[x.occ.due.getDay()]}`; };
+const tdCheck = (done, attrs, label) => `<button class="tdchk${done ? ' on' : ''}" ${attrs} aria-pressed="${!!done}" aria-label="${esc(label)}">${done ? '✓' : ''}</button>`;
+function tdChoreRow(x) {
+  return `<div class="tdrow chore${x.done ? ' done' : ''}">${tdCheck(x.done, `data-act="todoChore" data-id="${esc(x.c.id)}" data-key="${esc(x.occ.key)}" data-who="${esc(x.who)}"`, (x.done ? 'Fortryd: ' : 'Udført: ') + x.c.title)}
+    <span class="tdico">${esc(x.c.icon || '✅')}</span><span class="tdtx"><b>${esc(x.c.title)}</b>${choreWhen(x) ? `<small>${esc(choreWhen(x))}</small>` : ''}</span>${tdAv(x.who)}</div>`;
+}
+function tdItemRow(i, del) {
+  return `<div class="tdrow${i.done ? ' done' : ''}${TD.overdue(i) && !i.done ? ' late' : ''}">${tdCheck(i.done, `data-act="todoItem" data-id="${esc(i.id)}"`, (i.done ? 'Fortryd: ' : 'Udført: ') + i.title)}
+    <span class="tdtx"><b>${esc(i.title)}</b>${i.due && !i.done ? tdDue(i.due) : ''}</span>${tdAv(i.who)}${del ? `<button class="tddel" data-act="todoRm" data-id="${esc(i.id)}" aria-label="Slet ${esc(i.title)}">×</button>` : ''}</div>`;
+}
+// Hvis man har valgt sig selv øverst, vises kun ens egne (og fælles) ting
+const tdMine = (who) => (x) => !who || !x || x === who;
+function wTodo(size, h = 1, wd = 1) {
+  const me = settings.me || ''; const today = startOfDay(new Date());
+  const ch = TD.choresOn(today).filter((x) => tdMine(me)(x.who)).sort((a, b) => (a.done ? 1 : 0) - (b.done ? 1 : 0));
+  const its = TD.openItems(me);
+  const open = ch.filter((x) => !x.done).length + its.length;
+  const head = cardHead(meMember() ? `${meMember().name}s to do` : 'To do', open ? `<span class="small muted">${open}</span>` : '');
+  if (!ch.length && !its.length) return head + `<div class="empty">${TD.chores().length || TD.items().length ? 'Alt er klaret ✓' : 'Ingen gøremål.'}</div>`;
+  const chHtml = ch.map(tdChoreRow).join(''); const itHtml = its.map((i) => tdItemRow(i)).join('');
+  if (wd >= 2 && ch.length && its.length) return head + `<div class="tdcols"><div class="tdlist" data-trimcard><div class="tdsub">I dag</div>${chHtml}</div><div class="tdlist" data-trimcard><div class="tdsub">Gøremål</div>${itHtml}</div></div>`;
+  return head + `<div class="tdlist" data-trimcard>${ch.length ? `<div class="tdsub">I dag</div>${chHtml}` : ''}${its.length ? `<div class="tdsub">Gøremål</div>${itHtml}` : ''}</div>`;
+}
+function pageTodo() {
+  const who = ui.tdWho === undefined ? settings.me || '' : ui.tdWho;
+  const today = startOfDay(new Date());
+  const chips = members().length ? `<div class="nfilter">${[{ id: '', name: 'Alle' }].concat(members()).map((m) => `<button class="chipbtn" data-act="todoWho" data-id="${esc(m.id)}" aria-pressed="${who === m.id}"><span class="cbt">${esc(m.name)}</span></button>`).join('')}</div>` : '';
+  const top = `<div class="ptitle"><h1>To do</h1>${chips}</div>`;
+  const ch = TD.choresOn(today).filter((x) => tdMine(who)(x.who)).sort((a, b) => (a.done ? 1 : 0) - (b.done ? 1 : 0));
+  const todayCard = `<section class="card"><b>I dag</b>${ch.length ? `<div class="tdlist">${ch.map(tdChoreRow).join('')}</div>` : `<div class="empty">${TD.chores().length ? 'Ingen faste pligter i dag.' : 'Faste pligter sættes op under Indstillinger → To do.'}</div>`}</section>`;
+  const opts = `<option value="">Alle</option>${members().map((m) => `<option value="${esc(m.id)}"${(ui.tdNewWho ?? who) === m.id ? ' selected' : ''}>${esc(m.name)}</option>`).join('')}`;
+  const add = `<form class="tdadd" data-todoadd><input type="text" name="t" placeholder="Nyt gøremål" aria-label="Nyt gøremål" autocomplete="off" enterkeyhint="done"><select name="w" aria-label="Hvem">${opts}</select><input type="date" name="d" aria-label="Senest"><button class="btn primary" aria-label="Tilføj">+</button></form>`;
+  const its = TD.openItems(who); const dn = TD.doneItems(who);
+  const itemsCard = `<section class="card"><b>Gøremål</b>${add}${its.length ? `<div class="tdlist">${its.map((i) => tdItemRow(i, true)).join('')}</div>` : '<div class="empty">Ingen gøremål.</div>'}
+    ${dn.length ? `<details class="mx-fold"><summary>Udført (${dn.length})</summary><div class="tdlist">${dn.slice(0, 30).map((i) => tdItemRow(i, true)).join('')}</div></details>` : ''}</section>`;
+  // Ugeplan for de faste pligter
+  const ws = addDays(TD.monday(today), (ui.tdWeek || 0) * 7); const days = [...Array(7)].map((_, i) => addDays(ws, i));
+  const rows = TD.chores().map((c) => `<div class="tdw-n"><span>${esc(c.icon || '✅')}</span><b>${esc(c.title)}</b></div>${days.map((d) => { const occ = TD.occurrence(c, d);
+    if (!occ) return '<div class="tdw-c"></div>';
+    const span = c.every !== 'day'; if (span && !sameDay(d, occ.due)) return `<div class="tdw-c span${sameDay(d, today) ? ' today' : ''}"></div>`;
+    const done = TD.choresOn(d).find((x) => x.c.id === c.id); const w = TD.whoFor(c, occ);
+    return `<div class="tdw-c${sameDay(d, today) ? ' today' : ''}${done && done.done ? ' done' : ''}">${tdAv(w, true)}</div>`; }).join('')}`).join('');
+  const weekCard = TD.chores().length ? `<section class="card wide"><div class="sechead2"><b>Turnus · uge ${isoWeek(ws)}</b><span class="parrows"><button class="arr" data-act="todoWeek" data-dir="-1" aria-label="Ugen før">‹</button><button class="arr" data-act="todoWeek" data-dir="1" aria-label="Ugen efter">›</button></span></div>
+    <div class="tdweek"><div></div>${days.map((d) => `<div class="tdw-h${sameDay(d, today) ? ' today' : ''}"><b>${DAYS[d.getDay()]}</b><span>${d.getDate()}/${d.getMonth() + 1}</span></div>`).join('')}${rows}</div></section>` : '';
+  return top + `<div class="tdgrid">${todayCard}${itemsCard}${weekCard}</div>`;
+}
+function todoSettings() {
+  const ms = members();
+  const pre = `<div class="choices">${TD.PRESETS.map((p, i) => `<button class="pill" data-act="choreAdd" data-i="${i}">+ ${p.icon} ${esc(p.title)}</button>`).join('')}<button class="pill" data-act="choreAdd" data-i="">+ Egen pligt</button></div>`;
+  const one = (c) => {
+    const dayChip = (d) => `<button class="pill sm" data-act="choreDay" data-id="${esc(c.id)}" data-d="${d}" aria-pressed="${!c.days || !c.days.length || c.days.includes(d)}">${DAYS[d]}</button>`;
+    const order = [1, 2, 3, 4, 5, 6, 0];
+    const when = c.every === 'day' ? `<div class="choices">${order.map(dayChip).join('')}</div>`
+      : c.every === 'month' ? '' : `<label class="inl">Senest<select data-chore="${esc(c.id)}" data-k="day">${order.map((d) => `<option value="${d}"${(c.day ?? 6) === d ? ' selected' : ''}>${DAYS_LONG[d]}</option>`).join('')}</select></label>`;
+    const mode = c.every === 'day' ? `<div class="wseg">${[['turnus', 'På skift'], ['fast', 'Fast pr. ugedag']].map(([v, l]) => `<button data-act="choreMode" data-id="${esc(c.id)}" data-v="${v}" aria-pressed="${(c.mode || 'turnus') === v}"><span>${l}</span></button>`).join('')}</div>` : '';
+    const fast = c.every === 'day' && c.mode === 'fast';
+    const who = fast ? `<div class="tdplan">${order.filter((d) => !c.days || !c.days.length || c.days.includes(d)).map((d) => `<label class="f">${DAYS_LONG[d]}<select data-chore="${esc(c.id)}" data-k="plan" data-wd="${d}"><option value="">–</option>${ms.map((m) => `<option value="${esc(m.id)}"${(c.plan || {})[d] === m.id ? ' selected' : ''}>${esc(m.name)}</option>`).join('')}</select></label>`).join('')}</div>`
+      : `<div class="choices">${ms.map((m) => `<button class="pill sm" data-act="chorePerson" data-id="${esc(c.id)}" data-m="${esc(m.id)}" aria-pressed="${(c.people || []).includes(m.id)}">${(c.people || []).includes(m.id) ? '✓' : '+'} ${esc(m.name)}</button>`).join('')}</div>
+        ${(c.people || []).length > 1 ? `<label class="inl">Først i turnussen<select data-chore="${esc(c.id)}" data-k="first">${c.people.map((id) => `<option value="${esc(id)}"${(c.first || c.people[0]) === id ? ' selected' : ''}>${esc((memberOf(id) || {}).name || '?')}</option>`).join('')}</select></label>` : ''}`;
+    return `<section class="card"><div class="tdset-h"><input class="tdicon" type="text" data-chore="${esc(c.id)}" data-k="icon" value="${esc(c.icon || '')}" aria-label="Ikon" maxlength="4"><input type="text" data-chore="${esc(c.id)}" data-k="title" value="${esc(c.title)}" placeholder="Navn" aria-label="Navn"><button class="btn" data-act="choreRm" data-id="${esc(c.id)}" aria-label="Fjern ${esc(c.title)}">Fjern</button></div>
+      <div class="row"><select data-chore="${esc(c.id)}" data-k="every" aria-label="Hvor ofte">${TD.EVERY.map(([v, l]) => `<option value="${v}"${c.every === v ? ' selected' : ''}>${l}</option>`).join('')}</select>${mode}</div>
+      ${when}${ms.length ? who : '<span class="small muted">Tilføj familiemedlemmer under Familie</span>'}</section>`;
+  };
+  return `<section class="card wide"><b>Faste pligter</b>${pre}</section>${TD.chores().map(one).join('')}`;
+}
+// Klubnavne deles kun mellem ord: er et ord for langt, bliver skriften mindre – og ellers bruges forkortelsen (aldrig halve navne)
+function spFitNames() {
+  document.querySelectorAll('.sp-t b').forEach((b) => {
+    const over = () => b.scrollWidth > b.clientWidth + 1 || b.scrollHeight > b.clientHeight + 1;
+    if (!over()) return; b.style.fontSize = '13px';
+    if (over() && b.dataset.abbr) { b.style.fontSize = ''; b.textContent = b.dataset.abbr; }
+  });
 }
 // ---------- Sport-siden: dagens kampe i alle fulgte sportsgrene, og detaljer om den enkelte kamp ----------
 let spRefs = [];
@@ -586,11 +669,11 @@ function spWhen(it) {
 // Holdsport (fodbold, NBA, NFL, NHL): logo og navn på hver side, resultat eller starttid i midten
 function spTeamRow(it, favId = '') {
   const m = it.m || it;
-  const mid = m.state === 'pre' || (it.kind === 'fb' && FB.pending(m)) ? '<span class="sp-mid vs">–</span>' : `<span class="sp-mid"><b class="${m.home.win ? 'w' : ''}">${esc(m.home.score)}</b><i>–</i><b class="${m.away.win ? 'w' : ''}">${esc(m.away.score)}</b></span>`;
-  const side = (t, r) => `<span class="sp-t${r ? ' r' : ''}${t.id && t.id === favId ? ' fav' : ''}">${spLogo(t)}<b>${esc(t.name)}</b></span>`;
+  const mid = m.state === 'pre' || (it.kind === 'fb' && FB.pending(m)) ? '<span class="sp-mid vs">–</span>' : `<span class="sp-mid"><b class="${m.home.win ? 'won' : ''}">${esc(m.home.score)}</b><i>–</i><b class="${m.away.win ? 'won' : ''}">${esc(m.away.score)}</b></span>`;
+  const side = (t, r) => `<span class="sp-t${r ? ' r' : ''}${t.id && t.id === favId ? ' fav' : ''}">${spLogo(t)}<b data-abbr="${esc(t.abbr || '')}">${esc(t.name)}</b></span>`;
   return `<div class="sp-row ${m.state}" ${spRef(it)}>${spWhen(it)}${side(m.home)}${mid}${side(m.away, true)}</div>`;
 }
-const setCells = (p, o) => p.sets.map((s, i) => `<i class="${s.w ? 'w' : ''}">${esc(s.v)}${s.tb != null && o.sets[i] && !s.w ? `<sup>${esc(s.tb)}</sup>` : ''}</i>`).join('');
+const setCells = (p, o) => p.sets.map((s, i) => `<i class="${s.w ? 'won' : ''}">${esc(s.v)}${s.tb != null && o.sets[i] && !s.w ? `<sup>${esc(s.tb)}</sup>` : ''}</i>`).join('');
 function spTennisRow(it) {
   const p = (a, b) => `<div class="tn-p${a.win ? ' win' : ''}">${flag(a.flag)}<b>${esc(a.name)}</b>${a.rank ? `<small>${a.rank}</small>` : ''}<span class="tn-sets">${setCells(a, b)}</span></div>`;
   return `<div class="sp-tn ${it.state}" ${spRef(it)}>${spWhen(it)}<div class="tn-ps">${p(it.p1, it.p2)}${p(it.p2, it.p1)}</div>${it.round ? `<span class="tn-rd">${esc(it.round)}</span>` : ''}</div>`;
@@ -1157,7 +1240,7 @@ function wNed(size, h = 1, wd = 1) {
     <div class="cdw"><div class="cdn">${c.days < 0 ? '✓' : c.days}</div><div class="cdl">${label}</div><div class="cdd">${cap(DAYS_LONG[d.getDay()])} ${d.getDate()}. ${MONTHS[d.getMonth()]} ${d.getFullYear()}</div></div></div></div>`;
 }
 
-const WRENDER = { vasketid: wVasketid, elpris: wElpris, elforbrug: wElforbrug, stilling: wStilling, fodbold: wFodbold, naeste: wNaeste, dagensret: wDagensRet, nyhed1: wNyhed1, timer: wTimer, screens: wScreens, madplan: wMadplan, indkob: wIndkob, inspiration: wInspiration, uge: wUge, vejr: wVejr, steder: wSteder, nyheder: wNyheder, sonos: wSonos, tv: wTv, nedtaelling: wNed };
+const WRENDER = { todo: wTodo, vasketid: wVasketid, elpris: wElpris, elforbrug: wElforbrug, stilling: wStilling, fodbold: wFodbold, naeste: wNaeste, dagensret: wDagensRet, nyhed1: wNyhed1, timer: wTimer, screens: wScreens, madplan: wMadplan, indkob: wIndkob, inspiration: wInspiration, uge: wUge, vejr: wVejr, steder: wSteder, nyheder: wNyheder, sonos: wSonos, tv: wTv, nedtaelling: wNed };
 
 function pageForside() {
   const inLayout = (id) => curLayout().some((x) => x.id === id);
@@ -1626,7 +1709,7 @@ function lookSettings() {
 const SET_TABS = [
   { id: 'familie', label: 'Familie' },
   { id: 'tjenester', label: 'Tjenester' },
-  { id: 'vejr', label: 'Vejret' }, { id: 'nyheder', label: 'Nyheder' }, { id: 'kalender', label: 'Kalender' }, 
+  { id: 'vejr', label: 'Vejret' }, { id: 'nyheder', label: 'Nyheder' }, { id: 'kalender', label: 'Kalender' }, { id: 'todo', label: 'To do' }, 
   { id: 'musik', label: 'Musik' }, { id: 'tv', label: 'DR TV' }, { id: 'somfy', label: 'Somfy' }, { id: 'fodbold', label: 'Sport' }, { id: 'el', label: 'Strøm' }, { id: 'udseende', label: 'Udseende' }, { id: 'forbindelse', label: 'Forbindelse' }
 ];
 function pageIndstillinger() {
@@ -1641,6 +1724,7 @@ function pageIndstillinger() {
       <span class="appico">${svg(x.icon, 30)}</span><span class="appmain"><b>${esc(x.name)}</b><span>${esc(x.desc)}</span></span><span class="tgl" aria-hidden="true"><i></i></span></button>`; }).join('')}</div></section>`,
     vejr: () => vejrSettings(),
     fodbold: () => fodboldSettings(),
+    todo: () => todoSettings(),
     el: () => elSettings(),
     nyheder: () => `
     <section class="card wide"><div class="sechead2"><b>Nyhedskilder</b><label class="inl">Skift kilde i kortet<select data-set="news.rotateSecs" aria-label="Skift kilde i nyhedskortet">${[10, 15, 20, 30, 45, 60, 0].map((v) => `<option value="${v}" ${newsSecs() === v ? 'selected' : ''}>${v ? 'hvert ' + v + '. sek' : 'aldrig'}</option>`).join('')}</select></label></div>
@@ -1708,7 +1792,7 @@ function pageIndstillinger() {
   <div class="form" role="tabpanel">${T[tab]()}</div>`;
 }
 
-const PAGE_RENDER = { sport: pageSport, stroem: pageStroem, somfy: pageSomfy, madro: () => '', forside: pageForside, kalender: pageKalender, vejr: pageVejr, nyheder: pageNyheder, musik: pageMusik, tv: pageTv, indstillinger: pageIndstillinger };
+const PAGE_RENDER = { todo: pageTodo, sport: pageSport, stroem: pageStroem, somfy: pageSomfy, madro: () => '', forside: pageForside, kalender: pageKalender, vejr: pageVejr, nyheder: pageNyheder, musik: pageMusik, tv: pageTv, indstillinger: pageIndstillinger };
 
 // Madro vises som hele appen i en ramme, der bliver liggende (så den ikke genindlæses ved hver opdatering)
 let madroSub = '';
@@ -1726,6 +1810,7 @@ function renderMain(keepScroll = true) {
   showMadroFrame(ui.page === 'madro');
   m.innerHTML = PAGE_RENDER[ui.page]();
   if (ui.page === 'forside') { scaleGrid(); fitCards(); trimCards(); }
+  if (ui.page === 'sport') spFitNames();
   if (keepScroll) m.scrollTop = y;
 }
 // Sørg for at kort som kalenderen altid viser alt: først kompakt visning, derefter scroll inde i kortet (størrelsen ændres aldrig)
@@ -2025,6 +2110,16 @@ const act = {
   calAdd: () => { const colors = ['#D0563C', '#4C78D0', '#D9A400', '#2E9D5B', '#7A5AC8']; const c = { id: uid(), name: 'Ny kalender', color: colors[settings.calendars.length % colors.length], url: '' }; settings.calendars.push(c); ui.calEdit = c.id; save(); renderMain(); setTimeout(() => { const el = document.querySelectorAll('.calname'); if (el.length) { el[el.length - 1].focus(); el[el.length - 1].select(); } }, 50); },
   calEdit: (b) => { ui.calEdit = ui.calEdit === b.dataset.id ? null : b.dataset.id; renderMain(); },
   calEv: (b) => { const e = calRefs[+b.dataset.i]; if (e) showEvent(e); },
+  todoChore: (b) => { const was = !!b.classList.contains('on'); TD.toggleChore(b.dataset.id, b.dataset.key, settings.me || ''); if (!was) toast('Godt klaret ✓'); renderMain(); },
+  todoItem: (b) => { const was = b.classList.contains('on'); TD.toggleItem(b.dataset.id, settings.me || ''); if (!was) toast('Godt klaret ✓'); renderMain(); },
+  todoRm: (b) => { TD.removeItem(b.dataset.id); renderMain(); },
+  todoWho: (b) => { ui.tdWho = b.dataset.id; ui.tdNewWho = undefined; renderMain(); },
+  todoWeek: (b) => { ui.tdWeek = (ui.tdWeek || 0) + +b.dataset.dir; renderMain(); },
+  choreAdd: (b) => { const p = b.dataset.i === '' ? {} : TD.PRESETS[+b.dataset.i]; TD.addChore(p); renderMain(); },
+  choreRm: (b) => { TD.removeChore(b.dataset.id); renderMain(); },
+  choreMode: (b) => { TD.setChore(b.dataset.id, 'mode', b.dataset.v); renderMain(); },
+  choreDay: (b) => { const c = TD.chores().find((x) => x.id === b.dataset.id); if (!c) return; const d = +b.dataset.d; let ds = c.days && c.days.length ? c.days.slice() : [0, 1, 2, 3, 4, 5, 6]; ds = ds.includes(d) ? ds.filter((x) => x !== d) : ds.concat(d); if (!ds.length) return; TD.setChore(c.id, 'days', ds.length === 7 ? [] : ds); renderMain(); },
+  chorePerson: (b) => { const c = TD.chores().find((x) => x.id === b.dataset.id); if (!c) return; const p = c.people || []; const order = members().map((m) => m.id); const np = (p.includes(b.dataset.m) ? p.filter((x) => x !== b.dataset.m) : p.concat(b.dataset.m)).sort((x, y) => order.indexOf(x) - order.indexOf(y)); TD.setChore(c.id, 'people', np); if (!np.includes(c.first)) c.first = np[0] || ''; renderMain(); },
   spOpen: (b) => { const it = spRefs[+b.dataset.i]; if (it) showSport(it); },
   spDay: (b) => { const d = +b.dataset.dir; ui.spOff = d ? Math.max(-7, Math.min(14, (ui.spOff || 0) + d)) : 0; ui.spTouched = Date.now(); spLoad(); renderMain(false); },
   spRefresh: () => { loadFootball(true); spLoad(spDay(), true); },
@@ -2074,6 +2169,8 @@ document.addEventListener('input', (e) => {
 });
 document.addEventListener('keydown', (e) => { if (e.key !== 'Enter') return; if (e.target.id === 'geoQ') act.geoSearch(); else if (e.target.dataset && e.target.dataset.place !== undefined) e.target.blur(); });
 document.addEventListener('submit', (e) => {
+  const tf = e.target.closest('[data-todoadd]');
+  if (tf) { e.preventDefault(); const v = tf.t.value.trim(); if (!v) return; ui.tdNewWho = tf.w.value; TD.addItem({ title: v, who: tf.w.value, due: tf.d.value }); renderMain(); const n = document.querySelector('.tdadd input[name=t]'); if (n) n.focus(); return; }
   const f = e.target.closest('[data-shopadd]'); if (!f) return;
   e.preventDefault();
   const inp = f.querySelector('input'); const v = inp.value.trim(); if (!v) return;
@@ -2082,6 +2179,9 @@ document.addEventListener('submit', (e) => {
 });
 document.addEventListener('change', (e) => {
   const t = e.target;
+  if (t.dataset.chore) { const c = TD.chores().find((x) => x.id === t.dataset.chore); if (!c) return;
+    if (t.dataset.k === 'plan') { c.plan = { ...(c.plan || {}), [t.dataset.wd]: t.value }; save(); return; }
+    TD.setChore(c.id, t.dataset.k, t.dataset.k === 'day' ? +t.value : t.value.trim()); if (!['title', 'icon'].includes(t.dataset.k)) renderMain(); return; }
   if (t.dataset.elapp) { const a = settings.el.apps = settings.el.apps || {}; const o = a[t.dataset.elapp] = a[t.dataset.elapp] || {}; o[t.dataset.k] = t.type === 'checkbox' ? t.checked : t.value; save(); renderMain(); return; }
   if (t.dataset.wsel) { const x = editLayout().find((y) => y.id === t.dataset.wsel); if (x) { x[t.dataset.k] = t.value; ui.inspIdx = 0; ui.inspAt = Date.now(); save(); renderMain(); } return; }
   if (t.dataset.set) {
