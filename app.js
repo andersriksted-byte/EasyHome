@@ -1062,12 +1062,18 @@ function showEvent(e) {
   m.addEventListener('click', (ev) => { if (ev.target === m || ev.target.closest('[data-close]')) close(); });
 }
 // Start ved kl. 7 (eller lige før nu i dag), og behold placeringen ved opdateringer
+// Denne uge: kalenderen følger klokken, så den røde nu-streg står øverst og man ser det, der kommer.
+// Har man selv scrollet, bliver visningen stående i 2 minutter og følger så klokken igen. Andre uger starter kl. 7.
 function calScroll() {
   const el = document.getElementById('tgBody'); if (!el) return;
-  const key = String(ui.calWeek || 0);
-  if (ui.calScrollKey !== key) { ui.calScrollKey = key; ui.calScrollTop = Math.max(0, Math.min(7, new Date().getHours() - 1)) * CAL_HH - 10; }
-  el.scrollTop = ui.calScrollTop;
-  el.onscroll = () => { if (el.clientHeight) ui.calScrollTop = el.scrollTop; };
+  const key = String(ui.calWeek || 0); const now = new Date();
+  const follow = !ui.calWeek && !(ui.calUserAt && Date.now() - ui.calUserAt < 120000);
+  if (follow) ui.calScrollTop = Math.max(0, (now.getHours() + now.getMinutes() / 60) * CAL_HH - 12);
+  else if (ui.calScrollKey !== key) ui.calScrollTop = 7 * CAL_HH - 10;
+  ui.calScrollKey = key;
+  ui.calProg = true; el.scrollTop = ui.calScrollTop;
+  requestAnimationFrame(() => { ui.calProg = false; });
+  el.onscroll = () => { if (!el.clientHeight) return; ui.calScrollTop = el.scrollTop; if (!ui.calProg) ui.calUserAt = Date.now(); };
 }
 // Kalendere med samme navn og farve vises og skjules samlet
 function calGroups(cals) {
