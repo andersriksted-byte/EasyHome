@@ -170,3 +170,29 @@ export function ytd(y, upto = new Date()) {
   const lim = new Date(y, upto.getMonth(), upto.getDate()); return sum(state.daily.filter((d) => d.t.getFullYear() === y && d.t <= lim));
 }
 export const hourly = (day) => state.usage.filter((u) => +day0(u.t) === +day0(day));
+
+// ---------- Vasketid: billigste sammenhængende timer ----------
+// Billigste vindue på n timer mellem to tidspunkter (kun hele timer, der ikke er gået)
+export function cheapestBetween(a, b, n = 2) {
+  const t0 = new Date(); t0.setMinutes(0, 0, 0);
+  let hs = []; for (let d = day0(a); d < b; d = addD(d, 1)) hs = hs.concat(hours(d));
+  hs = hs.filter((h) => h.t >= t0 && h.t >= a && +h.t + 3600000 <= +b);
+  let best = null;
+  for (let i = 0; i + n <= hs.length; i++) {
+    if (+hs[i + n - 1].t - +hs[i].t !== (n - 1) * 3600000) continue; // skal være sammenhængende
+    const avg = hs.slice(i, i + n).reduce((s, h) => s + h.price, 0) / n;
+    if (!best || avg < best.avg) best = { from: hs[i].t, to: new Date(+hs[i + n - 1].t + 3600000), avg };
+  }
+  return best;
+}
+// Ugens mønster: gennemsnitspris pr. ugedag og time de seneste 4 uger → typisk billigste tid på hver ugedag
+export function weekPattern(n = 2) {
+  const cut = Date.now() - 28 * 86400000; const acc = {}; // "dag-time" → [sum, antal]
+  state.prices.filter((p) => +p.t > cut && +p.t < Date.now()).forEach((p) => { const k = p.t.getDay() + '-' + p.t.getHours(); const v = total(p); acc[k] = acc[k] || [0, 0]; acc[k][0] += v; acc[k][1]++; });
+  const avg = (d, h) => { const x = acc[d + '-' + h]; return x ? x[0] / x[1] : null; };
+  return [1, 2, 3, 4, 5, 6, 0].map((d) => {
+    let best = null;
+    for (let h = 0; h + n <= 24; h++) { const vs = Array.from({ length: n }, (_, k) => avg(d, h + k)); if (vs.some((v) => v === null)) continue; const a = vs.reduce((s, v) => s + v, 0) / n; if (!best || a < best.avg) best = { day: d, h, avg: a }; }
+    return best;
+  }).filter(Boolean);
+}

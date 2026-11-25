@@ -1296,3 +1296,22 @@ button.w7r.sel{background:color-mix(in srgb,var(--accent) 16%,transparent);box-s
 .elline{width:100%;height:auto;display:block}
 .elgrid{stroke:var(--line);stroke-width:1}
 .elax{fill:var(--muted);font-size:13px;font-weight:700}
+
+/* Billig strøm */
+.vt{display:flex;flex-direction:column;gap:10px;flex:1;min-height:0}
+.vt.row{flex-direction:row;align-items:stretch}
+.vt-slot,.vt-week{display:flex;flex-direction:column;gap:2px;padding:10px 14px;border-radius:14px;background:var(--dayBg);flex:1;min-width:0}
+.vt-slot.main{background:color-mix(in srgb,#16A34A 16%,var(--dayBg));box-shadow:inset 0 0 0 2px color-mix(in srgb,#16A34A 45%,transparent)}
+.vt-slot span,.vt-week>span{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+.vt-slot b{font-size:clamp(20px,9cqmin,32px);font-weight:800;line-height:1.1;white-space:nowrap}
+.vt-slot.main b{color:#16A34A}
+.vt-slot em{font-style:normal;font-size:13px;font-weight:700;color:var(--muted)}
+.vt-slot small{font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vt-slot,.vt-week{overflow:hidden}
+.vt-week b{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
+.vt>div{flex:1 1 0;min-height:0}
+.vt-week b{font-size:18px;font-weight:800;line-height:1.2}
+.vt-days{display:flex;gap:4px;margin-top:6px}
+.vt-d{flex:1;display:flex;flex-direction:column;align-items:center;padding:4px 0;border-radius:8px;background:var(--card);font-size:11px}
+.vt-d b{font-size:14px}.vt-d.best{background:#16A34A;color:#fff}
+.vt-d span{font-weight:700;opacity:.8}

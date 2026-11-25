@@ -1,5 +1,5 @@
 {
-  "version": "1.62.2",
+  "version": "1.63.0",
   "files": [
     "index.html",
     "app.js",
@@ -25,6 +25,16 @@
     "el.js"
   ],
   "notes": [
+    {
+      "version": "1.63.0",
+      "date": "25. november 2026",
+      "title": "Billig strøm",
+      "items": [
+        "Nyt kort: Billig strøm – hvornår det er billigst at vaske tøj i dag og i morgen",
+        "Viser også, hvornår strømmen typisk er billigst i løbet af ugen",
+        "Vælg hvor mange timer vasken tager under Tilpas forside"
+      ]
+    },
     {
       "version": "1.62.2",
       "date": "25. november 2026",
