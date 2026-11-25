@@ -630,10 +630,16 @@ function pageStroem() {
       const avgDay = ds.slice(-30).reduce((s, d) => s + d.kwh, 0) / Math.min(30, ds.length);
       const dayLbl = sameDay(last.t, addDays(new Date(), -1)) ? 'I går' : `${cap(DAYS_LONG[last.t.getDay()])} ${last.t.getDate()}/${last.t.getMonth() + 1}`;
       const dim = new Date(y, new Date().getMonth() + 1, 0).getDate();
+      // Måneden mod samme måned sidste år – de samme dage (1. til og med seneste dag med data)
+      const mo = new Date().getMonth(); let curM = 0, prevM = 0, nd = 0;
+      for (let k = 1; k <= dim; k++) { const a = EL.dayKwh(y, mo, k); const b = EL.dayKwh(y - 1, mo, k); if (a !== null && b !== null) { curM += a; prevM += b; nd++; } }
+      const mDiff = nd && prevM ? Math.round(((curM - prevM) / prevM) * 100) : null;
+      const mPrevAll = EL.monthKwh(y - 1, mo);
+      const mCmp = mDiff === null ? '' : '<br><b class="' + (mDiff > 0 ? 'up' : 'down') + '">' + (mDiff > 0 ? '+' : '') + mDiff + ' % mod ' + esc(MONTHS[mo].slice(0, 3)) + '. ' + (y - 1) + '</b> <span class="muted">(samme dage)</span>';
       const tile = (cls, lab, big, unit, sub) => `<div class="elt ${cls}"><span>${lab}</span><div><b>${big}</b><i>${unit}</i></div>${sub ? `<small>${sub}</small>` : ''}</div>`;
       const tiles = `<div class="eltiles">
         ${tile('t1', esc(dayLbl), kr(last.kwh, 1), 'kWh', last.cost !== null ? kr(last.cost) + ' kr' : '')}
-        ${tile('t2', esc(cap(MONTHS[new Date().getMonth()])) + ' indtil nu', kr(m.kwh, 0), 'kWh', m.cost !== null ? kr(m.cost, 0) + ' kr' + (m.days ? ` · ca. ${kr((m.cost / m.days) * dim, 0)} kr hele måneden` : '') : '')}
+        ${tile('t2', esc(cap(MONTHS[new Date().getMonth()])) + ' indtil nu', kr(m.kwh, 0), 'kWh', (m.cost !== null ? kr(m.cost, 0) + ' kr' + (m.days ? ` · ca. ${kr((m.cost / m.days) * dim, 0)} kr hele måneden` : '') : '') + mCmp)}
         ${tile('t3', 'I år indtil nu', ytd !== null ? kr(ytd, 0) : '–', 'kWh', ytd !== null && ap ? `ca. ${kr(ytd * ap, 0)} kr${ytdPrev ? ` · <b class="${ytd > ytdPrev ? 'up' : 'down'}">${ytd > ytdPrev ? '+' : ''}${Math.round(((ytd - ytdPrev) / ytdPrev) * 100)} % mod ${y - 1}</b>` : ''}` : '')}
         ${tile('t4', 'Snit pr. dag', kr(avgDay, 1), 'kWh', ap ? `ca. ${kr(avgDay * ap)} kr · ${kr(ap)} kr/kWh` : '')}
       </div>`;

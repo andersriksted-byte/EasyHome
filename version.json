@@ -1,5 +1,5 @@
 {
-  "version": "1.64.2",
+  "version": "1.64.3",
   "files": [
     "index.html",
     "app.js",
@@ -25,6 +25,14 @@
     "el.js"
   ],
   "notes": [
+    {
+      "version": "1.64.3",
+      "date": "25. november 2026",
+      "title": "Måneden mod sidste år",
+      "items": [
+        "Feltet med månedens forbrug viser nu, hvordan måneden ligger i forhold til samme måned sidste år"
+      ]
+    },
     {
       "version": "1.64.2",
       "date": "25. november 2026",
