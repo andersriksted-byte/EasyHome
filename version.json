@@ -1,5 +1,5 @@
 {
-  "version": "1.68.1",
+  "version": "1.69.0",
   "files": [
     "index.html",
     "app.js",
@@ -25,6 +25,16 @@
     "el.js"
   ],
   "notes": [
+    {
+      "version": "1.69.0",
+      "date": "25. november 2026",
+      "title": "Ens og enkel Billig strøm",
+      "items": [
+        "Alle apparater vises nu ens: hvornår I bør starte, og hvad det koster på det tidspunkt",
+        "Nyt: hvad et 10 minutters varmt brusebad koster",
+        "Et bredt kort viser alle seks apparater på én række"
+      ]
+    },
     {
       "version": "1.68.1",
       "date": "25. november 2026",
