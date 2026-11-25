@@ -617,7 +617,7 @@ function pageStroem() {
   const prices = `<section class="card wide elprice">
     <div class="elp-now ${lvl}"><span>Elpris nu</span><b>${kr(p)}</b><small>kr/kWh · ${EL.hasTariffs() ? 'inkl. alt' : 'spot + moms'}</small></div>
     <div class="elp-info"><div><span>Billigst</span><b>${cw ? `kl. ${pad(cw.from.getHours())}–${pad(cw.to.getHours())}` : '–'}</b></div><div><span>Snit i dag</span><b>${kr(avg(today))} kr</b></div>${tom.length ? `<div><span>Snit i morgen</span><b>${kr(avg(tom))} kr</b></div>` : ''}</div>
-    <div class="elp-bars">${priceBars(tom.length ? today.concat(tom) : today, { labels: true, every: 6 })}</div></section>`;
+    <div class="elp-bars">${priceBars(tom.length ? today.concat(tom) : today, { labels: true, every: 6 })}</div><button class="btn line elp-ref" data-act="elRefresh" aria-label="Opdater">${svg('refresh', 18)}</button></section>`;
   let usage = '';
   if (EL.state.status && !EL.state.status.configured) usage = `<section class="card wide"><b>Elforbrug</b><div class="empty">Forbind Eloverblik under Indstillinger → Strøm.</div></section>`;
   else if (EL.state.usageError && !EL.state.usage.length) usage = `<section class="card wide"><b>Elforbrug</b><div class="err">${esc(EL.state.usageError)}</div></section>`;
@@ -640,7 +640,8 @@ function pageStroem() {
       usage = `<section class="card wide eluse"><div class="sechead2"><b>Elforbrug</b><span class="small muted">Fra Eloverblik · kommer dagen efter</span></div>${tiles}${elExplorer()}</section>`;
     }
   }
-  return `<div class="ptitle"><h1>Strøm</h1><div class="tools"><button class="btn line" data-act="elRefresh" aria-label="Opdater">${svg('refresh', 18)}</button></div></div><div class="elpage">${usage}${prices}</div>`;
+  // Hele siden skal kunne ses uden at scrolle: forbruget fylder resten af højden, priserne en smal stribe
+  return `<div class="elpage fit">${usage}${prices}</div>`;
 }
 // Forbrug over tid: time, dag, måned, kvartal, år og akkumuleret – med sammenligning med tidligere år
 const YEAR_COL = ['var(--accent)', '#F59E0B', '#A855F7', '#10B981', '#EF4444'];
@@ -709,7 +710,7 @@ function elExplorer() {
     const ticks = MONTHS.map((mm, i) => ({ x: Math.floor((new Date(y, i, 1) - new Date(y, 0, 1)) / 86400000) + 14, label: cap(mm).slice(0, 3) }));
     body = lineChart(ser, 366, ticks) + legend(ser) + `<div class="eltots">${tot(EL.ytd(y), 'I år indtil nu')}${ser.slice(1).map((x) => diff(EL.ytd(y), EL.ytd(+x.name), x.name + ' (samme dato)')).join('')}</div>`;
   }
-  return `<div class="elx"><div class="elx-head">${seg}${cmpBtn}</div>${head}${body}</div>`;
+  return `<div class="elx"><div class="elx-head">${seg}${head}${cmpBtn}</div>${body}</div>`;
 }
 function elSettings() {
   const e = settings.el || {}; const st = EL.state.status;
