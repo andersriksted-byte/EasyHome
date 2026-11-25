@@ -380,16 +380,22 @@ async function el(req, env, path, ctx) {
   if (path === '/el/usage') {
     const from = q.get('from'), to = q.get('to');
     if (!/^\d{4}-\d{2}-\d{2}$/.test(from || '') || !/^\d{4}-\d{2}-\d{2}$/.test(to || '')) return json(env, { error: 'Mangler datoer' }, 400);
-    const ck = 'elo_usage_' + from + '_' + to; const hit = await env.DASH_KV.get(ck); if (hit) return json(env, JSON.parse(hit));
+    const agg = ['Hour', 'Day', 'Month'].includes(q.get('agg')) ? q.get('agg') : 'Hour';
+    const ck = 'elo_usage_' + agg + '_' + from + '_' + to; const hit = await env.DASH_KV.get(ck); if (hit) return json(env, JSON.parse(hit));
     const meter = await eloMeter(env);
-    const j = await eloCall(env, `/meterdata/gettimeseries/${from}/${to}/Hour`, { meteringPoints: { meteringPoint: [meter.id] } });
+    const j = await eloCall(env, `/meterdata/gettimeseries/${from}/${to}/${agg}`, { meteringPoints: { meteringPoint: [meter.id] } });
     const out = [];
     (j.result || []).forEach((x) => { const doc = x.MyEnergyData_MarketDocument || {}; (doc.TimeSeries || []).forEach((ts) => (ts.Period || []).forEach((p) => {
-      const start = Date.parse(p.timeInterval && p.timeInterval.start); const step = /PT15M/.test(p.resolution) ? 900000 : 3600000;
-      (p.Point || []).forEach((pt) => out.push({ t: new Date(start + (+pt.position - 1) * step).toISOString(), kwh: +pt['out_Quantity.quantity'] || 0 }));
+      const start = Date.parse(p.timeInterval && p.timeInterval.start); const res = p.resolution || '';
+      // Dag og måned har ikke fast længde; brug periodens start (én periode pr. dag/måned)
+      const step = /PT15M/.test(res) ? 900000 : /PT1H/.test(res) ? 3600000 : 0;
+      const at = (n) => { if (step) return new Date(start + n * step); const d = new Date(start + 3 * 3600000); if (/P1M/.test(res)) d.setUTCMonth(d.getUTCMonth() + n); else d.setUTCDate(d.getUTCDate() + n); return d; };
+      (p.Point || []).forEach((pt) => out.push({ t: at(+pt.position - 1).toISOString(), kwh: +pt['out_Quantity.quantity'] || 0 }));
     })); });
     const res = { meter: meter.id, points: out };
-    await env.DASH_KV.put(ck, JSON.stringify(res), { expirationTtl: 3 * 3600 });
+    // Afsluttede perioder ændrer sig ikke: gem dem længe. Perioder, der rører i dag, gemmes kort.
+    const old = Date.parse(to) < Date.now() - 3 * 86400000;
+    await env.DASH_KV.put(ck, JSON.stringify(res), { expirationTtl: old ? 30 * 86400 : 3 * 3600 });
     return json(env, res);
   }
   if (path === '/el/charges') {

@@ -122,7 +122,11 @@ export async function workerFetch(path, opts = {}) {
     headers: { 'X-Dash-Key': settings.proxy.key, ...(opts.body ? { 'Content-Type': 'application/json' } : {}), ...(opts.headers || {}) }
   });
   if (res.status === 401 && String(settings.proxy.key).startsWith('t1.') && authHook) authHook();
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  if (!res.ok) {
+    // Vis workerens egen forklaring (fx "Energi Data Service svarede 403") i stedet for kun et tal
+    let msg = `HTTP ${res.status}`; try { const j = await res.clone().json(); if (j && j.error) msg = j.error; } catch (e) { /* ikke JSON */ }
+    throw new Error(msg);
+  }
   return res;
 }
 let authHook = null;

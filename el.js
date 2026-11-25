@@ -20,9 +20,18 @@ export async function loadPrices(force = false) {
   if (!force && ar === state.area && Date.now() - state.pricesAt < 30 * 60000) return;
   // 35 dage tilbage (til at regne forbrugets pris ud) og til og med i morgen
   const from = ymd(addD(new Date(), -35)); const to = ymd(addD(new Date(), 2));
-  const j = await (await workerFetch(`/el/prices?area=${ar}&from=${from}&to=${to}`)).json();
-  if (j.error) throw new Error(j.error);
-  state.prices = (j.records || []).map((r) => ({ t: new Date(r.t), spot: r.p / 1000 })); // kr/kWh uden moms
+  // Energi Data Service er åben og må hentes direkte fra skærmen; workeren bruges kun som reserve
+  let recs;
+  try {
+    const url = 'https://api.energidataservice.dk/dataset/DayAheadPrices?' + new URLSearchParams({ start: from, end: to, filter: JSON.stringify({ PriceArea: [ar] }), sort: 'TimeUTC asc', limit: '10000' });
+    const r = await fetch(url); if (!r.ok) throw new Error('Energi Data Service svarede ' + r.status);
+    recs = ((await r.json()).records || []).map((x) => ({ t: x.TimeUTC + 'Z', p: x.DayAheadPriceDKK }));
+  } catch (e) {
+    const j = await (await workerFetch(`/el/prices?area=${ar}&from=${from}&to=${to}`)).json();
+    if (j.error) throw new Error(j.error);
+    recs = j.records || [];
+  }
+  state.prices = recs.filter((r) => r.p !== null && r.p !== undefined).map((r) => ({ t: new Date(r.t), spot: r.p / 1000 })); // kr/kWh uden moms
   state.area = ar; state.pricesAt = Date.now(); state.error = '';
 }
 
@@ -105,3 +114,37 @@ export function yesterdayHours() {
   const d = last ? last.t : y;
   return { day: d, hours: state.usage.filter((u) => +day0(u.t) === +d) };
 }
+
+// ---------- Historik: forbrug dag for dag for de seneste år (til måned, kvartal, år og sammenligning) ----------
+state.daily = []; state.dailyAt = 0; state.histError = '';
+export async function loadHistory(force = false) {
+  if (!state.status || !state.status.configured) return;
+  if (!force && Date.now() - state.dailyAt < 6 * 3600000) return;
+  const y = new Date().getFullYear(); const out = [];
+  for (let yr = y - 4; yr <= y; yr++) {
+    const to = yr === y ? ymd(new Date()) : `${yr + 1}-01-01`;
+    try {
+      const j = await (await workerFetch(`/el/usage?agg=Day&from=${yr}-01-01&to=${to}`)).json();
+      if (j.error) throw new Error(j.error);
+      (j.points || []).forEach((p) => out.push({ t: day0(new Date(p.t)), kwh: p.kwh }));
+    } catch (e) { if (yr === y) state.histError = e.message; } // ældre år findes måske ikke (nyt hus, ny måler)
+  }
+  const seen = new Map(); out.forEach((d) => seen.set(+d.t, d));
+  state.daily = [...seen.values()].sort((a, b) => a.t - b.t); state.dailyAt = Date.now();
+  if (state.daily.length) state.histError = '';
+}
+export const years = () => [...new Set(state.daily.map((d) => d.t.getFullYear()))].sort();
+const sum = (l) => l.reduce((s, d) => s + d.kwh, 0);
+export const dayKwh = (y, m, d) => { const x = state.daily.find((v) => v.t.getFullYear() === y && v.t.getMonth() === m && v.t.getDate() === d); return x ? x.kwh : null; };
+export function monthKwh(y, m) { const l = state.daily.filter((d) => d.t.getFullYear() === y && d.t.getMonth() === m); return l.length ? sum(l) : null; }
+export function quarterKwh(y, q) { const l = state.daily.filter((d) => d.t.getFullYear() === y && Math.floor(d.t.getMonth() / 3) === q); return l.length ? sum(l) : null; }
+export function yearKwh(y) { const l = state.daily.filter((d) => d.t.getFullYear() === y); return l.length ? sum(l) : null; }
+// Akkumuleret forbrug fra 1. januar, dag for dag (til at sammenligne år)
+export function cumulative(y) {
+  let acc = 0; return state.daily.filter((d) => d.t.getFullYear() === y).map((d) => { acc += d.kwh; return { doy: Math.floor((d.t - new Date(y, 0, 1)) / 86400000), kwh: acc }; });
+}
+// Samme periode sidste år til sammenligning: forbrug fra 1. januar til samme dato
+export function ytd(y, upto = new Date()) {
+  const lim = new Date(y, upto.getMonth(), upto.getDate()); return sum(state.daily.filter((d) => d.t.getFullYear() === y && d.t <= lim));
+}
+export const hourly = (day) => state.usage.filter((u) => +day0(u.t) === +day0(day));

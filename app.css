@@ -1275,3 +1275,24 @@ button.w7r.sel{background:color-mix(in srgb,var(--accent) 16%,transparent);box-s
 .elkpi{display:flex;flex-direction:column;padding:10px 14px;border-radius:14px;background:var(--dayBg);min-width:120px}
 .elkpi span{font-size:12px;font-weight:700;color:var(--muted)}
 .elkpi b{font-size:19px;font-weight:800}
+
+/* Forbrug over tid */
+.elx{margin-top:14px;display:flex;flex-direction:column;gap:10px}
+.elx-head{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+.seg{display:inline-flex;background:var(--dayBg);border-radius:12px;padding:3px;gap:2px;flex-wrap:wrap}
+.seg button{border:0;background:transparent;color:var(--muted);font:inherit;font-size:14px;font-weight:700;padding:8px 12px;border-radius:9px;cursor:pointer;min-height:38px}
+.seg button[aria-pressed=true]{background:var(--card);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.elnav{display:flex;align-items:center;gap:12px}.elnav b{font-size:17px;min-width:150px;text-align:center}
+.elg{display:flex;align-items:flex-end;gap:6px;height:200px;padding-bottom:20px}
+.elg.dense{gap:2px}
+.elg-c{flex:1;min-width:0;height:100%;display:flex;flex-direction:column;position:relative}
+.elg-b{flex:1;display:flex;align-items:flex-end;gap:1px}
+.elg-b i{flex:1;border-radius:3px 3px 0 0;min-width:0}
+.elg-c>span{position:absolute;bottom:-18px;left:0;right:0;text-align:center;font-size:11px;font-weight:700;color:var(--muted);white-space:nowrap}
+.eltots{display:flex;flex-wrap:wrap;gap:10px}
+.eltot{display:flex;flex-direction:column;padding:8px 12px;border-radius:12px;background:var(--dayBg)}
+.eltot span{font-size:12px;font-weight:700;color:var(--muted)}.eltot b{font-size:18px;font-weight:800}
+.eltot b.up{color:#DC2626}.eltot b.down{color:#16A34A}
+.elline{width:100%;height:auto;display:block}
+.elgrid{stroke:var(--line);stroke-width:1}
+.elax{fill:var(--muted);font-size:13px;font-weight:700}

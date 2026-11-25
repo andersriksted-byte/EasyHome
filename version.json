@@ -1,5 +1,5 @@
 {
-  "version": "1.61.2",
+  "version": "1.62.0",
   "files": [
     "index.html",
     "app.js",
@@ -25,6 +25,16 @@
     "el.js"
   ],
   "notes": [
+    {
+      "version": "1.62.0",
+      "date": "25. november 2026",
+      "title": "Elforbrug over tid",
+      "items": [
+        "Se elforbruget time for time, dag for dag, pr. måned, kvartal og år på Strøm-siden",
+        "Sammenlign med de seneste år – og se det akkumulerede forbrug år for år",
+        "Elpriserne hentes nu mere stabilt, og fejlbeskeder siger, hvad der er galt"
+      ]
+    },
     {
       "version": "1.61.2",
       "date": "25. november 2026",

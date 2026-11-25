@@ -601,12 +601,69 @@ function pageStroem() {
       const hmax = Math.max(...y.hours.map((x) => x.kwh), 0.1) * 1.1;
       usage = `<section class="card wide"><div class="sechead2"><b>Elforbrug</b><span class="small muted">Fra Eloverblik – kommer dagen efter</span></div>
         <div class="elkpis">${stat('Seneste dag', kr(ds[ds.length - 1].kwh, 1) + ' kWh')}${ds[ds.length - 1].cost !== null ? stat('Pris seneste dag', kr(ds[ds.length - 1].cost) + ' kr') : ''}${stat(cap(MONTHS[new Date().getMonth()]) + ' indtil nu', kr(m.kwh, 0) + ' kWh')}${m.cost !== null ? stat('Pris indtil nu', kr(m.cost, 0) + ' kr') : ''}${stat('Snit pr. dag', kr(ds.reduce((s, d) => s + d.kwh, 0) / ds.length, 1) + ' kWh')}</div>
-        <div class="lab" style="margin:8px 0 4px">Sidste ${ds.length} dage</div>
-        <div class="eldays big">${ds.map((d) => `<div class="elday${d.t.getDay() === 0 || d.t.getDay() === 6 ? ' we' : ''}" title="${d.t.getDate()}/${d.t.getMonth() + 1}: ${kr(d.kwh, 1)} kWh${d.cost !== null ? ' · ' + kr(d.cost) + ' kr' : ''}"><i style="height:${Math.max(3, (d.kwh / max) * 100)}%"></i><span>${d.t.getDate()}</span></div>`).join('')}</div>
-        ${y.hours.length ? `<div class="lab" style="margin:14px 0 4px">Time for time · ${esc(cap(DAYS_LONG[y.day.getDay()]))} ${y.day.getDate()}. ${esc(MONTHS[y.day.getMonth()])}</div><div class="eldays big hrs">${y.hours.map((x) => `<div class="elday" title="kl. ${pad(x.t.getHours())}: ${kr(x.kwh, 2)} kWh"><i style="height:${Math.max(3, (x.kwh / hmax) * 100)}%"></i><span>${x.t.getHours() % 3 === 0 ? pad(x.t.getHours()) : ''}</span></div>`).join('')}</div>` : ''}</section>`;
+        ${elExplorer()}</section>`;
     } else usage = `<section class="card wide"><b>Elforbrug</b><div class="empty">Henter forbrug …</div></section>`;
   }
   return `<div class="ptitle"><h1>Strøm</h1><div class="tools"><button class="btn line" data-act="elRefresh" aria-label="Opdater">${svg('refresh', 18)}</button></div></div><div class="elpage">${prices}${usage}</div>`;
+}
+// Forbrug over tid: time, dag, måned, kvartal, år og akkumuleret – med sammenligning med tidligere år
+const YEAR_COL = ['var(--accent)', '#F59E0B', '#A855F7', '#10B981', '#EF4444'];
+function groupBars(labels, series, opts = {}) {
+  const max = Math.max(0.001, ...series.flatMap((x) => x.values.filter((v) => v !== null))) * 1.08;
+  return `<div class="elg${opts.dense ? ' dense' : ''}">${labels.map((lab, i) => `<div class="elg-c"><div class="elg-b">${series.map((x) => { const v = x.values[i]; return `<i style="height:${v === null ? 0 : Math.max(1.5, (v / max) * 100)}%;background:${x.color}${x.faded ? ';opacity:.55' : ''}" title="${esc(x.name)} · ${esc(lab)}: ${v === null ? '–' : kr(v, v < 10 ? 2 : 0)} kWh"></i>`; }).join('')}</div><span>${esc(opts.showLab ? opts.showLab(lab, i) : lab)}</span></div>`).join('')}</div>`;
+}
+function lineChart(series, xmax, ticks) {
+  const W = 1000, H = 260, P = 60; const ymax = Math.max(1, ...series.flatMap((x) => x.points.map((p) => p.y))) * 1.05;
+  const X = (x) => P + (x / xmax) * (W - P - 6), Y = (y) => H - 22 - (y / ymax) * (H - 34);
+  const grid = [0.25, 0.5, 0.75, 1].map((f) => `<line x1="${P}" x2="${W - 6}" y1="${Y(ymax * f)}" y2="${Y(ymax * f)}" class="elgrid"/><text x="${P - 6}" y="${Y(ymax * f) + 4}" text-anchor="end" class="elax">${Math.round(ymax * f)}</text>`).join('');
+  const tk = ticks.map((t) => `<text x="${X(t.x)}" y="${H - 4}" text-anchor="middle" class="elax">${esc(t.label)}</text>`).join('');
+  const lines = series.map((x) => `<polyline fill="none" stroke="${x.color}" stroke-width="${x.faded ? 2 : 3.5}" stroke-linejoin="round" ${x.faded ? 'opacity=".7"' : ''} points="${x.points.map((p) => `${X(p.x).toFixed(1)},${Y(p.y).toFixed(1)}`).join(' ')}"/>`).join('');
+  return `<svg class="elline" viewBox="0 0 ${W} ${H}" role="img" aria-label="Akkumuleret forbrug">${grid}${tk}${lines}</svg>`;
+}
+function elExplorer() {
+  const v = ui.elView || 'maaned'; const cmp = !!ui.elCmp; const now = new Date();
+  const ys = EL.years(); const ref = ui.elRef ? new Date(ui.elRef) : now;
+  const views = [['time', 'Time'], ['dag', 'Dag'], ['maaned', 'Måned'], ['kvartal', 'Kvartal'], ['aar', 'År'], ['akk', 'Akkumuleret']];
+  const seg = `<div class="seg">${views.map(([id, l]) => `<button data-act="elView" data-v="${id}" aria-pressed="${v === id}">${l}</button>`).join('')}</div>`;
+  const cmpBtn = v === 'time' || v === 'aar' || v === 'akk' ? '' : `<button class="pill" data-act="elCmp" aria-pressed="${cmp}">${cmp ? '✓' : '+'} Sammenlign med tidligere år</button>`;
+  const nav = (label) => `<div class="elnav"><button class="arr" data-act="elNav" data-dir="-1" aria-label="Forrige">‹</button><b>${esc(label)}</b><button class="arr" data-act="elNav" data-dir="1" aria-label="Næste">›</button></div>`;
+  const prevYears = (y) => (cmp ? ys.filter((x) => x < y).slice(-3) : []);
+  const legend = (list) => (list.length > 1 ? `<div class="st-legend">${list.map((x) => `<span style="--nc:${x.color}"><i></i>${esc(x.name)}</span>`).join('')}</div>` : '');
+  const tot = (val, label) => `<div class="eltot"><span>${esc(label)}</span><b>${val === null ? '–' : kr(val, val < 100 ? 1 : 0)} kWh</b></div>`;
+  const diff = (a, b, y) => (a !== null && b ? `<div class="eltot"><span>Mod ${y}</span><b class="${a > b ? 'up' : 'down'}">${a > b ? '+' : ''}${Math.round(((a - b) / b) * 100)} %</b></div>` : '');
+  let body = '', head = '';
+  if (!ys.length && v !== 'time') body = `<div class="empty">${EL.state.histError ? esc(EL.state.histError) : 'Henter historik …'}</div>`;
+  else if (v === 'time') {
+    const d = startOfDay(ref); const hs = EL.hourly(d);
+    head = nav(`${cap(DAYS_LONG[d.getDay()])} ${d.getDate()}. ${MONTHS[d.getMonth()]}`);
+    let acc = 0; const cum = hs.map((x) => (acc += x.kwh));
+    body = hs.length ? groupBars(hs.map((x) => pad(x.t.getHours())), [{ name: 'Forbrug', color: YEAR_COL[0], values: hs.map((x) => x.kwh) }], { showLab: (l, i) => (i % 3 === 0 ? l : '') }) + `<div class="eltots">${tot(acc, 'I alt')}${tot(Math.max(...hs.map((x) => x.kwh)), 'Højeste time')}</div><div class="small muted">Akkumuleret: ${cum.filter((_, i) => i % 6 === 5).map((c, i) => `kl. ${pad(i * 6 + 6)}: ${kr(c, 1)}`).join(' · ')} kWh</div>` : '<div class="empty">Ingen timedata for denne dag (Eloverblik har kun de seneste ca. 30 dage time for time).</div>';
+  } else if (v === 'dag') {
+    const y = ref.getFullYear(), m = ref.getMonth(); const dim = new Date(y, m + 1, 0).getDate();
+    head = nav(`${cap(MONTHS[m])} ${y}`);
+    const mk = (yy, i) => ({ name: String(yy), color: YEAR_COL[i], faded: i > 0, values: Array.from({ length: dim }, (_, k) => EL.dayKwh(yy, m, k + 1)) });
+    const ser = [mk(y, 0)].concat(prevYears(y).reverse().map((yy, i) => mk(yy, i + 1)));
+    body = groupBars(Array.from({ length: dim }, (_, k) => String(k + 1)), ser, { dense: true, showLab: (l, i) => (i % 2 === 0 ? l : '') }) + legend(ser) + `<div class="eltots">${(() => { const curM = y === now.getFullYear() && m === now.getMonth(); const upto = (yy) => { let t = 0; for (let k = 1; k <= (curM ? dim : dim); k++) { const v = EL.dayKwh(yy, m, k); if (v !== null && (!curM || EL.dayKwh(y, m, k) !== null)) t += v; } return t; };
+      // Indeværende måned sammenlignes med de samme dage i de tidligere år (ikke hele måneden)
+      return tot(EL.monthKwh(y, m), curM ? 'Indtil nu' : 'I alt') + ser.slice(1).map((x) => diff(upto(y), upto(+x.name), x.name + (curM ? ' (samme dage)' : ''))).join(''); })()}</div>`;
+  } else if (v === 'maaned' || v === 'kvartal') {
+    const y = ref.getFullYear(); head = nav(String(y));
+    const n = v === 'maaned' ? 12 : 4; const fn = v === 'maaned' ? EL.monthKwh : EL.quarterKwh;
+    const labs = v === 'maaned' ? MONTHS.map((x) => cap(x).slice(0, 3)) : ['1. kvt', '2. kvt', '3. kvt', '4. kvt'];
+    const mk = (yy, i) => ({ name: String(yy), color: YEAR_COL[i], faded: i > 0, values: Array.from({ length: n }, (_, k) => fn(yy, k)) });
+    const ser = [mk(y, 0)].concat(prevYears(y).reverse().map((yy, i) => mk(yy, i + 1)));
+    const cur = y === now.getFullYear();
+    body = groupBars(labs, ser) + legend(ser) + `<div class="eltots">${tot(EL.yearKwh(y), cur ? 'I år indtil nu' : 'Hele året')}${ser.slice(1).map((x) => diff(cur ? EL.ytd(y) : EL.yearKwh(y), cur ? EL.ytd(+x.name) : EL.yearKwh(+x.name), x.name + (cur ? ' (samme dato)' : ''))).join('')}</div>`;
+  } else if (v === 'aar') {
+    const ser = [{ name: 'Hele året', color: YEAR_COL[0], values: ys.map((y) => EL.yearKwh(y)) }, { name: 'Til samme dato', color: YEAR_COL[1], faded: true, values: ys.map((y) => EL.ytd(y)) }];
+    body = groupBars(ys.map(String), ser) + legend(ser) + `<div class="eltots">${ys.slice(-2).length === 2 ? diff(EL.ytd(ys[ys.length - 1]), EL.ytd(ys[ys.length - 2]), ys[ys.length - 2] + ' (samme dato)') : ''}</div>`;
+  } else {
+    const y = now.getFullYear(); const list = [y].concat(ys.filter((x) => x < y).slice(-3).reverse()); // akkumuleret viser altid de seneste år til sammenligning
+    const ser = list.map((yy, i) => ({ name: String(yy), color: YEAR_COL[i], faded: i > 0, points: EL.cumulative(yy).map((p) => ({ x: p.doy, y: p.kwh })) })).filter((x) => x.points.length);
+    const ticks = MONTHS.map((mm, i) => ({ x: Math.floor((new Date(y, i, 1) - new Date(y, 0, 1)) / 86400000) + 14, label: cap(mm).slice(0, 3) }));
+    body = lineChart(ser, 366, ticks) + legend(ser) + `<div class="eltots">${tot(EL.ytd(y), 'I år indtil nu')}${ser.slice(1).map((x) => diff(EL.ytd(y), EL.ytd(+x.name), x.name + ' (samme dato)')).join('')}</div>`;
+  }
+  return `<div class="elx"><div class="elx-head">${seg}${cmpBtn}</div>${head}${body}</div>`;
 }
 function elSettings() {
   const e = settings.el || {}; const st = EL.state.status;
@@ -1467,7 +1524,7 @@ function loadEl(force = false) {
   if (!svcOn('el') || !hasProxy()) return;
   const show = () => { if (ui.page === 'stroem' || (ui.page === 'forside' && curLayout().some((x) => x.id === 'elpris' || x.id === 'elforbrug'))) softRender(); };
   EL.loadPrices(force).then(show).catch((e) => { EL.state.error = e.message; show(); });
-  EL.loadEloverblik(force).then(show);
+  EL.loadEloverblik(force).then(() => { show(); if (ui.page === 'stroem') return EL.loadHistory(force).then(show); });
 }
 function loadAll() { loadEl(); loadFootball(); loadWeather(); loadNews(); loadCal(); loadSonos(true); if (svcOn('madro')) MD.start(); if (svcOn('somfy')) SF.refresh(); }
 
@@ -1656,6 +1713,11 @@ const act = {
   calEv: (b) => { const e = calRefs[+b.dataset.i]; if (e) showEvent(e); },
   fbLeague: (b) => { const fb = settings.football = settings.football || { leagues: [], teams: [] }; fb.leagues = fb.leagues || []; const id = b.dataset.id; fb.leagues = fb.leagues.includes(id) ? fb.leagues.filter((x) => x !== id) : fb.leagues.concat(id); if (!fb.leagues.includes(id)) { fb.teams = (fb.teams || []).filter((t) => t.lg !== id); fb.follow = (fb.follow || []).filter((x) => x !== id); } save(); renderMain(); loadFootball(true); },
   elRefresh: () => { loadEl(true); toast('Henter strøm-data …'); },
+  elView: (b) => { ui.elView = b.dataset.v; ui.elRef = null; renderMain(); },
+  elCmp: () => { ui.elCmp = !ui.elCmp; renderMain(); },
+  elNav: (b) => { const d = ui.elRef ? new Date(ui.elRef) : new Date(); const dir = +b.dataset.dir; const v = ui.elView || 'maaned';
+    if (v === 'time') d.setDate(d.getDate() + dir); else if (v === 'dag') { d.setDate(1); d.setMonth(d.getMonth() + dir); } else d.setFullYear(d.getFullYear() + dir);
+    if (d > new Date()) return; ui.elRef = +d; renderMain(); },
   fbFollow: (b) => { const fb = settings.football = settings.football || { leagues: [], teams: [] }; const f = fb.follow || []; const id = b.dataset.id; fb.follow = f.includes(id) ? f.filter((x) => x !== id) : f.concat(id); save(); renderMain(); loadFootball(true); },
   fbTeam: (b) => { const fb = settings.football = settings.football || { leagues: [], teams: [] }; fb.teams = fb.teams || []; const id = b.dataset.id; const lg = b.dataset.lg;
     if (fb.teams.some((t) => t.id === id && t.lg === lg)) fb.teams = fb.teams.filter((t) => !(t.id === id && t.lg === lg)); // samme klub kan følges i én turnering uden de andre
