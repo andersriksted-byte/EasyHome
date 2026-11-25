@@ -1,5 +1,5 @@
 {
-  "version": "1.66.2",
+  "version": "1.67.0",
   "files": [
     "index.html",
     "app.js",
@@ -25,6 +25,16 @@
     "el.js"
   ],
   "notes": [
+    {
+      "version": "1.67.0",
+      "date": "25. november 2026",
+      "title": "Jeres egne vasketider",
+      "items": [
+        "Vælg selv under Indstillinger → Strøm, hvornår på døgnet I vil bruge vaskemaskine, opvasker, tørretumbler og elbil",
+        "Varighed og forbrug kan også rettes, og apparater kan slås fra",
+        "Billig strøm bruger jeres valg"
+      ]
+    },
     {
       "version": "1.66.2",
       "date": "25. november 2026",

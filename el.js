@@ -186,7 +186,7 @@ export const hourly = (day) => state.usage.filter((u) => +day0(u.t) === +day0(da
 
 // ---------- Vasketid: billigste sammenhængende timer ----------
 // Tidsrum som [fra, til]; nat (fx 22–7) går hen over midnat
-const inWin = (h, w) => (w[0] <= w[1] ? h >= w[0] && h < w[1] : h >= w[0] || h < w[1]);
+const inWin = (h, w) => (w[0] % 24 === w[1] % 24 ? true : w[0] <= w[1] ? h >= w[0] && h < w[1] : h >= w[0] || h < w[1]);
 // Billigste vindue på n timer mellem to tidspunkter (kun hele timer, der ikke er gået)
 export function cheapestBetween(a, b, n = 2, win = [0, 24]) {
   const t0 = new Date(); t0.setMinutes(0, 0, 0);

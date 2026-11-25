@@ -594,12 +594,16 @@ const APPLIANCES = [
   { id: 'tumbler', ico: '🌀', name: 'Tørretumbler', n: 2, win: [7, 22], kwh: 2.5 },
   { id: 'elbil', ico: '🚗', name: 'Elbil', n: 4, win: [22, 7], kwh: 30 }
 ];
+// Apparaterne med familiens egne valg (Indstillinger → Strøm): til/fra, tidsrum, varighed og forbrug
+function elApps() {
+  const own = (settings.el && settings.el.apps) || {};
+  return APPLIANCES.map((a) => { const o = own[a.id] || {}; return { ...a, on: o.on !== false, win: [o.from ?? a.win[0], o.to ?? a.win[1]].map(Number), n: +(o.n ?? a.n), kwh: +String(o.kwh ?? a.kwh).replace(',', '.') || a.kwh }; });
+}
 function wVasketid(size, h = 1, wd = 1, x = null) {
   const w = elWait('Billig strøm'); if (w) return w;
   const now = new Date(); const end = new Date(+now + 24 * 3600000); const cur = EL.now();
   const until = (t) => { const m = Math.round((t - now) / 60000); return m < 60 ? `om ${m} min` : `om ${Math.floor(m / 60)} t${m % 60 >= 5 ? ' ' + (m % 60) + ' m' : ''}`; };
-  const hidden = (x && x.hide) || [];
-  const list = APPLIANCES.filter((a) => !hidden.includes(a.id)).map((a) => ({ a, b: EL.cheapestBetween(now, end, a.n, a.win) })).filter((r) => r.b);
+  const list = elApps().filter((a) => a.on).map((a) => ({ a, b: EL.cheapestBetween(now, end, a.n, a.win) })).filter((r) => r.b);
   // Tidslinje: de næste 24 timer farvet efter pris, med de anbefalede tidsrum markeret
   const t0 = new Date(); t0.setMinutes(0, 0, 0);
   const hs = EL.hours(new Date()).concat(EL.hours(addDays(new Date(), 1))).filter((x2) => x2.t >= t0).slice(0, 24);
@@ -744,7 +748,13 @@ function elExplorer() {
 }
 function elSettings() {
   const e = settings.el || {}; const st = EL.state.status;
-  return `<section class="card"><b>Elpris</b>
+  const hrs = (sel, k, id) => `<select data-elapp="${id}" data-k="${k}" aria-label="${k === 'from' ? 'Fra' : 'Til'} kl.">${Array.from({ length: 25 }, (_, i) => `<option value="${i}"${+sel === i ? ' selected' : ''}>${pad(i % 24)}${i === 24 ? ' (midnat)' : ''}</option>`).join('')}</select>`;
+  const apps = `<section class="card wide"><b>Billig strøm – hvornår vil I bruge apparaterne?</b>
+    <div class="elapps">${elApps().map((a) => `<div class="elapp${a.on ? '' : ' off'}"><label class="elapp-on"><input type="checkbox" data-elapp="${a.id}" data-k="on"${a.on ? ' checked' : ''}><span class="vt-ico">${a.ico}</span><b>${esc(a.name)}</b></label>
+      <label class="inl">Fra kl. ${hrs(a.win[0], 'from', a.id)}</label><label class="inl">til kl. ${hrs(a.win[1], 'to', a.id)}</label>
+      <label class="inl">Varighed<select data-elapp="${a.id}" data-k="n">${[1, 2, 3, 4, 5, 6, 8].map((v) => `<option value="${v}"${a.n === v ? ' selected' : ''}>${v} t</option>`).join('')}</select></label>
+      <label class="inl">kWh<input type="text" inputmode="decimal" data-elapp="${a.id}" data-k="kwh" value="${esc(String(a.kwh).replace('.', ','))}" style="width:60px" aria-label="Forbrug i kWh"></label></div>`).join('')}</div></section>`;
+  return apps + `<section class="card"><b>Elpris</b>
       <label class="inl">Prisområde<select data-set="el.area" aria-label="Prisområde"><option value="auto"${!e.area || e.area === 'auto' ? ' selected' : ''}>Automatisk (${EL.area() === 'DK1' ? 'Vest' : 'Øst'})</option><option value="DK1"${e.area === 'DK1' ? ' selected' : ''}>Vestdanmark (DK1)</option><option value="DK2"${e.area === 'DK2' ? ' selected' : ''}>Østdanmark (DK2)</option></select></label>
        ${e.supplier ? `<div class="small muted">${esc(e.supplier)}</div>` : ''}
       <label class="inl">Elselskabets tillæg (øre/kWh inkl. moms)<input type="text" inputmode="decimal" data-set="el.markup" value="${esc(String(e.markup ?? ''))}" placeholder="0" aria-label="Elselskabets tillæg i øre pr. kWh" style="width:90px"></label>
@@ -1840,6 +1850,7 @@ document.addEventListener('submit', (e) => {
 });
 document.addEventListener('change', (e) => {
   const t = e.target;
+  if (t.dataset.elapp) { const a = settings.el.apps = settings.el.apps || {}; const o = a[t.dataset.elapp] = a[t.dataset.elapp] || {}; o[t.dataset.k] = t.type === 'checkbox' ? t.checked : t.value; save(); renderMain(); return; }
   if (t.dataset.wsel) { const x = editLayout().find((y) => y.id === t.dataset.wsel); if (x) { x[t.dataset.k] = t.value; ui.inspIdx = 0; ui.inspAt = Date.now(); save(); renderMain(); } return; }
   if (t.dataset.set) {
     const v = t.type === 'checkbox' ? t.checked : t.value.trim();
