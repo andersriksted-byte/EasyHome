@@ -152,21 +152,28 @@ export function yesterdayHours() {
 
 // ---------- Historik: forbrug dag for dag for de seneste år (til måned, kvartal, år og sammenligning) ----------
 state.daily = []; state.dailyAt = 0; state.histError = '';
-export async function loadHistory(force = false) {
+let histBusy = null;
+export function loadHistory(force = false) {
+  if (histBusy) return histBusy; // kun én hentning ad gangen
+  histBusy = loadHistoryNow(force).finally(() => { histBusy = null; });
+  return histBusy;
+}
+async function loadHistoryNow(force) {
   if (!state.status || !state.status.configured) return;
-  if (!force && Date.now() - state.dailyAt < 6 * 3600000) return;
-  const y = new Date().getFullYear(); const out = [];
-  for (let yr = y - 4; yr <= y; yr++) {
+  if (!force && state.daily.length && Date.now() - state.dailyAt < 6 * 3600000) return;
+  if (!force && !state.daily.length && Date.now() - state.dailyAt < 2 * 60000) return; // fejlede for nylig: prøv igen om lidt
+  const y = new Date().getFullYear(); const errs = [];
+  // Alle år hentes samtidig (Eloverblik kan være langsom); ældre år findes måske ikke (nyt hus, ny måler)
+  const res = await Promise.all([y - 4, y - 3, y - 2, y - 1, y].map(async (yr) => {
     const to = yr === y ? ymd(new Date()) : `${yr + 1}-01-01`;
-    try {
-      const j = await (await workerFetch(`/el/usage?agg=Day&from=${yr}-01-01&to=${to}`)).json();
-      if (j.error) throw new Error(j.error);
-      (j.points || []).forEach((p) => out.push({ t: day0(new Date(p.t)), kwh: p.kwh }));
-    } catch (e) { if (yr === y) state.histError = e.message; } // ældre år findes måske ikke (nyt hus, ny måler)
-  }
-  const seen = new Map(); out.forEach((d) => seen.set(+d.t, d));
+    try { const j = await (await workerFetch(`/el/usage?agg=Day&from=${yr}-01-01&to=${to}`)).json(); if (j.error) throw new Error(j.error); return j.points || []; }
+    catch (e) { if (yr >= y - 1) errs.push(e.message); return []; }
+  }));
+  const seen = new Map(); res.flat().forEach((p) => { const d = { t: day0(new Date(p.t)), kwh: p.kwh }; seen.set(+d.t, d); });
+  // Reserve: mangler dagstal, bruges de seneste ca. 30 dage time for time lagt sammen pr. dag
+  days(40).forEach((d) => { if (!seen.has(+d.t)) seen.set(+d.t, { t: d.t, kwh: d.kwh }); });
   state.daily = [...seen.values()].sort((a, b) => a.t - b.t); state.dailyAt = Date.now();
-  if (state.daily.length) state.histError = '';
+  state.histError = res.flat().length ? '' : errs[0] || 'Eloverblik sendte ingen dagstal';
 }
 export const years = () => [...new Set(state.daily.map((d) => d.t.getFullYear()))].sort();
 const sum = (l) => l.reduce((s, d) => s + d.kwh, 0);

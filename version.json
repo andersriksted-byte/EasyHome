@@ -1,5 +1,5 @@
 {
-  "version": "1.69.1",
+  "version": "1.69.2",
   "files": [
     "index.html",
     "app.js",
@@ -25,6 +25,16 @@
     "el.js"
   ],
   "notes": [
+    {
+      "version": "1.69.2",
+      "date": "25. november 2026",
+      "title": "Strøm-historik rettet",
+      "items": [
+        "Historikken (måned, kvartal, år) hentes nu, når du åbner Strøm-siden, og prøver selv igen ved fejl",
+        "Mangler Eloverblik dagstal, vises i det mindste de seneste 30 dage",
+        "En eventuel fejl fra Eloverblik vises nu i stedet for \"Henter historik …\""
+      ]
+    },
     {
       "version": "1.69.1",
       "date": "25. november 2026",

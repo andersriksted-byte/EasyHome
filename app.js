@@ -727,7 +727,7 @@ function elExplorer() {
   const tot = (val, label) => { const x = conv(val); return `<div class="eltot"><span>${esc(label)}</span><b>${x === null ? '–' : (unitKr ? 'ca. ' : '') + kr(x, x < 100 ? 1 : 0)} ${U}</b></div>`; };
   const diff = (a, b, y) => (a !== null && b ? `<div class="eltot"><span>Mod ${y}</span><b class="${a > b ? 'up' : 'down'}">${a > b ? '+' : ''}${Math.round(((a - b) / b) * 100)} %</b></div>` : '');
   let body = '', head = '';
-  if (!ys.length && v !== 'time') body = `<div class="empty">${EL.state.histError ? esc(EL.state.histError) : 'Henter historik …'}</div>`;
+  if (!ys.length && v !== 'time') body = `<div class="empty">${EL.state.histError ? 'Historik: ' + esc(EL.state.histError) + ' – prøver igen om lidt' : 'Henter historik fra Eloverblik …'}</div>`;
   else if (v === 'time') {
     // Uden valgt dag: den seneste dag, Eloverblik har timer for (i dag og ofte i går mangler endnu)
     const lastU = EL.state.usage.length ? EL.state.usage[EL.state.usage.length - 1].t : null;
@@ -1634,7 +1634,7 @@ function loadAll() { loadEl(); loadFootball(); loadWeather(); loadNews(); loadCa
 
 /* ---------- Handlinger ---------- */
 const act = {
-  nav: (b) => { if (settings.navOpen) { settings.navOpen = false; save(); } ui.page = b.dataset.page; ui.editing = false; ui.fbDay = null; history.replaceState(null, '', '#' + ui.page); renderNav(); renderMain(false); $('#main').focus({ preventScroll: true }); if (ui.page === 'musik') loadSonos(); },
+  nav: (b) => { if (settings.navOpen) { settings.navOpen = false; save(); } ui.page = b.dataset.page; ui.editing = false; ui.fbDay = null; history.replaceState(null, '', '#' + ui.page); renderNav(); renderMain(false); $('#main').focus({ preventScroll: true }); if (ui.page === 'musik') loadSonos(); if (ui.page === 'stroem') { loadEl(); EL.loadHistory().then(() => { if (ui.page === 'stroem') softRender(); }); } },
   toggleNav: () => { settings.navOpen = !settings.navOpen; save(); renderNav(); },
   nextTheme: () => { const i = THEME_ORDER.indexOf(settings.theme); settings.theme = THEME_ORDER[(i + 1) % THEME_ORDER.length]; save(); applyTheme(); renderHeader(); if (ui.editing || ui.page === 'indstillinger') renderMain(); },
   setTheme: (b) => { settings.theme = b.dataset.theme; save(); applyTheme(); renderHeader(); renderMain(); },
