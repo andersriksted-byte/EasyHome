@@ -1457,3 +1457,10 @@ button.w7r.sel{background:color-mix(in srgb,var(--accent) 16%,transparent);box-s
 @keyframes spin{to{transform:rotate(360deg)}}
 
 .nx-lbl{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);flex:none}
+
+.elbar.midn{border-left:2px dashed var(--muted);padding-left:2px;margin-left:3px}
+.elbar .elmid{position:absolute;top:-2px;left:6px;font-style:normal;font-size:11px;font-weight:800;color:var(--muted);white-space:nowrap;text-transform:uppercase;letter-spacing:.04em}
+.elbars{padding-top:16px}
+.elbar .elmid.first{left:0}
+.elw>.elleft{flex:0 1 auto;max-width:44%}
+@container (max-width:560px){.elgauge{display:none}.eladv{font-size:12px;padding:6px 8px}}

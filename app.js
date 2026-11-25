@@ -551,7 +551,9 @@ function priceBars(hs, opts = {}) {
   const max = Math.max(...hs.map((h) => h.price)) * 1.05; const min = Math.min(0, ...hs.map((h) => h.price));
   const nowH = new Date(); nowH.setMinutes(0, 0, 0);
   return `<div class="elbars${opts.big ? ' big' : ''}">${hs.map((h) => { const pct = Math.max(3, ((h.price - min) / (max - min || 1)) * 100); const cur = +h.t === +nowH;
-    return `<div class="elbar ${priceLevel(h.price, hs)}${cur ? ' now' : ''}${h.t < nowH ? ' past' : ''}" title="kl. ${pad(h.t.getHours())}: ${kr(h.price)} kr"><i style="height:${pct}%"></i>${opts.labels && h.t.getHours() % (opts.every || 3) === 0 ? `<span>${pad(h.t.getHours())}</span>` : ''}</div>`; }).join('')}</div>`;
+    // Ved midnat: en lodret streg og "I morgen" over søjlerne
+    const mid = opts.split && h.t.getHours() === 0 && !sameDay(h.t, nowH) ? `<em class="elmid">I morgen</em>` : opts.split && h === hs[0] && hs.some((x) => !sameDay(x.t, nowH)) ? `<em class="elmid first">I dag</em>` : '';
+    return `<div class="elbar ${priceLevel(h.price, hs)}${cur ? ' now' : ''}${h.t < nowH ? ' past' : ''}${mid && h.t.getHours() === 0 ? ' midn' : ''}" title="${sameDay(h.t, nowH) ? 'I dag' : 'I morgen'} kl. ${pad(h.t.getHours())}: ${kr(h.price)} kr">${mid}<i style="height:${pct}%"></i>${opts.labels && h.t.getHours() % (opts.every || 3) === 0 ? `<span>${pad(h.t.getHours())}</span>` : ''}</div>`; }).join('')}</div>`;
 }
 function elWait(title) {
   if (!hasProxy()) return cardHead(title) + '<div class="empty">Kræver forbindelsen til jeres server.</div>';
@@ -564,8 +566,9 @@ const LVL_TXT = { lo: 'Billig', mid: 'Middel', hi: 'Dyr' };
 function priceGauge(p, lo, hi, lvl) {
   const f = hi > lo ? Math.max(0, Math.min(1, (p - lo) / (hi - lo))) : 0.5; const a = Math.PI * (1 - f);
   const x = 60 + 46 * Math.cos(a), y = 60 - 46 * Math.sin(a);
-  return `<svg class="elgauge" viewBox="0 0 120 70" aria-hidden="true"><defs><linearGradient id="gg" x1="0" x2="1"><stop offset="0" stop-color="#16A34A"/><stop offset=".5" stop-color="#F59E0B"/><stop offset="1" stop-color="#DC2626"/></linearGradient></defs>
-    <path d="M14 60 A46 46 0 0 1 106 60" fill="none" stroke="url(#gg)" stroke-width="10" stroke-linecap="round"/>
+  const gid = 'gg' + (priceGauge.n = (priceGauge.n || 0) + 1); // eget id pr. måler (ellers forsvinder farven, hvis en anden måler er skjult)
+  return `<svg class="elgauge" viewBox="0 0 120 70" aria-hidden="true"><defs><linearGradient id="${gid}" x1="0" x2="1"><stop offset="0" stop-color="#16A34A"/><stop offset=".5" stop-color="#F59E0B"/><stop offset="1" stop-color="#DC2626"/></linearGradient></defs>
+    <path d="M14 60 A46 46 0 0 1 106 60" fill="none" stroke="url(#${gid})" stroke-width="10" stroke-linecap="round"/>
     <circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="8" class="gknob ${lvl}"/></svg>`;
 }
 // Anbefaling i et sprog man kan handle på
@@ -587,9 +590,11 @@ function wElpris(size, h = 1, wd = 1) {
   const advice = `<div class="eladv ${lvl}"><i>${adv.ico}</i><span>${esc(adv.txt)}</span></div>`;
   const mm = lo && hi ? `<div class="elmm"><div><span class="dot lo"></span>Lavest <b>${kr(lo.price)}</b> kl. ${pad(lo.t.getHours())}</div><div><span class="dot hi"></span>Højest <b>${kr(hi.price)}</b> kl. ${pad(hi.t.getHours())}</div></div>` : '';
   if (wd === 1 && h === 1) return head + big + advice;
-  if (wd === 1) return head + `<div class="elv">${big}${advice}${mm}${priceBars(today, { labels: true, every: 6 })}</div>`;
-  const hs = wd >= 3 && tom.length ? today.concat(tom) : today;
-  return head + `<div class="elw"><div class="elleft">${big}${advice}${h >= 2 ? mm : ''}</div>${priceBars(hs, { labels: true, every: hs.length > 24 ? 6 : 3 })}</div>`;
+  if (wd === 1) { const h0 = new Date(); h0.setMinutes(0, 0, 0); const hs1 = tom.length ? today.filter((x) => x.t >= h0).concat(tom) : today; return head + `<div class="elv">${big}${advice}${mm}${priceBars(hs1, { labels: true, split: true, every: 6 })}</div>`; }
+  // I dag og i morgen i samme søjler: resten af i dag (fra 2 timer siden) og hele i morgen, når priserne er kommet
+  const h0 = new Date(); h0.setMinutes(0, 0, 0); h0.setHours(h0.getHours() - 2);
+  const hs = tom.length ? today.filter((x) => x.t >= h0).concat(tom) : today;
+  return head + `<div class="elw"><div class="elleft">${big}${advice}${h >= 2 ? mm : ''}${!tom.length ? '<div class="small muted">I morgen: priserne kommer ved 13-tiden</div>' : ''}</div>${priceBars(hs, { labels: true, split: true, every: hs.length > 24 ? 6 : 3 })}</div>`;
 }
 // Billig strøm: anbefalede starttider for husets store strømslugere de næste 24 timer + en tidslinje
 const APPLIANCES = [

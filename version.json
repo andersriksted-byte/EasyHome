@@ -1,5 +1,5 @@
 {
-  "version": "1.70.3",
+  "version": "1.71.0",
   "files": [
     "index.html",
     "app.js",
@@ -25,6 +25,15 @@
     "el.js"
   ],
   "notes": [
+    {
+      "version": "1.71.0",
+      "date": "25. november 2026",
+      "title": "Elpris i dag og i morgen",
+      "items": [
+        "Elpris viser nu resten af i dag og hele i morgen i samme søjler, adskilt af en stiplet streg",
+        "Før kl. 13 står der, at morgendagens priser er på vej"
+      ]
+    },
     {
       "version": "1.70.3",
       "date": "25. november 2026",
