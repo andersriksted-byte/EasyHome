@@ -292,6 +292,27 @@ function pageArrows(scope, idx, n, what) {
 const placeArrows = (scope, idx) => pageArrows(scope, idx, settings.places.length, 'sted');
 // Kortets form: lille (1×1), bred (≥2×1), høj (1×≥2) eller stor (≥2×≥2)
 const shapeKind = (w, h) => (w >= 2 && h >= 2 ? 'big' : w >= 2 ? 'wide' : h >= 2 ? 'tall' : 'tiny');
+// Levende vejr: en stille animation bag kortet efter vejret lige nu – regn der falder, sol der skinner, sne, skyer, tåge, torden, stjerner
+function wxScene(code, isDay, windMs = 0) {
+  const k = W.kindOf(code, isDay); const rnd = (i, m) => { const x = Math.sin(i * 12.9898 + 78.233) * 43758.5453; return (x - Math.floor(x)) * m; }; // faste "tilfældige" placeringer
+  const drops = (n, cls) => Array.from({ length: n }, (_, i) => `<i class="${cls}" style="left:${rnd(i + 1, 100).toFixed(1)}%;animation-delay:-${rnd(i + 7, 2).toFixed(2)}s;animation-duration:${(0.7 + rnd(i + 3, 0.6)).toFixed(2)}s"></i>`).join('');
+  const flakes = (n) => Array.from({ length: n }, (_, i) => `<i class="flake" style="left:${rnd(i + 1, 100).toFixed(1)}%;animation-delay:-${rnd(i + 5, 8).toFixed(2)}s;animation-duration:${(6 + rnd(i + 2, 5)).toFixed(2)}s;--s:${(0.6 + rnd(i + 9, 0.8)).toFixed(2)}"></i>`).join('');
+  const stars = (n) => Array.from({ length: n }, (_, i) => `<i class="star" style="left:${rnd(i + 1, 100).toFixed(1)}%;top:${rnd(i + 11, 60).toFixed(1)}%;animation-delay:-${rnd(i + 3, 4).toFixed(2)}s"></i>`).join('');
+  const clouds = (n, dark) => Array.from({ length: n }, (_, i) => `<i class="cl${dark ? ' dk' : ''}" style="top:${(6 + rnd(i + 2, 40)).toFixed(1)}%;animation-delay:-${rnd(i + 4, 60).toFixed(1)}s;animation-duration:${(45 + rnd(i + 6, 30) - Math.min(25, windMs * 2)).toFixed(0)}s;--s:${(0.8 + rnd(i + 8, 0.9)).toFixed(2)}"></i>`).join('');
+  const inner = {
+    sun: '<i class="sunglow"></i><i class="rays"></i>',
+    moon: `<i class="moonglow"></i>${stars(18)}`,
+    partly: `<i class="sunglow"></i><i class="rays"></i>${clouds(3)}`,
+    partlyNight: `<i class="moonglow"></i>${stars(10)}${clouds(3, true)}`,
+    cloud: clouds(5),
+    fog: '<i class="fog f1"></i><i class="fog f2"></i><i class="fog f3"></i>',
+    drizzle: `${clouds(3, true)}${drops(22, 'drop sm')}`,
+    rain: `${clouds(4, true)}${drops(40, 'drop')}`,
+    snow: `${clouds(2)}${flakes(30)}`,
+    thunder: `${clouds(4, true)}${drops(40, 'drop')}<i class="flash"></i>`
+  }[k] || '';
+  return `<div class="wxscene k-${k}${isDay ? '' : ' night'}" aria-hidden="true">${inner}</div>`;
+}
 function wVejr(size, h = 1, wd = 1) {
   const n = settings.places.length;
   const idx = ((ui.fpPlace % n) + n) % n;
@@ -315,7 +336,7 @@ function wVejr(size, h = 1, wd = 1) {
     tall: `<div class="wx wx-tall">${now}${hours}${days}</div>`,
     big: `<div class="wx wx-big"><div class="wxl">${now}${hours}</div><div class="wxr">${days}</div></div>`
   }[kind];
-  return title + body;
+  return wxScene(w.now.code, w.now.isDay, w.now.wind) + title + body;
 }
 function wSteder(size) {
   const others = settings.places.slice(1);

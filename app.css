@@ -1476,3 +1476,38 @@ button.w7r.sel{background:color-mix(in srgb,var(--accent) 16%,transparent);box-s
 .elhero-n span{font-size:clamp(12px,4cqh,16px)}
 .elhero .elbadge{align-self:center}
 @container (max-width:560px){.eladv{font-size:12px;padding:6px 8px}.elbadge{font-size:10px;padding:2px 6px}}
+
+/* Levende vejr bag vejrkortet */
+.wxscene{position:absolute;inset:0;z-index:0;pointer-events:none;overflow:hidden;border-radius:inherit}
+.w:has(>.wxscene)>*:not(.wxscene){position:relative;z-index:1}
+.wxscene i{position:absolute;display:block}
+.wxscene.k-sun{background:radial-gradient(120% 90% at 100% 0%,rgba(255,196,61,.35),transparent 60%)}
+.wxscene.k-partly{background:radial-gradient(110% 80% at 100% 0%,rgba(255,196,61,.25),transparent 60%)}
+.wxscene.k-moon,.wxscene.k-partlyNight{background:linear-gradient(180deg,rgba(30,41,90,.35),transparent 80%)}
+.wxscene.k-cloud{background:linear-gradient(180deg,rgba(148,163,184,.25),transparent 80%)}
+.wxscene.k-rain,.wxscene.k-drizzle,.wxscene.k-thunder{background:linear-gradient(180deg,rgba(71,85,105,.35),rgba(71,85,105,.08))}
+.wxscene.k-snow{background:linear-gradient(180deg,rgba(186,206,230,.35),transparent 80%)}
+.wxscene.k-fog{background:linear-gradient(180deg,rgba(203,213,225,.35),rgba(203,213,225,.15))}
+.sunglow{right:-60px;top:-60px;width:200px;height:200px;border-radius:50%;background:radial-gradient(circle,rgba(255,214,90,.9) 0 22%,rgba(255,196,61,.35) 40%,transparent 70%);animation:wxpulse 6s ease-in-out infinite}
+.rays{right:-110px;top:-110px;width:300px;height:300px;border-radius:50%;background:repeating-conic-gradient(from 0deg,rgba(255,204,77,.22) 0 6deg,transparent 6deg 18deg);-webkit-mask:radial-gradient(circle,transparent 25%,#000 30%,transparent 70%);mask:radial-gradient(circle,transparent 25%,#000 30%,transparent 70%);animation:wxspin 40s linear infinite}
+.moonglow{right:18px;top:14px;width:54px;height:54px;border-radius:50%;box-shadow:inset -14px -6px 0 0 rgba(226,232,240,.9);filter:drop-shadow(0 0 14px rgba(226,232,240,.5));transform:rotate(-20deg)}
+.star{width:3px;height:3px;border-radius:50%;background:#fff;opacity:.2;animation:wxtwinkle 3.5s ease-in-out infinite}
+.cl{left:-30%;width:140px;height:44px;border-radius:44px;background:rgba(255,255,255,.7);filter:blur(1px) drop-shadow(0 4px 8px rgba(100,116,139,.25));transform:scale(var(--s,1));animation:wxdrift 60s linear infinite}
+.cl::before,.cl::after{content:'';position:absolute;border-radius:50%;background:inherit}
+.cl::before{width:60px;height:60px;left:22px;top:-28px}.cl::after{width:46px;height:46px;left:68px;top:-18px}
+.cl.dk{background:rgba(100,116,139,.55)}
+.drop{top:-12%;width:2px;height:16px;border-radius:2px;background:linear-gradient(transparent,rgba(96,165,250,.85));animation:wxfall .9s linear infinite;transform:rotate(12deg)}
+.drop.sm{height:9px;opacity:.7}
+.flake{top:-6%;width:7px;height:7px;border-radius:50%;background:#fff;opacity:.9;box-shadow:0 0 4px rgba(255,255,255,.8);transform:scale(var(--s,1));animation:wxsnow 8s linear infinite}
+.flash{inset:0;background:rgba(255,255,255,.0);animation:wxflash 7s infinite}
+.fog{left:-50%;width:200%;height:28%;border-radius:50%;background:linear-gradient(90deg,transparent,rgba(148,163,184,.45),transparent);filter:blur(10px);animation:wxfog 18s ease-in-out infinite alternate}
+.fog.f1{top:20%}.fog.f2{top:48%;animation-duration:24s;animation-delay:-6s}.fog.f3{top:72%;animation-duration:30s;animation-delay:-12s}
+@keyframes wxspin{to{transform:rotate(360deg)}}
+@keyframes wxpulse{50%{transform:scale(1.08);opacity:.85}}
+@keyframes wxtwinkle{50%{opacity:.95}}
+@keyframes wxdrift{from{transform:translateX(0) scale(var(--s,1))}to{transform:translateX(160cqw) scale(var(--s,1))}}
+@keyframes wxfall{to{transform:translate(-22px,120cqh) rotate(12deg)}}
+@keyframes wxsnow{0%{transform:translate(0,0) scale(var(--s,1))}50%{transform:translate(14px,55cqh) scale(var(--s,1))}100%{transform:translate(-6px,112cqh) scale(var(--s,1))}}
+@keyframes wxflash{0%,91%,95%,100%{background:rgba(255,255,255,0)}92%,94%{background:rgba(255,255,255,.55)}}
+@keyframes wxfog{to{transform:translateX(25%)}}
+@media (prefers-reduced-motion:reduce){.wxscene i{animation:none!important}}

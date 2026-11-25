@@ -77,6 +77,7 @@ const TEXT = {
   85: 'Snebyger', 86: 'Kraftige snebyger', 95: 'Torden', 96: 'Torden med hagl', 99: 'Torden med hagl'
 };
 export const codeText = (c) => TEXT[c] || '–';
+export const kindOf = (c, isDay) => kind(c, isDay);
 
 function kind(c, isDay) {
   if (c <= 1) return isDay ? 'sun' : 'moon';

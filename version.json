@@ -1,5 +1,5 @@
 {
-  "version": "1.71.4",
+  "version": "1.72.0",
   "files": [
     "index.html",
     "app.js",
@@ -25,6 +25,15 @@
     "el.js"
   ],
   "notes": [
+    {
+      "version": "1.72.0",
+      "date": "25. november 2026",
+      "title": "Levende vejr",
+      "items": [
+        "Vejrkortet viser nu vejret lige nu som en stille animation: regn der falder, sol der skinner, skyer der driver, sne, tåge, torden og stjerner om natten",
+        "Skyerne driver hurtigere, når det blæser"
+      ]
+    },
     {
       "version": "1.71.4",
       "date": "25. november 2026",
