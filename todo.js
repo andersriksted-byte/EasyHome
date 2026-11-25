@@ -12,7 +12,7 @@ const dayDiff = (a, b) => Math.round((startOfDay(b) - startOfDay(a)) / 86400000)
 export const monday = (d) => { const x = startOfDay(d); x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); return x; };
 const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
 
-export const EVERY = [['day', 'Hver dag'], ['week', 'Hver uge'], ['2weeks', 'Hver 2. uge'], ['month', 'Hver måned']];
+export const EVERY = [['day', 'Hver dag'], ['week', 'Hver uge'], ['2weeks', 'Hver 2. uge'], ['3weeks', 'Hver 3. uge'], ['month', 'Hver måned']];
 export const PRESETS = [
   { title: 'Gåtur med hunden', icon: '🐕', every: 'day', mode: 'fast' },
   { title: 'Køkkentjans', icon: '🍽️', every: 'day', mode: 'turnus' },
@@ -37,11 +37,12 @@ export function occurrence(c, d) {
     if (!daysOf(c).includes(d.getDay()) || d < start) return null;
     return { key: iso(d), due: d, from: d, n: countDays(c, start, d) };
   }
-  if (c.every === 'week' || c.every === '2weeks') {
+  const k = { week: 1, '2weeks': 2, '3weeks': 3 }[c.every];
+  if (k) {
     const w = Math.round(dayDiff(monday(start), monday(d)) / 7);
-    if (c.every === '2weeks' && ((w % 2) + 2) % 2) return null;
+    if (((w % k) + k) % k) return null; // hver 2. eller 3. uge: kun i de uger, hvor det er dens tur
     const from = monday(d); const due = addDays(from, ((c.day ?? 6) + 6) % 7);
-    return { key: iso(from), due, from, n: c.every === '2weeks' ? Math.floor(w / 2) : w };
+    return { key: iso(from), due, from, n: Math.floor(w / k) };
   }
   const n = (d.getFullYear() - start.getFullYear()) * 12 + d.getMonth() - start.getMonth();
   const from = new Date(d.getFullYear(), d.getMonth(), 1);

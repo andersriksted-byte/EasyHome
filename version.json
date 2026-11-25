@@ -1,5 +1,5 @@
 {
-  "version": "1.74.0",
+  "version": "1.74.1",
   "files": [
     "index.html",
     "app.js",
@@ -27,6 +27,14 @@
     "todo.js"
   ],
   "notes": [
+    {
+      "version": "1.74.1",
+      "date": "25. november 2026",
+      "title": "Hver 3. uge",
+      "items": [
+        "To do: faste pligter kan nu også gentages hver 3. uge."
+      ]
+    },
     {
       "version": "1.74.0",
       "date": "25. november 2026",
