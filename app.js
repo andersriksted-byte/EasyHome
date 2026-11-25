@@ -555,17 +555,20 @@ function elWait(title) {
   if (!EL.state.prices.length) return cardHead(title) + '<div class="empty">Henter elpriser …</div>';
   return '';
 }
+const LVL_TXT = { lo: 'Billig', mid: 'Middel', hi: 'Dyr' };
 function wElpris(size, h = 1, wd = 1) {
   const w = elWait('Elpris'); if (w) return w;
-  const p = EL.now(); const today = EL.hours(new Date()); const tom = EL.hours(addDays(new Date(), 1));
-  const cw = EL.cheapest(3);
+  const p = EL.now(); const nx = EL.nextHour(); const today = EL.hours(new Date()); const tom = EL.hours(addDays(new Date(), 1));
   const lvl = p !== null ? priceLevel(p, today) : 'mid';
+  const lo = today.length ? today.reduce((a, b) => (b.price < a.price ? b : a)) : null; const hi = today.length ? today.reduce((a, b) => (b.price > a.price ? b : a)) : null;
   const head = cardHead('Elpris', `<span class="small muted">${EL.hasTariffs() ? 'inkl. alt' : 'spot + moms'} · ${EL.area()}</span>`);
-  const big = `<div class="elnow ${lvl}"><b>${kr(p)}</b><span>kr/kWh nu</span></div>`;
-  const cheap = cw ? `<div class="elcheap">Billigst: <b>kl. ${pad(cw.from.getHours())}–${pad(cw.to.getHours())}</b> ${sameDay(cw.from, new Date()) ? '' : 'i morgen '}(${kr(cw.avg)} kr)</div>` : '';
-  if (wd === 1 && h === 1) return head + big + cheap;
+  const trend = nx !== null && p !== null ? (nx > p + 0.05 ? '↗ stiger' : nx < p - 0.05 ? '↘ falder' : '→ uændret') : '';
+  const big = `<div class="elnow ${lvl}"><span class="ellvl">${LVL_TXT[lvl]} lige nu</span><b>${kr(p)}</b><span>kr/kWh${trend ? ` · ${trend} kl. ${pad((new Date().getHours() + 1) % 24)}` : ''}</span></div>`;
+  const mm = lo && hi ? `<div class="elmm"><div><span class="dot lo"></span>Lavest <b>${kr(lo.price)}</b> kl. ${pad(lo.t.getHours())}</div><div><span class="dot hi"></span>Højest <b>${kr(hi.price)}</b> kl. ${pad(hi.t.getHours())}</div></div>` : '';
+  if (wd === 1 && h === 1) return head + big;
+  if (wd === 1) return head + `<div class="elv">${big}${mm}${priceBars(today, { labels: true, every: 6 })}</div>`;
   const hs = wd >= 3 && tom.length ? today.concat(tom) : today;
-  return head + `<div class="elw"><div class="elleft">${big}${cheap}</div>${priceBars(hs, { labels: true, every: hs.length > 24 ? 6 : 3 })}</div>`;
+  return head + `<div class="elw"><div class="elleft">${big}${mm}</div>${priceBars(hs, { labels: true, every: hs.length > 24 ? 6 : 3 })}</div>`;
 }
 // Billig strøm: hvornår det er billigst at vaske tøj m.m. – om dagen (7–22) og om natten (22–7), i dag, i nat, i morgen og typisk i ugen
 function wVasketid(size, h = 1, wd = 1, x = null) {
@@ -576,7 +579,9 @@ function wVasketid(size, h = 1, wd = 1, x = null) {
   const tTom = addDays(today0, 1), tEnd = addDays(today0, 2);
   const cur = EL.now(); const tt = (b) => `kl. ${pad(b.from.getHours())}–${pad(b.to.getHours())}`;
   const kwh = n * 0.5; // en vask bruger typisk ca. 1 kWh på 2 timer
-  const save = (b) => (cur !== null && b && cur > b.avg ? `<small>Spar ${kr((cur - b.avg) * kwh)} kr pr. vask</small>` : b && cur !== null ? '<small>Billigst lige nu</small>' : '');
+  // "Start nu" kun når det billigste tidsrum er nu; ellers hvor længe til, og hvad man sparer i forhold til at starte nu
+  const until = (t) => { const m = Math.round((t - now) / 60000); return m < 60 ? `om ${m} min` : `om ${Math.floor(m / 60)} t${m % 60 ? ' ' + (m % 60) + ' min' : ''}`; };
+  const save = (b) => { if (!b) return ''; if (b.from <= now) return '<small class="vt-go">▶ Start nu</small>'; return `<small>${until(b.from)}${cur !== null && cur > b.avg ? ` · spar ${kr((cur - b.avg) * kwh)} kr` : ''}</small>`; };
   const slot = (lab, b, cls = '', mini = false, none = 'Ingen timer tilbage') => `<div class="vt-slot ${cls}"><span>${lab}</span>${b ? `<b>${tt(b)}</b>${mini ? '' : `<em>${kr(b.avg)} kr/kWh</em>${save(b)}`}` : `<b class="muted vt-none">${none}</b>`}</div>`;
   const wkLine = (lab, win) => { const wk = EL.weekPattern(n, win); const b = wk.length ? wk.reduce((a, c) => (c.avg < a.avg ? c : a)) : null; return b ? `<div><em>${lab}</em> <b>${esc(cap(DAYS[b.day]).slice(0, 3))} kl. ${pad(b.h)}–${pad((b.h + n) % 24)}</b></div>` : ''; };
   const head = (sub) => cardHead('Billig strøm', `<span class="small muted">${sub} · ${n} ${n === 1 ? 'time' : 'timer'}</span>`);
@@ -601,12 +606,14 @@ function wElforbrug(size, h = 1, wd = 1) {
   if (EL.state.usageError && !EL.state.usage.length) return head + `<div class="empty">${esc(EL.state.usageError)}</div>`;
   const ds = EL.days(30); if (!ds.length) return head + '<div class="empty">Henter forbrug …</div>';
   const last = ds[ds.length - 1]; const m = EL.monthSoFar();
+  const avg7 = ds.slice(-8, -1).reduce((s, d) => s + d.kwh, 0) / Math.max(1, ds.slice(-8, -1).length);
+  const vs = avg7 ? Math.round(((last.kwh - avg7) / avg7) * 100) : null;
   const dayLbl = sameDay(last.t, addDays(new Date(), -1)) ? 'I går' : `${cap(DAYS[last.t.getDay()])} ${last.t.getDate()}/${last.t.getMonth() + 1}`;
-  const stats = `<div class="elstats"><div><span>${esc(dayLbl)}</span><b>${kr(last.kwh, 1)} kWh</b>${last.cost !== null ? `<small>${kr(last.cost)} kr</small>` : ''}</div><div><span>${esc(MONTHS[new Date().getMonth()])} indtil nu</span><b>${kr(m.kwh, 0)} kWh</b>${m.cost !== null ? `<small>${kr(m.cost, 0)} kr</small>` : ''}</div></div>`;
+  const stats = `<div class="elstats"><div><span>${esc(dayLbl)}</span><b>${kr(last.kwh, 1)} <i>kWh</i></b><small>${last.cost !== null ? kr(last.cost) + ' kr' : ''}${vs !== null ? ` · <em class="${vs > 0 ? 'up' : 'down'}">${vs > 0 ? '+' : ''}${vs} %</em> mod ugen før` : ''}</small></div><div><span>${esc(cap(MONTHS[new Date().getMonth()]))} indtil nu</span><b>${kr(m.kwh, 0)} <i>kWh</i></b>${m.cost !== null ? `<small>${kr(m.cost, 0)} kr</small>` : ''}</div></div>`;
   if (wd === 1 && h === 1) return head + stats;
-  const shown = ds.slice(-(wd >= 3 ? 14 : 7)); const max = Math.max(...shown.map((d) => d.kwh)) * 1.1 || 1;
-  const bars = `<div class="eldays">${shown.map((d) => `<div class="elday" title="${d.t.getDate()}/${d.t.getMonth() + 1}: ${kr(d.kwh, 1)} kWh"><i style="height:${Math.max(3, (d.kwh / max) * 100)}%"></i><span>${cap(DAYS[d.t.getDay()]).slice(0, 2)}</span></div>`).join('')}</div>`;
-  return head + `<div class="elw">${stats}${bars}</div>`;
+  const shown = ds.slice(-(wd >= 3 ? 14 : 7)); const max = Math.max(...shown.map((d) => d.kwh)) * 1.15 || 1;
+  const bars = `<div class="eldays val">${shown.map((d, i) => `<div class="elday${i === shown.length - 1 ? ' last' : ''}" title="${d.t.getDate()}/${d.t.getMonth() + 1}: ${kr(d.kwh, 1)} kWh"><i style="height:${Math.max(3, (d.kwh / max) * 100)}%"><b>${kr(d.kwh, 0)}</b></i><span>${cap(DAYS[d.t.getDay()]).slice(0, 2)} ${d.t.getDate()}</span></div>`).join('')}</div>`;
+  return head + `<div class="${wd === 1 ? 'elv' : 'elw'}">${stats}${bars}</div>`;
 }
 function pageStroem() {
   const w = elWait('Strøm'); if (w) return `<div class="ptitle"><h1>Strøm</h1></div><section class="card">${w}</section>`;

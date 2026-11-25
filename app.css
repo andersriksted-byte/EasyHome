@@ -1372,3 +1372,23 @@ button.w7r.sel{background:color-mix(in srgb,var(--accent) 16%,transparent);box-s
 .elpage.fit .elp-bars .elbars{height:64px}
 .elp-ref{min-height:40px}
 .elnav b{min-width:120px}
+
+/* Lækrere strømkort */
+.elnow .ellvl{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.05em}
+.elnow.lo .ellvl{color:#16A34A}.elnow.mid .ellvl{color:#D97706}.elnow.hi .ellvl{color:#DC2626}
+.elnow b{font-size:clamp(34px,16cqmin,60px)}
+.elmm{display:flex;flex-direction:column;gap:3px;font-size:13px;font-weight:600;color:var(--muted)}
+.elmm>div{white-space:nowrap}.elmm b{color:var(--text);font-weight:800}
+.elmm .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:middle}.elmm .dot.lo{background:#16A34A}.elmm .dot.hi{background:#DC2626}
+.elleft{justify-content:space-between;gap:12px;min-width:150px}
+.elv{display:flex;flex-direction:column;gap:12px;flex:1;min-height:0}
+.elv .elbars,.elv .eldays{flex:1}
+.elstats b{font-size:26px}.elstats b i{font-style:normal;font-size:14px;color:var(--muted);font-weight:700}
+.elstats small em{font-style:normal}.elstats small em.up{color:#DC2626}.elstats small em.down{color:#16A34A}
+.eldays.val{padding-top:18px}
+.eldays.val .elday i{position:relative;border-radius:6px 6px 0 0;opacity:.75}
+.eldays.val .elday.last i{opacity:1}
+.eldays.val .elday i b{font-style:normal;position:absolute;bottom:100%;left:50%;transform:translateX(-50%);margin-bottom:3px;font-size:12px;font-weight:800;white-space:nowrap}
+.eldays.val .elday span{font-size:11px;white-space:nowrap}
+.vt-slot{justify-content:center}
+.vt-slot .vt-go{color:#16A34A;font-size:14px}

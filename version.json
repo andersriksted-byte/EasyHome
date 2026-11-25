@@ -1,5 +1,5 @@
 {
-  "version": "1.64.3",
+  "version": "1.65.0",
   "files": [
     "index.html",
     "app.js",
@@ -25,6 +25,16 @@
     "el.js"
   ],
   "notes": [
+    {
+      "version": "1.65.0",
+      "date": "25. november 2026",
+      "title": "Pænere strømkort",
+      "items": [
+        "Elpris viser nu, om prisen er billig, middel eller dyr, om den stiger eller falder, og dagens laveste og højeste pris",
+        "Elforbrug viser kWh på søjlerne og sammenligner med ugen før",
+        "Billig strøm viser, hvor længe der er til – og \"Start nu\", når det billigste tidsrum er nu"
+      ]
+    },
     {
       "version": "1.64.3",
       "date": "25. november 2026",

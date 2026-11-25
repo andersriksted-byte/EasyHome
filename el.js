@@ -114,10 +114,13 @@ export function hours(day) {
   state.prices.filter((p) => p.t >= a && p.t < b).forEach((p) => { const h = new Date(p.t); h.setMinutes(0, 0, 0); const k = +h; if (!by.has(k)) by.set(k, []); by.get(k).push(total(p)); });
   return [...by].sort((x, y) => x[0] - y[0]).map(([k, v]) => ({ t: new Date(k), price: v.reduce((s, x) => s + x, 0) / v.length }));
 }
+// Prisen nu = timens pris, beregnet på samme måde som søjlerne (så tallene altid passer sammen)
 export function now() {
-  const t = Date.now(); const p = state.prices.filter((x) => x.t <= t).pop();
-  return p ? total(p) : null;
+  const h0 = new Date(); h0.setMinutes(0, 0, 0);
+  const h = hours(new Date()).find((x) => +x.t === +h0);
+  return h ? h.price : null;
 }
+export function nextHour() { const h1 = new Date(); h1.setMinutes(0, 0, 0); h1.setHours(h1.getHours() + 1); const h = hours(h1).find((x) => +x.t === +h1); return h ? h.price : null; }
 // Billigste sammenhængende vindue på n timer fra nu og frem
 export function cheapest(n = 3) {
   const t0 = new Date(); t0.setMinutes(0, 0, 0);
