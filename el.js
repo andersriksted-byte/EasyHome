@@ -188,7 +188,8 @@ export const hourly = (day) => state.usage.filter((u) => +day0(u.t) === +day0(da
 // Tidsrum som [fra, til]; nat (fx 22–7) går hen over midnat
 const inWin = (h, w) => (w[0] % 24 === w[1] % 24 ? true : w[0] <= w[1] ? h >= w[0] && h < w[1] : h >= w[0] || h < w[1]);
 // Billigste vindue på n timer mellem to tidspunkter (kun hele timer, der ikke er gået)
-export function cheapestBetween(a, b, n = 2, win = [0, 24]) {
+export function priciestBetween(a, b, n = 2, win = [0, 24]) { return cheapestBetween(a, b, n, win, true); }
+export function cheapestBetween(a, b, n = 2, win = [0, 24], worst = false) {
   const t0 = new Date(); t0.setMinutes(0, 0, 0);
   let hs = []; for (let d = day0(a); d < b; d = addD(d, 1)) hs = hs.concat(hours(d));
   // Kun timer i det valgte tidsrum (fx dagtimer 7–22), så vasken både starter og slutter i tidsrummet
@@ -197,7 +198,7 @@ export function cheapestBetween(a, b, n = 2, win = [0, 24]) {
   for (let i = 0; i + n <= hs.length; i++) {
     if (+hs[i + n - 1].t - +hs[i].t !== (n - 1) * 3600000) continue; // skal være sammenhængende
     const avg = hs.slice(i, i + n).reduce((s, h) => s + h.price, 0) / n;
-    if (!best || avg < best.avg) best = { from: hs[i].t, to: new Date(+hs[i + n - 1].t + 3600000), avg };
+    if (!best || (worst ? avg > best.avg : avg < best.avg)) best = { from: hs[i].t, to: new Date(+hs[i + n - 1].t + 3600000), avg };
   }
   return best;
 }

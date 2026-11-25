@@ -1,5 +1,5 @@
 {
-  "version": "1.67.1",
+  "version": "1.67.2",
   "files": [
     "index.html",
     "app.js",
@@ -25,6 +25,14 @@
     "el.js"
   ],
   "notes": [
+    {
+      "version": "1.67.2",
+      "date": "25. november 2026",
+      "title": "Besparelse mod dyreste tid",
+      "items": [
+        "Billig strøm viser nu, hvad I sparer pr. gang ved at vælge den billige tid frem for den dyreste"
+      ]
+    },
     {
       "version": "1.67.1",
       "date": "25. november 2026",

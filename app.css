@@ -1440,3 +1440,5 @@ button.w7r.sel{background:color-mix(in srgb,var(--accent) 16%,transparent);box-s
 .vt-ticks .vt-star{color:#16A34A;font-weight:800;white-space:nowrap;top:14px}
 .vt-ticks{height:28px}
 .vt2{gap:6px}.vt-app{padding:7px 10px}.vt-ico{width:40px;height:40px;font-size:22px}.vt-txt b{font-size:20px}
+.vt-save{font-style:normal;font-size:12px;font-weight:800;color:#16A34A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vt-txt span{text-transform:none;font-size:12px}
