@@ -1,5 +1,5 @@
 {
-  "version": "1.63.6",
+  "version": "1.63.7",
   "files": [
     "index.html",
     "app.js",
@@ -25,6 +25,14 @@
     "el.js"
   ],
   "notes": [
+    {
+      "version": "1.63.7",
+      "date": "25. november 2026",
+      "title": "Vælg år at sammenligne med",
+      "items": [
+        "Vælg selv, hvilke år elforbruget sammenlignes med – tryk på årstallene på Strøm-siden"
+      ]
+    },
     {
       "version": "1.63.6",
       "date": "25. november 2026",

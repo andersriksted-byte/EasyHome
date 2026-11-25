@@ -655,9 +655,12 @@ function elExplorer() {
   const ys = EL.years(); const ref = ui.elRef ? new Date(ui.elRef) : now;
   const views = [['time', 'Time'], ['dag', 'Dag'], ['maaned', 'Måned'], ['kvartal', 'Kvartal'], ['aar', 'År'], ['akk', 'Akkumuleret']];
   const seg = `<div class="seg">${views.map(([id, l]) => `<button data-act="elView" data-v="${id}" aria-pressed="${v === id}">${l}</button>`).join('')}</div>`;
-  const cmpBtn = v === 'time' || v === 'aar' || v === 'akk' ? '' : `<button class="pill" data-act="elCmp" aria-pressed="${cmp}">${cmp ? '✓' : '+'} Sammenlign med tidligere år</button>`;
+  // Vælg selv, hvilke år der sammenlignes med (tryk på årstallene)
+  const refY = v === 'time' ? now.getFullYear() : ref.getFullYear(); const picked = ui.elYears || [];
+  const cmpYears = ys.filter((y) => y !== refY);
+  const cmpBtn = v === 'time' || v === 'aar' || !cmpYears.length ? '' : `<div class="elyrs"><span class="small muted">Sammenlign med</span>${cmpYears.map((y) => `<button class="pill" data-act="elYear" data-y="${y}" aria-pressed="${(v === 'akk' ? picked.length ? picked.includes(y) : y >= refY - 3 : picked.includes(y))}">${y}</button>`).join('')}</div>`;
   const nav = (label) => `<div class="elnav"><button class="arr" data-act="elNav" data-dir="-1" aria-label="Forrige">‹</button><b>${esc(label)}</b><button class="arr" data-act="elNav" data-dir="1" aria-label="Næste">›</button></div>`;
-  const prevYears = (y) => (cmp ? ys.filter((x) => x < y).slice(-3) : []);
+  const prevYears = (y) => picked.filter((x) => x !== y && ys.includes(x)).sort((a, b) => a - b);
   const legend = (list) => (list.length > 1 ? `<div class="st-legend">${list.map((x) => `<span style="--nc:${x.color}"><i></i>${esc(x.name)}</span>`).join('')}</div>` : '');
   const tot = (val, label) => `<div class="eltot"><span>${esc(label)}</span><b>${val === null ? '–' : kr(val, val < 100 ? 1 : 0)} kWh</b></div>`;
   const diff = (a, b, y) => (a !== null && b ? `<div class="eltot"><span>Mod ${y}</span><b class="${a > b ? 'up' : 'down'}">${a > b ? '+' : ''}${Math.round(((a - b) / b) * 100)} %</b></div>` : '');
@@ -688,7 +691,7 @@ function elExplorer() {
     const ser = [{ name: 'Hele året', color: YEAR_COL[0], values: ys.map((y) => EL.yearKwh(y)) }, { name: 'Til samme dato', color: YEAR_COL[1], faded: true, values: ys.map((y) => EL.ytd(y)) }];
     body = groupBars(ys.map(String), ser) + legend(ser) + `<div class="eltots">${ys.slice(-2).length === 2 ? diff(EL.ytd(ys[ys.length - 1]), EL.ytd(ys[ys.length - 2]), ys[ys.length - 2] + ' (samme dato)') : ''}</div>`;
   } else {
-    const y = now.getFullYear(); const list = [y].concat(ys.filter((x) => x < y).slice(-3).reverse()); // akkumuleret viser altid de seneste år til sammenligning
+    const y = now.getFullYear(); const list = [y].concat(picked.length ? prevYears(y).reverse() : ys.filter((x) => x < y).slice(-3).reverse()); // uden valg: de seneste 3 år
     const ser = list.map((yy, i) => ({ name: String(yy), color: YEAR_COL[i], faded: i > 0, points: EL.cumulative(yy).map((p) => ({ x: p.doy, y: p.kwh })) })).filter((x) => x.points.length);
     const ticks = MONTHS.map((mm, i) => ({ x: Math.floor((new Date(y, i, 1) - new Date(y, 0, 1)) / 86400000) + 14, label: cap(mm).slice(0, 3) }));
     body = lineChart(ser, 366, ticks) + legend(ser) + `<div class="eltots">${tot(EL.ytd(y), 'I år indtil nu')}${ser.slice(1).map((x) => diff(EL.ytd(y), EL.ytd(+x.name), x.name + ' (samme dato)')).join('')}</div>`;
@@ -1746,7 +1749,7 @@ const act = {
   fbLeague: (b) => { const fb = settings.football = settings.football || { leagues: [], teams: [] }; fb.leagues = fb.leagues || []; const id = b.dataset.id; fb.leagues = fb.leagues.includes(id) ? fb.leagues.filter((x) => x !== id) : fb.leagues.concat(id); if (!fb.leagues.includes(id)) { fb.teams = (fb.teams || []).filter((t) => t.lg !== id); fb.follow = (fb.follow || []).filter((x) => x !== id); } save(); renderMain(); loadFootball(true); },
   elRefresh: () => { loadEl(true); toast('Henter strøm-data …'); },
   elView: (b) => { ui.elView = b.dataset.v; ui.elRef = null; renderMain(); },
-  elCmp: () => { ui.elCmp = !ui.elCmp; renderMain(); },
+  elYear: (b) => { const y = +b.dataset.y; let p = ui.elYears || []; if (!p.length && ui.elView === 'akk') { const cy = new Date().getFullYear(); p = EL.years().filter((x) => x < cy).slice(-3); } ui.elYears = p.includes(y) ? p.filter((x) => x !== y) : p.concat(y); renderMain(); },
   elNav: (b) => { const d = ui.elRef ? new Date(ui.elRef) : new Date(); const dir = +b.dataset.dir; const v = ui.elView || 'maaned';
     if (v === 'time') d.setDate(d.getDate() + dir); else if (v === 'dag') { d.setDate(1); d.setMonth(d.getMonth() + dir); } else d.setFullYear(d.getFullYear() + dir);
     if (d > new Date()) return; ui.elRef = +d; renderMain(); },

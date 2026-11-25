@@ -1324,3 +1324,6 @@ button.w7r.sel{background:color-mix(in srgb,var(--accent) 16%,transparent);box-s
 .vt-none{font-size:15px!important}
 .vt-week>div{font-size:14px;line-height:1.5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.vt-week em{font-style:normal;color:var(--muted);font-weight:700}
 .vt-week>div b{font-size:15px}
+
+.elyrs{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.elyrs .pill{min-height:36px;padding:4px 14px}
