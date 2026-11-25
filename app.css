@@ -1436,3 +1436,7 @@ button.w7r.sel{background:color-mix(in srgb,var(--accent) 16%,transparent);box-s
 .elapp.off{opacity:.55}
 .elapp-on{display:flex;align-items:center;gap:10px;min-width:200px;cursor:pointer}
 .elapp-on .vt-ico{width:36px;height:36px;font-size:20px;border-radius:10px}
+
+.vt-ticks .vt-star{color:#16A34A;font-weight:800;white-space:nowrap;top:14px}
+.vt-ticks{height:28px}
+.vt2{gap:6px}.vt-app{padding:7px 10px}.vt-ico{width:40px;height:40px;font-size:22px}.vt-txt b{font-size:20px}
