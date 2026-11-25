@@ -13,6 +13,7 @@ import * as A from './login.js';
 import * as MD from './madro.js';
 import * as MC from './mcats.js';
 import * as FB from './football.js';
+import * as EL from './el.js';
 import * as SF from './somfy.js';
 import * as TM from './timer.js';
 import { onAuthLost } from './util.js';
@@ -52,6 +53,7 @@ const themeLabel = (id) => (id === 'auto' ? 'Automatisk' : THEMES[id].label);
 /* ---------- Ikoner ---------- */
 const ICON = {
   sunon: 'M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10zM12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4', sunoff: 'M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z',
+  stroem: 'M13 2 4 14h7l-1 8 9-12h-7l1-8z', bolt: 'M13 2 4 14h7l-1 8 9-12h-7l1-8z',
   ball: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 7.5l3.8 2.8-1.5 4.4H9.7l-1.5-4.4L12 7.5zM12 3v4.5M15.8 10.3l4.3-1.4M14.3 14.7l2.7 3.7M9.7 14.7 7 18.4M8.2 10.3 3.9 8.9',
   timer: 'M12 8v5l3 2M9 2h6M12 22a8 8 0 1 0 0-16 8 8 0 0 0 0 16z', pause: 'M7 5h4v14H7zM13 5h4v14h-4z',
   blinds: 'M4 4h16M5 4v9M19 4v9M5 13h14M7 7h10M7 10h10M12 13v4M10 19a2 2 0 1 0 4 0 2 2 0 0 0-4 0',
@@ -77,7 +79,7 @@ const GRIP = '<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24"
 
 const PAGES = [
   { id: 'forside', label: 'Forside' }, { id: 'kalender', label: 'Kalender' }, { id: 'madro', label: 'Madro' }, { id: 'vejr', label: 'Vejret' },
-  { id: 'nyheder', label: 'Nyheder' }, { id: 'musik', label: 'Musik' }, { id: 'somfy', label: 'Screens' }, { id: 'tv', label: 'DR TV' }
+  { id: 'nyheder', label: 'Nyheder' }, { id: 'musik', label: 'Musik' }, { id: 'somfy', label: 'Screens' }, { id: 'stroem', label: 'Strøm' }, { id: 'tv', label: 'DR TV' }
 ];
 // Tjenester ("app store"): hver tjeneste kan slås til og fra under Indstillinger → Tjenester.
 // Slås en tjeneste fra, skjules dens side, kort, faner og felter. Kortene på forsiden huskes til den slås til igen.
@@ -90,6 +92,7 @@ const SERVICES = [
   { id: 'musik', name: 'Musik (Sonos)', icon: 'musik', desc: 'Styr Sonos: afspil, rum og lydstyrke.', pages: ['musik'], widgets: ['sonos'], tabs: [] },
   { id: 'tv', name: 'DR TV', icon: 'tv', desc: 'Genveje til DR\'s kanaler.', pages: ['tv'], widgets: ['tv'], tabs: ['tv'] },
   { id: 'timer', name: 'Timer nedtælling', icon: 'timer', desc: 'Køkkentimer med alarm – fx til madlavning.', pages: [], widgets: ['timer'], tabs: [] },
+  { id: 'el', name: 'Strøm', icon: 'bolt', desc: 'Elpriser time for time og jeres elforbrug.', pages: ['stroem'], widgets: ['elpris', 'elforbrug'], tabs: ['el'] },
   { id: 'fodbold', name: 'Fodbold', icon: 'ball', desc: 'Kampe, resultater og stillinger.', pages: [], widgets: ['fodbold', 'stilling'], tabs: ['fodbold'] },
   { id: 'nedtaelling', name: 'Nedtællinger', icon: 'cd', desc: 'Dage til juleaften, ferie og fødselsdage.', pages: [], widgets: ['nedtaelling'], tabs: [] }
 ];
@@ -97,10 +100,10 @@ const svcOn = (id) => !settings.services || settings.services[id] !== false;
 const pageOn = (p) => SERVICES.every((x) => !x.pages.includes(p) || svcOn(x.id));
 const widgetOn = (w) => SERVICES.every((x) => !x.widgets.includes(w) || svcOn(x.id));
 const tabOn = (t) => (t === 'musik' ? svcOn('musik') : t === 'somfy' ? svcOn('somfy') : t === 'kalender' ? svcOn('kalender') || svcOn('nedtaelling') : SERVICES.every((x) => !x.tabs.includes(t) || svcOn(x.id)));
-const WIDGETS = { fodbold: 'Fodbold', stilling: 'Fodbold-stilling', naeste: 'Næste i kalenderen', dagensret: 'Dagens ret', nyhed1: 'Én nyhed ad gangen', timer: 'Timer nedtælling', screens: 'Screens (Somfy)', madplan: 'Madplan', indkob: 'Indkøbsliste', inspiration: 'Opskrift-inspiration', uge: 'Familiens uge', vejr: 'Vejret', steder: 'Vejret andre steder', nyheder: 'Nyheder', sonos: 'Musik (Sonos)', tv: 'DR TV', nedtaelling: 'Nedtælling' };
+const WIDGETS = { elpris: 'Elpris', elforbrug: 'Elforbrug', fodbold: 'Fodbold', stilling: 'Fodbold-stilling', naeste: 'Næste i kalenderen', dagensret: 'Dagens ret', nyhed1: 'Én nyhed ad gangen', timer: 'Timer nedtælling', screens: 'Screens (Somfy)', madplan: 'Madplan', indkob: 'Indkøbsliste', inspiration: 'Opskrift-inspiration', uge: 'Familiens uge', vejr: 'Vejret', steder: 'Vejret andre steder', nyheder: 'Nyheder', sonos: 'Musik (Sonos)', tv: 'DR TV', nedtaelling: 'Nedtælling' };
 // Forsiden er et gitter af ens kvadrater. Et kort fylder w kvadrater i bredden og h i højden.
 const SHAPES = [[1, 1], [2, 1], [3, 1], [4, 1], [1, 2], [1, 3], [1, 4], [2, 2]];
-const DEFAULT_SHAPE = { stilling: [1, 2], fodbold: [2, 1], naeste: [1, 1], dagensret: [2, 1], nyhed1: [2, 1], timer: [1, 1], screens: [2, 1], madplan: [4, 1], indkob: [2, 1], inspiration: [2, 1], uge: [4, 1], vejr: [2, 1], steder: [2, 1], nyheder: [2, 1], sonos: [1, 1], tv: [1, 1], nedtaelling: [1, 1] };
+const DEFAULT_SHAPE = { elpris: [2, 1], elforbrug: [2, 1], stilling: [1, 2], fodbold: [2, 1], naeste: [1, 1], dagensret: [2, 1], nyhed1: [2, 1], timer: [1, 1], screens: [2, 1], madplan: [4, 1], indkob: [2, 1], inspiration: [2, 1], uge: [4, 1], vejr: [2, 1], steder: [2, 1], nyheder: [2, 1], sonos: [1, 1], tv: [1, 1], nedtaelling: [1, 1] };
 const LEGACY = { S: [1, 1], M: [2, 1], L: [4, 1] };
 const shapeOf = (x) => (x.w && x.h ? [x.w, x.h] : LEGACY[x.size] || [1, 1]);
 const FIT = ['uge']; // kort der aldrig må skære indhold af – de bliver kompakte og vokser i højden ved behov
@@ -531,6 +534,89 @@ function wFodbold(size, h = 1, wd = 1) {
   const blocks = keys.map((k) => `<div class="fb-grp"><div class="fb-sub">${esc(k)}</div>${groups.get(k).map(row).join('')}</div>`);
   return head + `<div class="fb-days">${blocks.join('')}</div>`;
 }
+// ---------- Strøm ----------
+const kr = (v, d = 2) => (v === null || v === undefined ? '–' : v.toFixed(d).replace('.', ','));
+// Farve efter pris i forhold til dagens niveau: grøn = billig, gul = mellem, rød = dyr
+function priceLevel(v, list) {
+  const s = list.map((x) => x.price).sort((a, b) => a - b); if (!s.length) return 'mid';
+  const lo = s[Math.floor(s.length / 3)], hi = s[Math.floor((s.length * 2) / 3)];
+  return v <= lo ? 'lo' : v >= hi ? 'hi' : 'mid';
+}
+function priceBars(hs, opts = {}) {
+  if (!hs.length) return '';
+  const max = Math.max(...hs.map((h) => h.price)) * 1.05; const min = Math.min(0, ...hs.map((h) => h.price));
+  const nowH = new Date(); nowH.setMinutes(0, 0, 0);
+  return `<div class="elbars${opts.big ? ' big' : ''}">${hs.map((h) => { const pct = Math.max(3, ((h.price - min) / (max - min || 1)) * 100); const cur = +h.t === +nowH;
+    return `<div class="elbar ${priceLevel(h.price, hs)}${cur ? ' now' : ''}${h.t < nowH ? ' past' : ''}" title="kl. ${pad(h.t.getHours())}: ${kr(h.price)} kr"><i style="height:${pct}%"></i>${opts.labels && h.t.getHours() % (opts.every || 3) === 0 ? `<span>${pad(h.t.getHours())}</span>` : ''}</div>`; }).join('')}</div>`;
+}
+function elWait(title) {
+  if (!hasProxy()) return cardHead(title) + '<div class="empty">Kræver forbindelsen til jeres server.</div>';
+  if (EL.state.error && !EL.state.prices.length) return cardHead(title) + `<div class="empty">${esc(EL.state.error)}</div>`;
+  if (!EL.state.prices.length) return cardHead(title) + '<div class="empty">Henter elpriser …</div>';
+  return '';
+}
+function wElpris(size, h = 1, wd = 1) {
+  const w = elWait('Elpris'); if (w) return w;
+  const p = EL.now(); const today = EL.hours(new Date()); const tom = EL.hours(addDays(new Date(), 1));
+  const cw = EL.cheapest(3);
+  const lvl = p !== null ? priceLevel(p, today) : 'mid';
+  const head = cardHead('Elpris', `<span class="small muted">${EL.hasTariffs() ? 'inkl. alt' : 'spot + moms'} · ${EL.area()}</span>`);
+  const big = `<div class="elnow ${lvl}"><b>${kr(p)}</b><span>kr/kWh nu</span></div>`;
+  const cheap = cw ? `<div class="elcheap">Billigst: <b>kl. ${pad(cw.from.getHours())}–${pad(cw.to.getHours())}</b> ${sameDay(cw.from, new Date()) ? '' : 'i morgen '}(${kr(cw.avg)} kr)</div>` : '';
+  if (wd === 1 && h === 1) return head + big + cheap;
+  const hs = wd >= 3 && tom.length ? today.concat(tom) : today;
+  return head + `<div class="elw"><div class="elleft">${big}${cheap}</div>${priceBars(hs, { labels: true, every: hs.length > 24 ? 6 : 3 })}</div>`;
+}
+function wElforbrug(size, h = 1, wd = 1) {
+  const head = cardHead('Elforbrug');
+  if (!hasProxy()) return head + '<div class="empty">Kræver forbindelsen til jeres server.</div>';
+  if (EL.state.status && !EL.state.status.configured) return head + '<div class="empty">Forbind Eloverblik under Indstillinger → Strøm.</div>';
+  if (EL.state.usageError && !EL.state.usage.length) return head + `<div class="empty">${esc(EL.state.usageError)}</div>`;
+  const ds = EL.days(30); if (!ds.length) return head + '<div class="empty">Henter forbrug …</div>';
+  const last = ds[ds.length - 1]; const m = EL.monthSoFar();
+  const dayLbl = sameDay(last.t, addDays(new Date(), -1)) ? 'I går' : `${cap(DAYS[last.t.getDay()])} ${last.t.getDate()}/${last.t.getMonth() + 1}`;
+  const stats = `<div class="elstats"><div><span>${esc(dayLbl)}</span><b>${kr(last.kwh, 1)} kWh</b>${last.cost !== null ? `<small>${kr(last.cost)} kr</small>` : ''}</div><div><span>${esc(MONTHS[new Date().getMonth()])} indtil nu</span><b>${kr(m.kwh, 0)} kWh</b>${m.cost !== null ? `<small>${kr(m.cost, 0)} kr</small>` : ''}</div></div>`;
+  if (wd === 1 && h === 1) return head + stats;
+  const shown = ds.slice(-(wd >= 3 ? 14 : 7)); const max = Math.max(...shown.map((d) => d.kwh)) * 1.1 || 1;
+  const bars = `<div class="eldays">${shown.map((d) => `<div class="elday" title="${d.t.getDate()}/${d.t.getMonth() + 1}: ${kr(d.kwh, 1)} kWh"><i style="height:${Math.max(3, (d.kwh / max) * 100)}%"></i><span>${cap(DAYS[d.t.getDay()]).slice(0, 2)}</span></div>`).join('')}</div>`;
+  return head + `<div class="elw">${stats}${bars}</div>`;
+}
+function pageStroem() {
+  const w = elWait('Strøm'); if (w) return `<div class="ptitle"><h1>Strøm</h1></div><section class="card">${w}</section>`;
+  const today = EL.hours(new Date()); const tom = EL.hours(addDays(new Date(), 1)); const p = EL.now(); const cw = EL.cheapest(3);
+  const stat = (lab, v) => `<div class="elkpi"><span>${lab}</span><b>${v}</b></div>`;
+  const avg = (l) => (l.length ? l.reduce((s, x) => s + x.price, 0) / l.length : null);
+  const minH = today.length ? today.reduce((a, b) => (b.price < a.price ? b : a)) : null; const maxH = today.length ? today.reduce((a, b) => (b.price > a.price ? b : a)) : null;
+  const prices = `<section class="card wide"><div class="sechead2"><b>Elpris i dag</b><span class="small muted">${EL.hasTariffs() ? 'Inkl. nettarif, afgifter og moms' : 'Spotpris + moms – forbind Eloverblik for den fulde pris'} · ${EL.area() === 'DK1' ? 'Vestdanmark' : 'Østdanmark'}</span></div>
+    <div class="elkpis">${stat('Nu', kr(p) + ' kr')}${stat('Gennemsnit', kr(avg(today)) + ' kr')}${minH ? stat('Billigst', `kl. ${pad(minH.t.getHours())} · ${kr(minH.price)} kr`) : ''}${maxH ? stat('Dyrest', `kl. ${pad(maxH.t.getHours())} · ${kr(maxH.price)} kr`) : ''}${cw ? stat('Bedste 3 timer', `kl. ${pad(cw.from.getHours())}–${pad(cw.to.getHours())}`) : ''}</div>
+    ${priceBars(today, { big: true, labels: true, every: 2 })}
+    ${tom.length ? `<div class="sechead2" style="margin-top:14px"><b>I morgen</b><span class="small muted">Gennemsnit ${kr(avg(tom))} kr</span></div>${priceBars(tom, { big: true, labels: true, every: 2 })}` : '<div class="small muted" style="margin-top:10px">Morgendagens priser kommer ved 13-tiden.</div>'}</section>`;
+  let usage = '';
+  if (EL.state.status && !EL.state.status.configured) usage = `<section class="card wide"><b>Elforbrug</b><div class="empty">Forbind Eloverblik under Indstillinger → Strøm.</div></section>`;
+  else if (EL.state.usageError && !EL.state.usage.length) usage = `<section class="card wide"><b>Elforbrug</b><div class="err">${esc(EL.state.usageError)}</div></section>`;
+  else {
+    const ds = EL.days(30);
+    if (ds.length) {
+      const m = EL.monthSoFar(); const max = Math.max(...ds.map((d) => d.kwh)) * 1.1 || 1; const y = EL.yesterdayHours();
+      const hmax = Math.max(...y.hours.map((x) => x.kwh), 0.1) * 1.1;
+      usage = `<section class="card wide"><div class="sechead2"><b>Elforbrug</b><span class="small muted">Fra Eloverblik – kommer dagen efter</span></div>
+        <div class="elkpis">${stat('Seneste dag', kr(ds[ds.length - 1].kwh, 1) + ' kWh')}${ds[ds.length - 1].cost !== null ? stat('Pris seneste dag', kr(ds[ds.length - 1].cost) + ' kr') : ''}${stat(cap(MONTHS[new Date().getMonth()]) + ' indtil nu', kr(m.kwh, 0) + ' kWh')}${m.cost !== null ? stat('Pris indtil nu', kr(m.cost, 0) + ' kr') : ''}${stat('Snit pr. dag', kr(ds.reduce((s, d) => s + d.kwh, 0) / ds.length, 1) + ' kWh')}</div>
+        <div class="lab" style="margin:8px 0 4px">Sidste ${ds.length} dage</div>
+        <div class="eldays big">${ds.map((d) => `<div class="elday${d.t.getDay() === 0 || d.t.getDay() === 6 ? ' we' : ''}" title="${d.t.getDate()}/${d.t.getMonth() + 1}: ${kr(d.kwh, 1)} kWh${d.cost !== null ? ' · ' + kr(d.cost) + ' kr' : ''}"><i style="height:${Math.max(3, (d.kwh / max) * 100)}%"></i><span>${d.t.getDate()}</span></div>`).join('')}</div>
+        ${y.hours.length ? `<div class="lab" style="margin:14px 0 4px">Time for time · ${esc(cap(DAYS_LONG[y.day.getDay()]))} ${y.day.getDate()}. ${esc(MONTHS[y.day.getMonth()])}</div><div class="eldays big hrs">${y.hours.map((x) => `<div class="elday" title="kl. ${pad(x.t.getHours())}: ${kr(x.kwh, 2)} kWh"><i style="height:${Math.max(3, (x.kwh / hmax) * 100)}%"></i><span>${x.t.getHours() % 3 === 0 ? pad(x.t.getHours()) : ''}</span></div>`).join('')}</div>` : ''}</section>`;
+    } else usage = `<section class="card wide"><b>Elforbrug</b><div class="empty">Henter forbrug …</div></section>`;
+  }
+  return `<div class="ptitle"><h1>Strøm</h1><div class="tools"><button class="btn line" data-act="elRefresh" aria-label="Opdater">${svg('refresh', 18)}</button></div></div><div class="elpage">${prices}${usage}</div>`;
+}
+function elSettings() {
+  const e = settings.el || {}; const st = EL.state.status;
+  return `<section class="card"><b>Elpris</b>
+      <label class="inl">Prisområde<select data-set="el.area" aria-label="Prisområde"><option value="auto"${!e.area || e.area === 'auto' ? ' selected' : ''}>Automatisk (${EL.area() === 'DK1' ? 'Vest' : 'Øst'})</option><option value="DK1"${e.area === 'DK1' ? ' selected' : ''}>Vestdanmark (DK1)</option><option value="DK2"${e.area === 'DK2' ? ' selected' : ''}>Østdanmark (DK2)</option></select></label>
+      <label class="inl">Elselskabets tillæg (øre/kWh)<input type="number" step="0.1" min="0" data-set="el.markup" value="${esc(String(e.markup ?? ''))}" placeholder="0" aria-label="Elselskabets tillæg i øre pr. kWh" style="width:90px"></label></section>
+    <section class="card"><b>Eloverblik (forbrug og nettarif)</b>
+      <div class="small ${st && st.configured ? '' : 'muted'}">${!hasProxy() ? 'Kræver forbindelsen til jeres server.' : !st ? 'Tjekker …' : st.configured ? (EL.state.usageError ? 'Fejl: ' + esc(EL.state.usageError) : '✓ Forbundet' + (EL.hasTariffs() ? ' · nettarif hentet' : '')) : 'Ikke forbundet'}</div>
+      <details class="small"><summary>Sådan forbinder du</summary><ol style="margin:6px 0 0 18px;padding:0;display:flex;flex-direction:column;gap:4px"><li>Log ind på eloverblik.dk → Min profil → Datadeling → Opret token.</li><li>Cloudflare → Workers & Pages → easyhome → Settings → Variables and Secrets → Add: type <b>Secret</b>, navn <b>ELOVERBLIK_TOKEN</b>, værdi = token.</li><li>Tryk Deploy og vent et minut.</li></ol></details></section>`;
+}
 // Stilling: én liga ad gangen (den foretrukne først) – swipe eller pile skifter liga
 function stLeagues() {
   const fb = settings.football || {};
@@ -705,7 +791,7 @@ function wNed(size, h = 1, wd = 1) {
     <div class="cdw"><div class="cdn">${c.days < 0 ? '✓' : c.days}</div><div class="cdl">${label}</div><div class="cdd">${cap(DAYS_LONG[d.getDay()])} ${d.getDate()}. ${MONTHS[d.getMonth()]} ${d.getFullYear()}</div></div></div></div>`;
 }
 
-const WRENDER = { stilling: wStilling, fodbold: wFodbold, naeste: wNaeste, dagensret: wDagensRet, nyhed1: wNyhed1, timer: wTimer, screens: wScreens, madplan: wMadplan, indkob: wIndkob, inspiration: wInspiration, uge: wUge, vejr: wVejr, steder: wSteder, nyheder: wNyheder, sonos: wSonos, tv: wTv, nedtaelling: wNed };
+const WRENDER = { elpris: wElpris, elforbrug: wElforbrug, stilling: wStilling, fodbold: wFodbold, naeste: wNaeste, dagensret: wDagensRet, nyhed1: wNyhed1, timer: wTimer, screens: wScreens, madplan: wMadplan, indkob: wIndkob, inspiration: wInspiration, uge: wUge, vejr: wVejr, steder: wSteder, nyheder: wNyheder, sonos: wSonos, tv: wTv, nedtaelling: wNed };
 
 function pageForside() {
   const inLayout = (id) => curLayout().some((x) => x.id === id);
@@ -1167,7 +1253,7 @@ const SET_TABS = [
   { id: 'familie', label: 'Familie' },
   { id: 'tjenester', label: 'Tjenester' },
   { id: 'vejr', label: 'Vejret' }, { id: 'nyheder', label: 'Nyheder' }, { id: 'kalender', label: 'Kalender' }, 
-  { id: 'musik', label: 'Musik' }, { id: 'tv', label: 'DR TV' }, { id: 'somfy', label: 'Somfy' }, { id: 'fodbold', label: 'Fodbold' }, { id: 'udseende', label: 'Udseende' }, { id: 'forbindelse', label: 'Forbindelse' }
+  { id: 'musik', label: 'Musik' }, { id: 'tv', label: 'DR TV' }, { id: 'somfy', label: 'Somfy' }, { id: 'fodbold', label: 'Fodbold' }, { id: 'el', label: 'Strøm' }, { id: 'udseende', label: 'Udseende' }, { id: 'forbindelse', label: 'Forbindelse' }
 ];
 function pageIndstillinger() {
   const s = settings;
@@ -1181,6 +1267,7 @@ function pageIndstillinger() {
       <span class="appico">${svg(x.icon, 30)}</span><span class="appmain"><b>${esc(x.name)}</b><span>${esc(x.desc)}</span></span><span class="tgl" aria-hidden="true"><i></i></span></button>`; }).join('')}</div></section>`,
     vejr: () => vejrSettings(),
     fodbold: () => fodboldSettings(),
+    el: () => elSettings(),
     nyheder: () => `
     <section class="card wide"><div class="sechead2"><b>Nyhedskilder</b><label class="inl">Skift kilde i kortet<select data-set="news.rotateSecs" aria-label="Skift kilde i nyhedskortet">${[10, 15, 20, 30, 45, 60, 0].map((v) => `<option value="${v}" ${newsSecs() === v ? 'selected' : ''}>${v ? 'hvert ' + v + '. sek' : 'aldrig'}</option>`).join('')}</select></label></div>
       <div class="srcgrid">${Object.values(groups).flat().map((src) => `<label class="srcchip"><input type="checkbox" data-news="${esc(src.id)}" ${s.news.sources.includes(src.id) ? 'checked' : ''}><span class="srcname" title="${esc(src.name)}">${esc(src.name)}</span>${src.unverified ? '<span class="srcq" title="Afprøves">?</span>' : ''}${src.custom ? `<button class="srcx" data-act="customRm" data-id="${esc(src.id)}" aria-label="Fjern ${esc(src.name)}">×</button>` : ''}</label>`).join('')}</div>
@@ -1247,7 +1334,7 @@ function pageIndstillinger() {
   <div class="form" role="tabpanel">${T[tab]()}</div>`;
 }
 
-const PAGE_RENDER = { somfy: pageSomfy, madro: () => '', forside: pageForside, kalender: pageKalender, vejr: pageVejr, nyheder: pageNyheder, musik: pageMusik, tv: pageTv, indstillinger: pageIndstillinger };
+const PAGE_RENDER = { stroem: pageStroem, somfy: pageSomfy, madro: () => '', forside: pageForside, kalender: pageKalender, vejr: pageVejr, nyheder: pageNyheder, musik: pageMusik, tv: pageTv, indstillinger: pageIndstillinger };
 
 // Madro vises som hele appen i en ramme, der bliver liggende (så den ikke genindlæses ved hver opdatering)
 let madroSub = '';
@@ -1368,7 +1455,13 @@ async function loadSonos(full = false) {
 }
 function loadFootball(force = false) { if (!svcOn('fodbold') || !hasProxy()) return;
   if (curLayout().some((x) => x.id === 'stilling')) stLeagues().forEach((L) => FB.loadTable(L.id).then(() => { if (ui.page === 'forside') softRender(); })); FB.load(force).then(() => { if (ui.page === 'forside' && curLayout().some((x) => x.id === 'fodbold')) softRender(); }); }
-function loadAll() { loadFootball(); loadWeather(); loadNews(); loadCal(); loadSonos(true); if (svcOn('madro')) MD.start(); if (svcOn('somfy')) SF.refresh(); }
+function loadEl(force = false) {
+  if (!svcOn('el') || !hasProxy()) return;
+  const show = () => { if (ui.page === 'stroem' || (ui.page === 'forside' && curLayout().some((x) => x.id === 'elpris' || x.id === 'elforbrug'))) softRender(); };
+  EL.loadPrices(force).then(show).catch((e) => { EL.state.error = e.message; show(); });
+  EL.loadEloverblik(force).then(show);
+}
+function loadAll() { loadEl(); loadFootball(); loadWeather(); loadNews(); loadCal(); loadSonos(true); if (svcOn('madro')) MD.start(); if (svcOn('somfy')) SF.refresh(); }
 
 /* ---------- Handlinger ---------- */
 const act = {
@@ -1554,6 +1647,7 @@ const act = {
   calEdit: (b) => { ui.calEdit = ui.calEdit === b.dataset.id ? null : b.dataset.id; renderMain(); },
   calEv: (b) => { const e = calRefs[+b.dataset.i]; if (e) showEvent(e); },
   fbLeague: (b) => { const fb = settings.football = settings.football || { leagues: [], teams: [] }; fb.leagues = fb.leagues || []; const id = b.dataset.id; fb.leagues = fb.leagues.includes(id) ? fb.leagues.filter((x) => x !== id) : fb.leagues.concat(id); if (!fb.leagues.includes(id)) { fb.teams = (fb.teams || []).filter((t) => t.lg !== id); fb.follow = (fb.follow || []).filter((x) => x !== id); } save(); renderMain(); loadFootball(true); },
+  elRefresh: () => { loadEl(true); toast('Henter strøm-data …'); },
   fbFollow: (b) => { const fb = settings.football = settings.football || { leagues: [], teams: [] }; const f = fb.follow || []; const id = b.dataset.id; fb.follow = f.includes(id) ? f.filter((x) => x !== id) : f.concat(id); save(); renderMain(); loadFootball(true); },
   fbTeam: (b) => { const fb = settings.football = settings.football || { leagues: [], teams: [] }; fb.teams = fb.teams || []; const id = b.dataset.id; const lg = b.dataset.lg;
     if (fb.teams.some((t) => t.id === id && t.lg === lg)) fb.teams = fb.teams.filter((t) => !(t.id === id && t.lg === lg)); // samme klub kan følges i én turnering uden de andre
@@ -1604,6 +1698,7 @@ document.addEventListener('change', (e) => {
     setPath(t.dataset.set, v);
     if (t.dataset.set.startsWith('proxy.')) { S.state.checked = false; }
     if (t.dataset.set === 'weather.model') { D.wx = {}; loadWeather(); }
+    if (t.dataset.set.startsWith('el.')) { loadEl(true); renderMain(); }
     if (t.dataset.set === 'news.publicProxyForTest') { N.clearNewsCache(); loadNews(); }
     if (t.dataset.set.endsWith('Theme')) { applyTheme(); renderHeader(); }
   } else if (t.dataset.news) { toggleNews(t.dataset.news); }
@@ -1818,7 +1913,8 @@ function boot() {
   setInterval(() => { if (ui.stIdx && Date.now() - (ui.stTouched || 0) > 45000) { ui.stIdx = 0; softRender(); } }, 15000); // stilling: tilbage til den foretrukne liga
   setInterval(() => { if (ui.fbDay && Date.now() - (ui.fbTouched || 0) > 45000) { ui.fbDay = null; softRender(); } }, 15000); // i dag er altid standard: tilbage efter under et minut
   setInterval(loadNews, 5 * 60000);
-  setInterval(() => { if (!document.hidden) loadFootball(); }, 60000); // FB.load bestemmer selv: hvert minut under kampe, ellers hvert 10. minut
+  setInterval(() => { if (!document.hidden) loadFootball(); }, 60000);
+  setInterval(() => { if (!document.hidden) loadEl(); }, 5 * 60000); // priserne skifter hvert kvarter; nye priser for i morgen kommer ved 13-tiden // FB.load bestemmer selv: hvert minut under kampe, ellers hvert 10. minut
   setInterval(loadCal, 10 * 60000);
   setInterval(() => { if (S.state.connected && !document.hidden) loadSonos(); }, 8000);
   // Opdater dag-visninger ved midnat

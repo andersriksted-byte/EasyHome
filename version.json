@@ -1,5 +1,5 @@
 {
-  "version": "1.60.2",
+  "version": "1.61.0",
   "files": [
     "index.html",
     "app.js",
@@ -21,9 +21,20 @@
     "somfy.js",
     "timer.js",
     "mcats.js",
-    "football.js"
+    "football.js",
+    "el.js"
   ],
   "notes": [
+    {
+      "version": "1.61.0",
+      "date": "25. november 2026",
+      "title": "Strøm",
+      "items": [
+        "Ny side: Strøm – elprisen time for time i dag og i morgen, og jeres elforbrug",
+        "Nye kort: Elpris (prisen nu og billigste timer) og Elforbrug",
+        "Forbind Eloverblik under Indstillinger → Strøm for at se forbrug og den fulde pris"
+      ]
+    },
     {
       "version": "1.60.2",
       "date": "25. november 2026",

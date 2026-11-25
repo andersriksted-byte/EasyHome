@@ -9,6 +9,7 @@
 //   SONOS_CLIENT_SECRET  (secret) – "Secret" fra Sonos developer-portalen
 //   SOMFY_USER, SOMFY_PASSWORD (secrets) – login til Somfy-appen (TaHoma), bruges til at styre screens m.m.
 //   TOMTOM_KEY (secret, valgfri) – giver køretid med trafik til "Næste i kalenderen". Uden den bruges OpenStreetMap uden trafik.
+//   ELOVERBLIK_TOKEN (secret, valgfri) – token fra eloverblik.dk (Min profil → Datadeling) til elforbrug og nettariffer
 //   EXTRA_HOSTS          – valgfrit: ekstra domæner til egne RSS-feeds, adskilt af komma
 // KV-binding: DASH_KV (Storage & Databases → KV → opret "easyhome" → bind som DASH_KV)
 
@@ -330,6 +331,81 @@ async function sonos(req, env, path) {
   return json(env, { error: 'Ukendt' }, 404);
 }
 
+// ---------- Strøm: elpriser fra Energi Data Service og forbrug/tariffer fra Eloverblik ----------
+const ELO = 'https://api.eloverblik.dk/customerapi/api';
+async function eloToken(env, fresh = false) {
+  if (!fresh) { const t = await env.DASH_KV.get('elo_token'); if (t) return t; }
+  const r = await fetch(ELO + '/token', { headers: { Authorization: 'Bearer ' + env.ELOVERBLIK_TOKEN } });
+  if (!r.ok) throw new Error('Eloverblik afviste nøglen (' + r.status + ') – lav evt. en ny på eloverblik.dk');
+  const j = await r.json(); const t = j.result || j.token;
+  if (!t) throw new Error('Eloverblik gav ingen adgang');
+  await env.DASH_KV.put('elo_token', t, { expirationTtl: 20 * 3600 }); // gyldig i 24 timer
+  return t;
+}
+async function eloCall(env, path, body) {
+  const go = async (t) => fetch(ELO + path, { method: body ? 'POST' : 'GET', headers: { Authorization: 'Bearer ' + t, 'Content-Type': 'application/json', Accept: 'application/json' }, body: body ? JSON.stringify(body) : undefined });
+  let r = await go(await eloToken(env));
+  if (r.status === 401) r = await go(await eloToken(env, true));
+  if (r.status === 429 || r.status === 503) throw new Error('Eloverblik er travl lige nu – prøv igen om lidt');
+  if (!r.ok) throw new Error('Eloverblik svarede ' + r.status);
+  return r.json();
+}
+async function eloMeter(env) {
+  const c = await env.DASH_KV.get('elo_meter'); if (c) return JSON.parse(c);
+  const j = await eloCall(env, '/meteringpoints/meteringpoints?includeAll=false');
+  const mps = (j.result || []).filter((m) => (m.typeOfMP || 'E17') === 'E17'); // E17 = forbrug
+  const m = mps[0] || (j.result || [])[0];
+  if (!m) throw new Error('Ingen målere fundet i Eloverblik');
+  const meter = { id: m.meteringPointId, grid: m.balanceSupplierName || '', net: m.gridOperatorName || m.gridOperatorID || '', postcode: m.postcode || '' };
+  await env.DASH_KV.put('elo_meter', JSON.stringify(meter), { expirationTtl: 7 * 86400 });
+  return meter;
+}
+async function el(req, env, path, ctx) {
+  const q = new URL(req.url).searchParams;
+  if (path === '/el/prices') {
+    // Spotpriser (15 min) for et prisområde, fra–til (YYYY-MM-DD)
+    const area = q.get('area') === 'DK2' ? 'DK2' : 'DK1';
+    const from = /^\d{4}-\d{2}-\d{2}$/.test(q.get('from') || '') ? q.get('from') : new Date().toISOString().slice(0, 10);
+    const to = /^\d{4}-\d{2}-\d{2}$/.test(q.get('to') || '') ? q.get('to') : '';
+    const url = 'https://api.energidataservice.dk/dataset/DayAheadPrices?' + new URLSearchParams({ start: from, ...(to ? { end: to } : {}), filter: JSON.stringify({ PriceArea: [area] }), sort: 'TimeUTC asc', limit: '10000' });
+    const up = await fetch(url, { cf: { cacheTtl: 900, cacheEverything: true } });
+    if (!up.ok) return json(env, { error: 'Energi Data Service svarede ' + up.status }, 502);
+    const j = await up.json();
+    const recs = (j.records || []).map((r) => ({ t: (r.TimeUTC || r.HourUTC) + 'Z', p: r.DayAheadPriceDKK ?? r.SpotPriceDKK ?? null })).filter((r) => r.p !== null);
+    return json(env, { area, records: recs });
+  }
+  if (path === '/el/status') return json(env, { configured: !!env.ELOVERBLIK_TOKEN });
+  if (!env.ELOVERBLIK_TOKEN) return json(env, { configured: false, error: 'Eloverblik er ikke sat op (ELOVERBLIK_TOKEN)' }, 501);
+  if (path === '/el/meter') return json(env, { configured: true, meter: await eloMeter(env) });
+  if (path === '/el/usage') {
+    const from = q.get('from'), to = q.get('to');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(from || '') || !/^\d{4}-\d{2}-\d{2}$/.test(to || '')) return json(env, { error: 'Mangler datoer' }, 400);
+    const ck = 'elo_usage_' + from + '_' + to; const hit = await env.DASH_KV.get(ck); if (hit) return json(env, JSON.parse(hit));
+    const meter = await eloMeter(env);
+    const j = await eloCall(env, `/meterdata/gettimeseries/${from}/${to}/Hour`, { meteringPoints: { meteringPoint: [meter.id] } });
+    const out = [];
+    (j.result || []).forEach((x) => { const doc = x.MyEnergyData_MarketDocument || {}; (doc.TimeSeries || []).forEach((ts) => (ts.Period || []).forEach((p) => {
+      const start = Date.parse(p.timeInterval && p.timeInterval.start); const step = /PT15M/.test(p.resolution) ? 900000 : 3600000;
+      (p.Point || []).forEach((pt) => out.push({ t: new Date(start + (+pt.position - 1) * step).toISOString(), kwh: +pt['out_Quantity.quantity'] || 0 }));
+    })); });
+    const res = { meter: meter.id, points: out };
+    await env.DASH_KV.put(ck, JSON.stringify(res), { expirationTtl: 3 * 3600 });
+    return json(env, res);
+  }
+  if (path === '/el/charges') {
+    const hit = await env.DASH_KV.get('elo_charges'); if (hit) return json(env, JSON.parse(hit));
+    const meter = await eloMeter(env);
+    const j = await eloCall(env, '/meteringpoints/meteringpoint/getcharges', { meteringPoints: { meteringPoint: [meter.id] } });
+    const r0 = ((j.result || [])[0] || {}).result || {};
+    const tariffs = (r0.tariffs || []).map((t) => ({ name: t.name, owner: t.owner, period: t.periodType, prices: (t.prices || []).sort((a, b) => +a.position - +b.position).map((p) => +p.price) }));
+    const subs = (r0.subscriptions || []).map((t) => ({ name: t.name, price: +t.price, qty: +t.quantity || 1 }));
+    const res = { tariffs, subscriptions: subs, net: meter.net };
+    await env.DASH_KV.put('elo_charges', JSON.stringify(res), { expirationTtl: 86400 });
+    return json(env, res);
+  }
+  return json(env, { error: 'Ukendt' }, 404);
+}
+
 export default {
   async fetch(req, env, ctx) {
     if (req.method === 'OPTIONS') return new Response(null, { headers: cors(env) });
@@ -339,6 +415,7 @@ export default {
       if (path.startsWith('/auth/')) return await auth(req, env, path);
       if (!(await authOk(req, env))) return json(env, { error: 'Forkert nøgle' }, 401);
       if (path.startsWith('/somfy/')) return await somfy(req, env, path);
+      if (path.startsWith('/el/')) return await el(req, env, path, ctx);
       if (path === '/route') return await route(req, env, ctx);
       if (path === '/health') return json(env, { ok: true, sonosConfigured: sonosReady(env), version: 3 });
       if (path === '/proxy') return await proxy(req, env, ctx);
