@@ -1,5 +1,5 @@
 {
-  "version": "1.71.0",
+  "version": "1.71.1",
   "files": [
     "index.html",
     "app.js",
@@ -25,6 +25,14 @@
     "el.js"
   ],
   "notes": [
+    {
+      "version": "1.71.1",
+      "date": "25. november 2026",
+      "title": "Måleren er tilbage",
+      "items": [
+        "Prismåleren i Elpris er tilbage – også i det mindre kort"
+      ]
+    },
     {
       "version": "1.71.0",
       "date": "25. november 2026",

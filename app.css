@@ -1463,4 +1463,4 @@ button.w7r.sel{background:color-mix(in srgb,var(--accent) 16%,transparent);box-s
 .elbars{padding-top:16px}
 .elbar .elmid.first{left:0}
 .elw>.elleft{flex:0 1 auto;max-width:44%}
-@container (max-width:560px){.elgauge{display:none}.eladv{font-size:12px;padding:6px 8px}}
+@container (max-width:560px){.elgauge{width:64px;height:40px}.elhero{gap:8px}.elhero-n b{font-size:34px}.elbadge{font-size:10px;padding:2px 6px}.eladv{font-size:12px;padding:6px 8px}}
