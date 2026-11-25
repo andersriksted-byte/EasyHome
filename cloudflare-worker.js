@@ -363,16 +363,31 @@ async function eloMeter(env) {
 async function el(req, env, path, ctx) {
   const q = new URL(req.url).searchParams;
   if (path === '/el/prices') {
-    // Spotpriser (15 min) for et prisområde, fra–til (YYYY-MM-DD)
+    // Energi Data Service tillader kun 1 kald pr. minut pr. IP pr. datasæt. Derfor henter workeren priserne
+    // højst hver 20. minut, gemmer dem (40 dage) og deler dem med alle skærme.
     const area = q.get('area') === 'DK2' ? 'DK2' : 'DK1';
-    const from = /^\d{4}-\d{2}-\d{2}$/.test(q.get('from') || '') ? q.get('from') : new Date().toISOString().slice(0, 10);
-    const to = /^\d{4}-\d{2}-\d{2}$/.test(q.get('to') || '') ? q.get('to') : '';
-    const url = 'https://api.energidataservice.dk/dataset/DayAheadPrices?' + new URLSearchParams({ start: from, ...(to ? { end: to } : {}), filter: JSON.stringify({ PriceArea: [area] }), sort: 'TimeUTC asc', limit: '10000' });
-    const up = await fetch(url, { cf: { cacheTtl: 900, cacheEverything: true } });
-    if (!up.ok) return json(env, { error: 'Energi Data Service svarede ' + up.status }, 502);
-    const j = await up.json();
-    const recs = (j.records || []).map((r) => ({ t: (r.TimeUTC || r.HourUTC) + 'Z', p: r.DayAheadPriceDKK ?? r.SpotPriceDKK ?? null })).filter((r) => r.p !== null);
-    return json(env, { area, records: recs });
+    const key = 'el_prices_' + area;
+    const saved = JSON.parse((await env.DASH_KV.get(key)) || 'null') || { at: 0, records: [] };
+    const lastT = saved.records.length ? Date.parse(saved.records[saved.records.length - 1].t) : 0;
+    const needTomorrow = lastT < Date.now() + 12 * 3600000; // morgendagens priser kommer ved 13-tiden
+    if (Date.now() - saved.at > (needTomorrow ? 20 : 120) * 60000) {
+      const day = (d) => d.toISOString().slice(0, 10);
+      const from = saved.records.length ? day(new Date(Date.now() - 2 * 86400000)) : day(new Date(Date.now() - 40 * 86400000));
+      const url = 'https://api.energidataservice.dk/dataset/DayAheadPrices?' + new URLSearchParams({ start: from, end: day(new Date(Date.now() + 2 * 86400000)), filter: JSON.stringify({ PriceArea: [area] }), sort: 'TimeUTC asc', limit: '10000' });
+      try {
+        const up = await fetch(url);
+        if (up.ok) {
+          const j = await up.json(); const m = new Map(saved.records.map((r) => [r.t, r]));
+          (j.records || []).forEach((r) => { const p = r.DayAheadPriceDKK ?? r.SpotPriceDKK; if (p !== null && p !== undefined) { const t = new Date((r.TimeUTC || r.HourUTC) + 'Z').toISOString(); m.set(t, { t, p }); } });
+          const cut = Date.now() - 40 * 86400000;
+          saved.records = [...m.values()].filter((r) => Date.parse(r.t) > cut).sort((a, b) => Date.parse(a.t) - Date.parse(b.t));
+          saved.at = Date.now();
+          await env.DASH_KV.put(key, JSON.stringify(saved));
+        } else if (!saved.records.length) return json(env, { error: up.status === 429 ? 'Energi Data Service har travlt – prøver igen om lidt' : 'Energi Data Service svarede ' + up.status }, 502);
+        else { saved.at = Date.now() - 15 * 60000; await env.DASH_KV.put(key, JSON.stringify(saved)); } // prøv igen om ca. 5 min
+      } catch (e) { if (!saved.records.length) throw e; }
+    }
+    return json(env, { area, records: saved.records, at: saved.at });
   }
   if (path === '/el/status') return json(env, { configured: !!env.ELOVERBLIK_TOKEN });
   if (!env.ELOVERBLIK_TOKEN) return json(env, { configured: false, error: 'Eloverblik er ikke sat op (ELOVERBLIK_TOKEN)' }, 501);

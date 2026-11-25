@@ -1,5 +1,5 @@
 {
-  "version": "1.62.1",
+  "version": "1.62.2",
   "files": [
     "index.html",
     "app.js",
@@ -26,12 +26,12 @@
   ],
   "notes": [
     {
-      "version": "1.62.1",
+      "version": "1.62.2",
       "date": "25. november 2026",
       "title": "Elpriser rettet",
       "items": [
-        "Fejlen \"Energi Data Service svarede 429\" er rettet – elpriserne gemmes nu på skærmen, så der hentes langt færre data",
-        "Kommer fejlen alligevel, prøver skærmen selv igen efter få minutter"
+        "Elpriserne hentes nu én gang af jeres server og deles mellem alle skærme",
+        "Det retter fejlen \"Energi Data Service har travlt\""
       ]
     },
     {
