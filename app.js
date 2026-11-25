@@ -1552,7 +1552,7 @@ function loadEl(force = false) {
   if (settings.el && !settings.el.mk2) { settings.el.sub = settings.el.sub || '15'; if (!settings.el.change) settings.el.change = { from: '2027-03-01', markup: '10', sub: '20' }; settings.el.mk2 = true; save(); }
   if (!svcOn('el') || !hasProxy()) return;
   const show = () => { if (ui.page === 'stroem' || (ui.page === 'forside' && curLayout().some((x) => ['elpris', 'elforbrug', 'vasketid'].includes(x.id)))) softRender(); };
-  EL.loadPrices(force).then(show).catch((e) => { EL.state.error = e.message; show(); clearTimeout(loadEl.retry); loadEl.retry = setTimeout(() => loadEl(), 200000); });
+  EL.loadPrices(force).then(show).catch((e) => { EL.state.error = e.message; show(); clearTimeout(loadEl.retry); loadEl.retry = setTimeout(() => loadEl(), 75000); });
   EL.loadEloverblik(force).then(() => { show(); if (ui.page === 'stroem') return EL.loadHistory(force).then(show); });
 }
 function loadAll() { loadEl(); loadFootball(); loadWeather(); loadNews(); loadCal(); loadSonos(true); if (svcOn('madro')) MD.start(); if (svcOn('somfy')) SF.refresh(); }

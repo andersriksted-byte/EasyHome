@@ -1,5 +1,5 @@
 {
-  "version": "1.63.2",
+  "version": "1.63.3",
   "files": [
     "index.html",
     "app.js",
@@ -25,6 +25,15 @@
     "el.js"
   ],
   "notes": [
+    {
+      "version": "1.63.3",
+      "date": "25. november 2026",
+      "title": "Elpriser hentes sikrere",
+      "items": [
+        "Elpriserne hentes nu fra jeres eget netværk og deles med de andre skærme",
+        "Ved travlhed prøves igen efter et minut i stedet for flere minutter"
+      ]
+    },
     {
       "version": "1.63.2",
       "date": "25. november 2026",

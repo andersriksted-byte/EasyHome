@@ -21,21 +21,36 @@ const PKEY = (ar) => 'easyhome.elprices.' + ar;
 function cached(ar) { try { return JSON.parse(localStorage.getItem(PKEY(ar)) || '[]'); } catch (e) { return []; } }
 function store(ar, recs) { try { localStorage.setItem(PKEY(ar), JSON.stringify(recs)); } catch (e) { /* fuld eller blokeret */ } }
 let backoffUntil = 0;
-// Priserne hentes fra jeres server, som deler dem mellem alle skærme (Energi Data Service tillader kun 1 kald i minuttet pr. adresse).
-// Uden server hentes de direkte – højst hver 20. minut.
-async function fetchRange(ar, from, to) {
-  try {
-    const j = await (await workerFetch(`/el/prices?area=${ar}`)).json();
-    if (j.error) throw new Error(j.error);
-    return j.records || [];
-  } catch (e) {
-    if (e.message !== 'NO_PROXY' && !/Failed to fetch|NetworkError|Load failed/.test(e.message)) throw e;
-    const url = 'https://api.energidataservice.dk/dataset/DayAheadPrices?' + new URLSearchParams({ start: from, end: to, filter: JSON.stringify({ PriceArea: [ar] }), sort: 'TimeUTC asc', limit: '10000' });
-    const r = await fetch(url); if (!r.ok) throw new Error('Energi Data Service svarede ' + r.status);
-    return ((await r.json()).records || []).map((x) => ({ t: x.TimeUTC + 'Z', p: x.DayAheadPriceDKK }));
-  }
+// Energi Data Service tillader kun 1 kald i minuttet pr. adresse. Skærmen henter derfor først fra jeres server
+// (som deler priserne mellem skærmene). Har serveren ingen priser, henter skærmen selv – højst én gang i minuttet,
+// også på tværs af genindlæsninger – og deler resultatet med serveren.
+const LAST = 'easyhome.elprices.last';
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+async function direct(ar, from, to) {
+  const wait = (+localStorage.getItem(LAST) || 0) + 65000 - Date.now();
+  if (wait > 0) await sleep(wait);
+  try { localStorage.setItem(LAST, String(Date.now())); } catch (e) { /* ingen lagring */ }
+  const url = 'https://api.energidataservice.dk/dataset/DayAheadPrices?' + new URLSearchParams({ start: from, end: to, filter: JSON.stringify({ PriceArea: [ar] }), sort: 'TimeUTC asc', limit: '10000' });
+  const r = await fetch(url); if (!r.ok) throw new Error('Energi Data Service svarede ' + r.status);
+  const recs = ((await r.json()).records || []).map((x) => ({ t: x.TimeUTC + 'Z', p: x.DayAheadPriceDKK }));
+  workerFetch(`/el/prices?area=${ar}`, { method: 'POST', body: JSON.stringify({ records: recs }) }).catch(() => {});
+  return recs;
 }
+async function fetchRange(ar, from, to) {
+  let fromServer = null;
+  try { const j = await (await workerFetch(`/el/prices?area=${ar}`)).json(); if (!j.error) fromServer = j.records || []; } catch (e) { /* ingen server eller fejl */ }
+  // Serverens priser er gode nok, hvis de dækker i dag (og i morgen efter kl. 13)
+  const need = Date.now() + (new Date().getHours() >= 14 ? 30 : 6) * 3600000;
+  if (fromServer && fromServer.length && Date.parse(fromServer[fromServer.length - 1].t) >= need) return fromServer;
+  try { return await direct(ar, from, to); } catch (e) { if (fromServer && fromServer.length) return fromServer; throw e; }
+}
+let inflight = null;
 export async function loadPrices(force = false) {
+  if (inflight) return inflight; // kun én hentning ad gangen
+  inflight = loadPricesNow(force).finally(() => { inflight = null; });
+  return inflight;
+}
+async function loadPricesNow(force) {
   const ar = area();
   if (Date.now() < backoffUntil) return;
   if (ar === state.area && Date.now() - state.pricesAt < (force ? 60000 : 20 * 60000)) return; // også ved "opdater": højst én gang i minuttet
@@ -51,7 +66,7 @@ export async function loadPrices(force = false) {
     state.prices = have.map((r) => ({ t: new Date(r.t), spot: r.p / 1000 })); // kr/kWh uden moms
     state.area = ar; state.pricesAt = Date.now(); state.error = '';
   } catch (e) {
-    if (/429|travlt/.test(e.message)) { backoffUntil = Date.now() + 3 * 60000; state.error = 'Energi Data Service har travlt – prøver igen om få minutter'; }
+    if (/429|travlt/.test(e.message)) { backoffUntil = Date.now() + 70000; state.error = 'Energi Data Service har travlt – prøver igen om et minut'; }
     else state.error = e.message;
     if (!state.prices.length) throw new Error(state.error);
   }

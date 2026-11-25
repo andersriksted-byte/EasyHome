@@ -368,6 +368,15 @@ async function el(req, env, path, ctx) {
     const area = q.get('area') === 'DK2' ? 'DK2' : 'DK1';
     const key = 'el_prices_' + area;
     const saved = JSON.parse((await env.DASH_KV.get(key)) || 'null') || { at: 0, records: [] };
+    if (req.method === 'POST') {
+      // En skærm har selv hentet priserne (fra hjemmets egen adresse) og deler dem med de andre skærme
+      const body = await req.json().catch(() => ({})); const m = new Map(saved.records.map((r) => [r.t, r]));
+      (body.records || []).slice(0, 6000).forEach((r) => { const t = new Date(r.t); if (!isNaN(t) && typeof r.p === 'number') m.set(t.toISOString(), { t: t.toISOString(), p: r.p }); });
+      const cut = Date.now() - 40 * 86400000;
+      saved.records = [...m.values()].filter((r) => Date.parse(r.t) > cut).sort((a, b) => Date.parse(a.t) - Date.parse(b.t)); saved.at = Date.now();
+      await env.DASH_KV.put(key, JSON.stringify(saved));
+      return json(env, { ok: true, n: saved.records.length });
+    }
     const lastT = saved.records.length ? Date.parse(saved.records[saved.records.length - 1].t) : 0;
     const needTomorrow = lastT < Date.now() + 12 * 3600000; // morgendagens priser kommer ved 13-tiden
     if (Date.now() - saved.at > (needTomorrow ? 20 : 120) * 60000) {
