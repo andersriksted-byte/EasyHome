@@ -603,7 +603,7 @@ function wVasketid(size, h = 1, wd = 1, x = null) {
   // Tidslinje: de næste 24 timer farvet efter pris, med de anbefalede tidsrum markeret
   const t0 = new Date(); t0.setMinutes(0, 0, 0);
   const hs = EL.hours(new Date()).concat(EL.hours(addDays(new Date(), 1))).filter((x2) => x2.t >= t0).slice(0, 24);
-  const line = hs.length ? `<div class="vt-line">${hs.map((x2) => `<i class="${priceLevel(x2.price, hs)}${list.some((r) => x2.t >= r.b.from && x2.t < r.b.to && r === list[0]) ? ' pick' : ''}" title="kl. ${pad(x2.t.getHours())}: ${kr(x2.price)} kr"></i>`).join('')}</div><div class="vt-ticks">${hs.filter((_, k) => k % 6 === 0).map((x2) => `<span>${pad(x2.t.getHours())}</span>`).join('')}</div>` : '';
+  const line = hs.length ? `<div class="vt-line">${hs.map((x2) => `<i class="${priceLevel(x2.price, hs)}${list.some((r) => x2.t >= r.b.from && x2.t < r.b.to && r === list[0]) ? ' pick' : ''}" title="kl. ${pad(x2.t.getHours())}: ${kr(x2.price)} kr"></i>`).join('')}</div><div class="vt-ticks">${hs.map((x2, k) => (k % 6 === 0 ? `<span style="left:${((k + 0.5) / hs.length) * 100}%">${pad(x2.t.getHours())}</span>` : '')).join('')}</div>` : '';
   const card = (r) => { const go = r.b.from <= now; const sv = cur !== null && cur > r.b.avg ? (cur - r.b.avg) * r.a.kwh : 0;
     return `<div class="vt-app${go ? ' go' : ''}"><div class="vt-ico">${r.a.ico}</div><div class="vt-txt"><span>${esc(r.a.name)}</span><b>${go ? 'Start nu' : `kl. ${pad(r.b.from.getHours())}`}</b><small>${go ? `til kl. ${pad(r.b.to.getHours())}` : until(r.b.from)}${sv >= 0.5 ? ` · spar ${kr(sv, sv >= 10 ? 0 : 1)} kr` : ''}</small></div></div>`; };
   const head = cardHead('🔌 Billig strøm', '<span class="small muted">næste 24 timer</span>');
