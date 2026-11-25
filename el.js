@@ -189,6 +189,8 @@ export const hourly = (day) => state.usage.filter((u) => +day0(u.t) === +day0(da
 const inWin = (h, w) => (w[0] % 24 === w[1] % 24 ? true : w[0] <= w[1] ? h >= w[0] && h < w[1] : h >= w[0] || h < w[1]);
 // Billigste vindue på n timer mellem to tidspunkter (kun hele timer, der ikke er gået)
 export function priciestBetween(a, b, n = 2, win = [0, 24]) { return cheapestBetween(a, b, n, win, true); }
+// Første mulige start i tidsrummet – det man typisk gør uden at tænke over prisen (fx sætte bilen til, når man kommer hjem)
+export function firstBetween(a, b, n = 2, win = [0, 24]) { return cheapestBetween(a, b, n, win, 'first'); }
 export function cheapestBetween(a, b, n = 2, win = [0, 24], worst = false) {
   const t0 = new Date(); t0.setMinutes(0, 0, 0);
   let hs = []; for (let d = day0(a); d < b; d = addD(d, 1)) hs = hs.concat(hours(d));
@@ -198,7 +200,8 @@ export function cheapestBetween(a, b, n = 2, win = [0, 24], worst = false) {
   for (let i = 0; i + n <= hs.length; i++) {
     if (+hs[i + n - 1].t - +hs[i].t !== (n - 1) * 3600000) continue; // skal være sammenhængende
     const avg = hs.slice(i, i + n).reduce((s, h) => s + h.price, 0) / n;
-    if (!best || (worst ? avg > best.avg : avg < best.avg)) best = { from: hs[i].t, to: new Date(+hs[i + n - 1].t + 3600000), avg };
+    if (worst === 'first' && best) break;
+    if (!best || (worst === true ? avg > best.avg : avg < best.avg)) best = { from: hs[i].t, to: new Date(+hs[i + n - 1].t + 3600000), avg };
   }
   return best;
 }

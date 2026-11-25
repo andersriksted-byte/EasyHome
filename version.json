@@ -1,5 +1,5 @@
 {
-  "version": "1.67.2",
+  "version": "1.67.3",
   "files": [
     "index.html",
     "app.js",
@@ -26,11 +26,11 @@
   ],
   "notes": [
     {
-      "version": "1.67.2",
+      "version": "1.67.3",
       "date": "25. november 2026",
-      "title": "Besparelse mod dyreste tid",
+      "title": "Besparelse der giver mening",
       "items": [
-        "Billig strøm viser nu, hvad I sparer pr. gang ved at vælge den billige tid frem for den dyreste"
+        "Billig strøm viser nu, hvad I sparer ved at vente på den billige tid frem for at starte med det samme (eller når jeres tidsrum begynder)"
       ]
     },
     {

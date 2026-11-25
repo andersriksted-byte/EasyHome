@@ -603,8 +603,8 @@ function wVasketid(size, h = 1, wd = 1, x = null) {
   const w = elWait('Billig strøm'); if (w) return w;
   const now = new Date(); const end = new Date(+now + 24 * 3600000); const cur = EL.now();
   const until = (t) => { const m = Math.round((t - now) / 60000); return m < 60 ? `om ${m} min` : `om ${Math.floor(m / 60)} t${m % 60 >= 5 ? ' ' + (m % 60) + ' m' : ''}`; };
-  // For hvert apparat: billigste og dyreste tidsrum inden for jeres egne tider → hvad man sparer ved at vælge det billige
-  const list = elApps().filter((a) => a.on).map((a) => ({ a, b: EL.cheapestBetween(now, end, a.n, a.win), w: EL.priciestBetween(now, end, a.n, a.win) })).filter((r) => r.b);
+  // For hvert apparat: billigste tidsrum inden for jeres egne tider, sammenlignet med at starte ved første mulighed (nu, eller når tidsrummet begynder)
+  const list = elApps().filter((a) => a.on).map((a) => ({ a, b: EL.cheapestBetween(now, end, a.n, a.win), w: EL.firstBetween(now, end, a.n, a.win) })).filter((r) => r.b);
   // Tidslinje: de næste 24 timer farvet efter pris, med de anbefalede tidsrum markeret
   const t0 = new Date(); t0.setMinutes(0, 0, 0);
   const hs = EL.hours(new Date()).concat(EL.hours(addDays(new Date(), 1))).filter((x2) => x2.t >= t0).slice(0, 24);
@@ -613,7 +613,8 @@ function wVasketid(size, h = 1, wd = 1, x = null) {
   const isBest = (t) => best && t >= best.from && t < best.to;
   const line = hs.length ? `<div class="vt-line">${hs.map((x2) => `<i class="${priceLevel(x2.price, hs)}${isBest(x2.t) ? ' pick' : ''}" title="kl. ${pad(x2.t.getHours())}: ${kr(x2.price)} kr"></i>`).join('')}</div><div class="vt-ticks">${hs.map((x2, k) => (k % 6 === 0 ? `<span style="left:${((k + 0.5) / hs.length) * 100}%">${pad(x2.t.getHours())}</span>` : '')).join('')}${best ? `<span class="vt-star" style="left:${(((hs.findIndex((x2) => isBest(x2.t)) + 1.5) / hs.length) * 100)}%">★ billigst ${pad(best.from.getHours())}–${pad(best.to.getHours())}</span>` : ''}</div>` : '';
   const card = (r) => { const go = r.b.from <= now; const sv = r.w ? (r.w.avg - r.b.avg) * r.a.kwh : 0;
-    const save = sv >= 0.05 ? `<em class="vt-save" title="i forhold til dyreste tid kl. ${pad(r.w.from.getHours())}">💰 spar ${kr(sv, sv >= 10 ? 0 : 2)} kr mod kl. ${pad(r.w.from.getHours())}</em>` : '';
+    const first = r.w && r.w.from <= now ? 'start nu' : r.w ? `start kl. ${pad(r.w.from.getHours())}` : '';
+    const save = sv >= 0.05 ? `<em class="vt-save">💰 spar ${kr(sv, sv >= 10 ? 0 : 2)} kr mod ${first}</em>` : go || (r.w && +r.w.from === +r.b.from) ? '<em class="vt-save">✅ billigst allerede</em>' : '';
     return `<div class="vt-app${go ? ' go' : ''}"><div class="vt-ico">${r.a.ico}</div><div class="vt-txt"><span>${esc(r.a.name)} · ${go ? `til kl. ${pad(r.b.to.getHours())}` : until(r.b.from)}</span><b>${go ? 'Start nu' : `kl. ${pad(r.b.from.getHours())}`}</b>${save}</div></div>`; };
   const head = cardHead('🔌 Billig strøm', '<span class="small muted">næste 24 timer</span>');
   if (!list.length) return head + '<div class="empty">Priserne for i morgen kommer ved 13-tiden.</div>';
