@@ -50,12 +50,12 @@ function tariffAt(t) {
     return sum + (+v || 0);
   }, 0);
 }
-// Hvad en kWh koster alt i alt (kr inkl. moms). Uden Eloverblik: spotpris + eget tillæg + moms.
+// Hvad en kWh koster alt i alt (kr inkl. moms). Elselskabets tillæg angives inkl. moms, som selskaberne oplyser det.
 export const hasTariffs = () => !!(state.charges && state.charges.tariffs && state.charges.tariffs.length);
 export function total(p) {
-  const markup = (+((settings.el || {}).markup) || 0) / 100; // øre → kr
+  const markup = (+String((settings.el || {}).markup ?? '').replace(',', '.') || 0) / 100; // øre inkl. moms → kr
   const tar = tariffAt(p.t);
-  return ((p.spot) + (tar || 0) + markup) * 1.25;
+  return (p.spot + (tar || 0)) * 1.25 + markup;
 }
 
 // Timepriser for en dag (gennemsnit af kvarterene)

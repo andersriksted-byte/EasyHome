@@ -1,5 +1,5 @@
 {
-  "version": "1.61.0",
+  "version": "1.61.1",
   "files": [
     "index.html",
     "app.js",
@@ -25,6 +25,15 @@
     "el.js"
   ],
   "notes": [
+    {
+      "version": "1.61.1",
+      "date": "25. november 2026",
+      "title": "Elpris med jeres tillæg",
+      "items": [
+        "Energi Fyns tillæg (FynskSupportEl, 8,75 øre/kWh) er nu regnet med i elprisen",
+        "Tillægget kan rettes under Indstillinger → Strøm"
+      ]
+    },
     {
       "version": "1.61.0",
       "date": "25. november 2026",

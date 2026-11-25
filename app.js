@@ -612,7 +612,8 @@ function elSettings() {
   const e = settings.el || {}; const st = EL.state.status;
   return `<section class="card"><b>Elpris</b>
       <label class="inl">Prisområde<select data-set="el.area" aria-label="Prisområde"><option value="auto"${!e.area || e.area === 'auto' ? ' selected' : ''}>Automatisk (${EL.area() === 'DK1' ? 'Vest' : 'Øst'})</option><option value="DK1"${e.area === 'DK1' ? ' selected' : ''}>Vestdanmark (DK1)</option><option value="DK2"${e.area === 'DK2' ? ' selected' : ''}>Østdanmark (DK2)</option></select></label>
-      <label class="inl">Elselskabets tillæg (øre/kWh)<input type="number" step="0.1" min="0" data-set="el.markup" value="${esc(String(e.markup ?? ''))}" placeholder="0" aria-label="Elselskabets tillæg i øre pr. kWh" style="width:90px"></label></section>
+       ${e.supplier ? `<div class="small muted">${esc(e.supplier)}</div>` : ''}
+      <label class="inl">Elselskabets tillæg (øre/kWh inkl. moms)<input type="text" inputmode="decimal" data-set="el.markup" value="${esc(String(e.markup ?? ''))}" placeholder="0" aria-label="Elselskabets tillæg i øre pr. kWh" style="width:90px"></label></section>
     <section class="card"><b>Eloverblik (forbrug og nettarif)</b>
       <div class="small ${st && st.configured ? '' : 'muted'}">${!hasProxy() ? 'Kræver forbindelsen til jeres server.' : !st ? 'Tjekker …' : st.configured ? (EL.state.usageError ? 'Fejl: ' + esc(EL.state.usageError) : '✓ Forbundet' + (EL.hasTariffs() ? ' · nettarif hentet' : '')) : 'Ikke forbundet'}</div>
       <details class="small"><summary>Sådan forbinder du</summary><ol style="margin:6px 0 0 18px;padding:0;display:flex;flex-direction:column;gap:4px"><li>Log ind på eloverblik.dk → Min profil → Datadeling → Opret token.</li><li>Cloudflare → Workers & Pages → easyhome → Settings → Variables and Secrets → Add: type <b>Secret</b>, navn <b>ELOVERBLIK_TOKEN</b>, værdi = token.</li><li>Tryk Deploy og vent et minut.</li></ol></details></section>`;
@@ -1456,6 +1457,8 @@ async function loadSonos(full = false) {
 function loadFootball(force = false) { if (!svcOn('fodbold') || !hasProxy()) return;
   if (curLayout().some((x) => x.id === 'stilling')) stLeagues().forEach((L) => FB.loadTable(L.id).then(() => { if (ui.page === 'forside') softRender(); })); FB.load(force).then(() => { if (ui.page === 'forside' && curLayout().some((x) => x.id === 'fodbold')) softRender(); }); }
 function loadEl(force = false) {
+  // Engangs-opsætning: Energi Fyn FynskSupportEl – 8,75 øre/kWh i handels- og administrationstillæg (energifyn.dk, nov. 2026)
+  if (settings.el && !settings.el.mk1) { if (!settings.el.markup) { settings.el.markup = '8,75'; settings.el.supplier = 'Energi Fyn · FynskSupportEl'; } settings.el.mk1 = true; save(); }
   if (!svcOn('el') || !hasProxy()) return;
   const show = () => { if (ui.page === 'stroem' || (ui.page === 'forside' && curLayout().some((x) => x.id === 'elpris' || x.id === 'elforbrug'))) softRender(); };
   EL.loadPrices(force).then(show).catch((e) => { EL.state.error = e.message; show(); });
