@@ -637,7 +637,10 @@ function pageStroem() {
 const YEAR_COL = ['var(--accent)', '#F59E0B', '#A855F7', '#10B981', '#EF4444'];
 function groupBars(labels, series, opts = {}) {
   const max = Math.max(0.001, ...series.flatMap((x) => x.values.filter((v) => v !== null))) * 1.08;
-  return `<div class="elg${opts.dense ? ' dense' : ''}">${labels.map((lab, i) => `<div class="elg-c"><div class="elg-b">${series.map((x) => { const v = x.values[i]; return `<i style="height:${v === null ? 0 : Math.max(1.5, (v / max) * 100)}%;background:${x.color}${x.faded ? ';opacity:.55' : ''}" title="${esc(x.name)} · ${esc(lab)}: ${v === null ? '–' : kr(v, v < 10 ? 2 : 0)} kWh"></i>`; }).join('')}</div><span>${esc(opts.showLab ? opts.showLab(lab, i) : lab)}</span></div>`).join('')}</div>`;
+  // Tallet står på hver søjle: vandret når der er plads, ellers lodret (mange søjler eller flere år ved siden af hinanden)
+  const vert = series.length > 1 || labels.length > 16;
+  const fmt = (v) => (v >= 100 ? kr(v, 0) : v >= 10 ? kr(v, v >= 1000 ? 0 : 0) : kr(v, 1));
+  return `<div class="elg${opts.dense ? ' dense' : ''}${vert ? ' vert' : ''}">${labels.map((lab, i) => `<div class="elg-c"><div class="elg-b">${series.map((x) => { const v = x.values[i]; return `<i style="height:${v === null ? 0 : Math.max(1.5, (v / max) * 100)}%;background:${x.color}${x.faded ? ';opacity:.55' : ''}" title="${esc(x.name)} · ${esc(lab)}: ${v === null ? '–' : kr(v, v < 10 ? 2 : 0)} kWh">${v === null ? '' : `<b>${fmt(v)}</b>`}</i>`; }).join('')}</div><span>${esc(opts.showLab ? opts.showLab(lab, i) : lab)}</span></div>`).join('')}</div>`;
 }
 function lineChart(series, xmax, ticks) {
   const W = 1000, H = 260, P = 60; const ymax = Math.max(1, ...series.flatMap((x) => x.points.map((p) => p.y))) * 1.05;
