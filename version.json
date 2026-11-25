@@ -1,5 +1,5 @@
 {
-  "version": "1.70.2",
+  "version": "1.70.3",
   "files": [
     "index.html",
     "app.js",
@@ -26,12 +26,13 @@
   ],
   "notes": [
     {
-      "version": "1.70.2",
+      "version": "1.70.3",
       "date": "25. november 2026",
       "title": "Kalenderen følger klokken",
       "items": [
         "Kalender-siden står nu altid med nu-stregen øverst, så du ser det, der kommer",
-        "Har du selv scrollet, følger den klokken igen efter 2 minutter"
+        "Har du selv scrollet, følger den klokken igen efter 2 minutter",
+        "Når dagens sidste aftale er overstået, vises kalenderen fra kl. 7"
       ]
     },
     {

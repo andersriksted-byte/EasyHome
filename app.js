@@ -1068,7 +1068,9 @@ function calScroll() {
   const el = document.getElementById('tgBody'); if (!el) return;
   const key = String(ui.calWeek || 0); const now = new Date();
   const follow = !ui.calWeek && !(ui.calUserAt && Date.now() - ui.calUserAt < 120000);
-  if (follow) ui.calScrollTop = Math.max(0, (now.getHours() + now.getMinutes() / 60) * CAL_HH - 12);
+  // Er dagens sidste aftale overstået, vises fra kl. 7 (i morgen tidlig) i stedet for den tomme aften
+  const restToday = D.cal && D.cal.events.some((e) => !e.allDay && sameDay(e.start, now) && e.end > now && mineEvent(e) && !(settings.calHidden || []).includes(e.cal));
+  if (follow) ui.calScrollTop = restToday ? Math.max(0, (now.getHours() + now.getMinutes() / 60) * CAL_HH - 12) : 7 * CAL_HH - 10;
   else if (ui.calScrollKey !== key) ui.calScrollTop = 7 * CAL_HH - 10;
   ui.calScrollKey = key;
   ui.calProg = true; el.scrollTop = ui.calScrollTop;
