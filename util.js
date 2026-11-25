@@ -106,7 +106,7 @@ export function sharedSettings() {
 export function setPath(path, value) {
   const keys = path.split('.');
   let o = settings;
-  while (keys.length > 1) o = o[keys.shift()];
+  while (keys.length > 1) { const k = keys.shift(); if (!o[k] || typeof o[k] !== "object") o[k] = {}; o = o[k]; }
   o[keys[0]] = value;
   save();
 }

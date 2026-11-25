@@ -52,8 +52,16 @@ function tariffAt(t) {
 }
 // Hvad en kWh koster alt i alt (kr inkl. moms). Elselskabets tillæg angives inkl. moms, som selskaberne oplyser det.
 export const hasTariffs = () => !!(state.charges && state.charges.tariffs && state.charges.tariffs.length);
+const num = (v) => +String(v ?? '').replace(',', '.') || 0;
+// Aftalen kan skifte pris på en bestemt dato (fx 1. marts 2027): så gælder det nye tillæg og abonnement fra den dag
+function terms(t) {
+  const e = settings.el || {}; const ch = e.change;
+  if (ch && ch.from && t >= new Date(ch.from + 'T00:00:00')) return { markup: num(ch.markup), sub: num(ch.sub) };
+  return { markup: num(e.markup), sub: num(e.sub) };
+}
+export const subscriptionNow = () => terms(new Date()).sub;
 export function total(p) {
-  const markup = (+String((settings.el || {}).markup ?? '').replace(',', '.') || 0) / 100; // øre inkl. moms → kr
+  const markup = terms(p.t).markup / 100; // øre inkl. moms → kr
   const tar = tariffAt(p.t);
   return (p.spot + (tar || 0)) * 1.25 + markup;
 }
@@ -88,7 +96,9 @@ export function days(n = 30) {
 export function monthSoFar() {
   const m0 = new Date(); m0.setDate(1); m0.setHours(0, 0, 0, 0);
   const ds = days(40).filter((d) => d.t >= m0);
-  return { kwh: ds.reduce((s, d) => s + d.kwh, 0), cost: ds.every((d) => d.cost !== null) ? ds.reduce((s, d) => s + d.cost, 0) : null, days: ds.length };
+  // Abonnementet lægges til med den andel af måneden, der er gået
+  const dim = new Date(m0.getFullYear(), m0.getMonth() + 1, 0).getDate(); const sub = terms(m0).sub * (ds.length / dim);
+  return { kwh: ds.reduce((s, d) => s + d.kwh, 0), cost: ds.every((d) => d.cost !== null) ? ds.reduce((s, d) => s + d.cost, 0) + sub : null, days: ds.length };
 }
 export function yesterdayHours() {
   const y = day0(addD(new Date(), -1)); const ds = days(40); const last = ds[ds.length - 1];

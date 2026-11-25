@@ -1,5 +1,5 @@
 {
-  "version": "1.61.1",
+  "version": "1.61.2",
   "files": [
     "index.html",
     "app.js",
@@ -25,6 +25,15 @@
     "el.js"
   ],
   "notes": [
+    {
+      "version": "1.61.2",
+      "date": "25. november 2026",
+      "title": "Kommende prisændring",
+      "items": [
+        "Energi Fyns nye pris fra 1. marts 2027 (10 øre/kWh og 20 kr./md.) bruges automatisk fra den dag",
+        "Abonnementet er nu med i månedens pris på Strøm-siden"
+      ]
+    },
     {
       "version": "1.61.1",
       "date": "25. november 2026",

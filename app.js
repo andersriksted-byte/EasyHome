@@ -613,7 +613,10 @@ function elSettings() {
   return `<section class="card"><b>Elpris</b>
       <label class="inl">Prisområde<select data-set="el.area" aria-label="Prisområde"><option value="auto"${!e.area || e.area === 'auto' ? ' selected' : ''}>Automatisk (${EL.area() === 'DK1' ? 'Vest' : 'Øst'})</option><option value="DK1"${e.area === 'DK1' ? ' selected' : ''}>Vestdanmark (DK1)</option><option value="DK2"${e.area === 'DK2' ? ' selected' : ''}>Østdanmark (DK2)</option></select></label>
        ${e.supplier ? `<div class="small muted">${esc(e.supplier)}</div>` : ''}
-      <label class="inl">Elselskabets tillæg (øre/kWh inkl. moms)<input type="text" inputmode="decimal" data-set="el.markup" value="${esc(String(e.markup ?? ''))}" placeholder="0" aria-label="Elselskabets tillæg i øre pr. kWh" style="width:90px"></label></section>
+      <label class="inl">Elselskabets tillæg (øre/kWh inkl. moms)<input type="text" inputmode="decimal" data-set="el.markup" value="${esc(String(e.markup ?? ''))}" placeholder="0" aria-label="Elselskabets tillæg i øre pr. kWh" style="width:90px"></label>
+      <label class="inl">Abonnement (kr./md.)<input type="text" inputmode="decimal" data-set="el.sub" value="${esc(String(e.sub ?? ''))}" placeholder="0" aria-label="Abonnement i kroner pr. måned" style="width:90px"></label>
+      <div class="lab" style="margin-top:8px">Ny pris fra</div>
+      <div class="row" style="gap:8px;flex-wrap:wrap"><input type="date" data-set="el.change.from" value="${esc((e.change || {}).from || '')}" aria-label="Ny pris fra dato"><label class="inl">øre/kWh<input type="text" inputmode="decimal" data-set="el.change.markup" value="${esc(String((e.change || {}).markup ?? ''))}" aria-label="Nyt tillæg" style="width:70px"></label><label class="inl">kr./md.<input type="text" inputmode="decimal" data-set="el.change.sub" value="${esc(String((e.change || {}).sub ?? ''))}" aria-label="Nyt abonnement" style="width:70px"></label></div></section>
     <section class="card"><b>Eloverblik (forbrug og nettarif)</b>
       <div class="small ${st && st.configured ? '' : 'muted'}">${!hasProxy() ? 'Kræver forbindelsen til jeres server.' : !st ? 'Tjekker …' : st.configured ? (EL.state.usageError ? 'Fejl: ' + esc(EL.state.usageError) : '✓ Forbundet' + (EL.hasTariffs() ? ' · nettarif hentet' : '')) : 'Ikke forbundet'}</div>
       <details class="small"><summary>Sådan forbinder du</summary><ol style="margin:6px 0 0 18px;padding:0;display:flex;flex-direction:column;gap:4px"><li>Log ind på eloverblik.dk → Min profil → Datadeling → Opret token.</li><li>Cloudflare → Workers & Pages → easyhome → Settings → Variables and Secrets → Add: type <b>Secret</b>, navn <b>ELOVERBLIK_TOKEN</b>, værdi = token.</li><li>Tryk Deploy og vent et minut.</li></ol></details></section>`;
@@ -1459,6 +1462,8 @@ function loadFootball(force = false) { if (!svcOn('fodbold') || !hasProxy()) ret
 function loadEl(force = false) {
   // Engangs-opsætning: Energi Fyn FynskSupportEl – 8,75 øre/kWh i handels- og administrationstillæg (energifyn.dk, nov. 2026)
   if (settings.el && !settings.el.mk1) { if (!settings.el.markup) { settings.el.markup = '8,75'; settings.el.supplier = 'Energi Fyn · FynskSupportEl'; } settings.el.mk1 = true; save(); }
+  // Varslet prisændring fra Energi Fyn: 10 øre/kWh og 20 kr./md. fra 1. marts 2027
+  if (settings.el && !settings.el.mk2) { settings.el.sub = settings.el.sub || '15'; if (!settings.el.change) settings.el.change = { from: '2027-03-01', markup: '10', sub: '20' }; settings.el.mk2 = true; save(); }
   if (!svcOn('el') || !hasProxy()) return;
   const show = () => { if (ui.page === 'stroem' || (ui.page === 'forside' && curLayout().some((x) => x.id === 'elpris' || x.id === 'elforbrug'))) softRender(); };
   EL.loadPrices(force).then(show).catch((e) => { EL.state.error = e.message; show(); });
