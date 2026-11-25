@@ -29,13 +29,18 @@ export async function teamsOf(lg) {
 
 const favs = () => (settings.football && settings.football.teams) || [];
 const score = (c) => (c.score == null ? '' : typeof c.score === 'object' ? (c.score.displayValue ?? String(c.score.value ?? '')) : String(c.score));
-function parse(ev, fav, lgDefault = '') {
+// Mål og kort fra kampoversigten (bruges, hvis kampdetaljerne ikke kan hentes)
+const plays = (comp) => (comp.details || []).map((d) => ({ clock: (d.clock && d.clock.displayValue) || '', team: d.team ? String(d.team.id) : '', goal: !!d.scoringPlay, pen: !!d.penaltyKick, og: !!d.ownGoal, red: !!d.redCard, yellow: !!d.yellowCard,
+  who: ((d.athletesInvolved || [])[0] || {}).displayName || (((d.participants || [])[0] || {}).athlete || {}).displayName || '' })).filter((d) => d.goal || d.red || d.yellow);
+export function parse(ev, fav, lgDefault = '', slug = '') {
   const comp = (ev.competitions || [])[0] || {};
   const st = (comp.status || ev.status || {}).type || {};
   const side = (h) => { const c = (comp.competitors || []).find((x) => x.homeAway === h) || {}; const t = c.team || {};
     return { id: String(t.id || ''), name: dk(t.shortDisplayName || t.displayName || ''), abbr: t.abbreviation || '', logo: (t.logos && t.logos[0] && t.logos[0].href) || t.logo || '', score: score(c), win: !!c.winner, pens: c.shootoutScore != null ? String(c.shootoutScore) : '' }; };
   const lgName = (ev.league && ev.league.name) || lgDefault || (ev.season && ev.season.displayName) || '';
-  return { id: String(ev.id), date: new Date(ev.date), state: st.state || 'pre', detail: st.shortDetail || '', clock: (comp.status || ev.status || {}).displayClock || '', comp: COMP[lgName] || lgName, home: side('home'), away: side('away'), fav };
+  const lg = (ev.league && ev.league.slug) || slug;
+  const venue = (comp.venue && comp.venue.fullName) || '';
+  return { id: String(ev.id), date: new Date(ev.date), state: st.state || 'pre', detail: st.shortDetail || '', clock: (comp.status || ev.status || {}).displayClock || '', comp: COMP[lgName] || lgName, home: side('home'), away: side('away'), fav, lg, venue, plays: plays(comp) };
 }
 
 async function schedule(t, fixture) {
@@ -44,7 +49,7 @@ async function schedule(t, fixture) {
   // (FCK valgt under Conference League ≠ FCK i Superligaen), så dens kampe hentes fra netop den turnering.
   if (!t.lg || t.lg === 'nat') return (await get('all').catch(() => [])).map((e) => parse(e, t.id));
   const lgName = (LEAGUES.find((L) => L.id === t.lg) || {}).name;
-  const ms = (await get(t.lg).catch(() => [])).map((e) => parse(e, t.id));
+  const ms = (await get(t.lg).catch(() => [])).map((e) => parse(e, t.id, '', t.lg));
   const own = ms.filter((m) => m.comp === lgName);
   return own.length ? own : ms;
 }
@@ -60,7 +65,7 @@ async function leagueDays(lg) {
   const res = await Promise.all(months.map((m) => workerFetch(`/espn/${lg}/scoreboard?dates=${m}`).then((x) => x.json())));
   const name = ((res[0].leagues || [])[0] || {}).name || '';
   const seen = new Set();
-  return res.flatMap((j) => j.events || []).filter((e) => (seen.has(e.id) ? false : seen.add(e.id))).map((e) => parse(e, '', name))
+  return res.flatMap((j) => j.events || []).filter((e) => (seen.has(e.id) ? false : seen.add(e.id))).map((e) => parse(e, '', name, lg))
     .filter((m) => m.date >= a && m.date <= b).sort((x, y) => x.date - y.date);
 }
 

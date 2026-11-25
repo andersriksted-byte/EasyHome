@@ -1,5 +1,5 @@
 {
-  "version": "1.72.0",
+  "version": "1.73.0",
   "files": [
     "index.html",
     "app.js",
@@ -22,9 +22,21 @@
     "timer.js",
     "mcats.js",
     "football.js",
-    "el.js"
+    "el.js",
+    "sport.js"
   ],
   "notes": [
+    {
+      "version": "1.73.0",
+      "date": "25. november 2026",
+      "title": "Ny side: Sport",
+      "items": [
+        "Ny side i menuen: Sport. Dagens kampe og resultater i alle de sportsgrene, I følger – bladr mellem dagene med pilene.",
+        "Vælg sportsgrene under Indstillinger → Sport: fodbold, Formel 1, tennis, golf, NBA, NFL og NHL.",
+        "Tryk på en kamp for at se mål, kort, statistik og opstillinger – det opdateres af sig selv, mens kampen spilles. Det virker også fra fodboldkortet på forsiden.",
+        "Sonos: kan der ikke findes et cover til det, der spiller, vises favorittens ikon i stedet."
+      ]
+    },
     {
       "version": "1.72.0",
       "date": "25. november 2026",

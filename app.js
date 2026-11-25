@@ -13,6 +13,7 @@ import * as A from './login.js';
 import * as MD from './madro.js';
 import * as MC from './mcats.js';
 import * as FB from './football.js';
+import * as SP from './sport.js';
 import * as EL from './el.js';
 import * as SF from './somfy.js';
 import * as TM from './timer.js';
@@ -54,6 +55,7 @@ const themeLabel = (id) => (id === 'auto' ? 'Automatisk' : THEMES[id].label);
 const ICON = {
   sunon: 'M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10zM12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4', sunoff: 'M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z',
   stroem: 'M13 2 4 14h7l-1 8 9-12h-7l1-8z', bolt: 'M13 2 4 14h7l-1 8 9-12h-7l1-8z',
+  sport: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 7.5l3.8 2.8-1.5 4.4H9.7l-1.5-4.4L12 7.5zM12 3v4.5M15.8 10.3l4.3-1.4M14.3 14.7l2.7 3.7M9.7 14.7 7 18.4M8.2 10.3 3.9 8.9',
   ball: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 7.5l3.8 2.8-1.5 4.4H9.7l-1.5-4.4L12 7.5zM12 3v4.5M15.8 10.3l4.3-1.4M14.3 14.7l2.7 3.7M9.7 14.7 7 18.4M8.2 10.3 3.9 8.9',
   timer: 'M12 8v5l3 2M9 2h6M12 22a8 8 0 1 0 0-16 8 8 0 0 0 0 16z', pause: 'M7 5h4v14H7zM13 5h4v14h-4z',
   blinds: 'M4 4h16M5 4v9M19 4v9M5 13h14M7 7h10M7 10h10M12 13v4M10 19a2 2 0 1 0 4 0 2 2 0 0 0-4 0',
@@ -79,7 +81,7 @@ const GRIP = '<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24"
 
 const PAGES = [
   { id: 'forside', label: 'Forside' }, { id: 'kalender', label: 'Kalender' }, { id: 'madro', label: 'Madro' }, { id: 'vejr', label: 'Vejret' },
-  { id: 'nyheder', label: 'Nyheder' }, { id: 'musik', label: 'Musik' }, { id: 'somfy', label: 'Screens' }, { id: 'stroem', label: 'Strøm' }, { id: 'tv', label: 'DR TV' }
+  { id: 'nyheder', label: 'Nyheder' }, { id: 'musik', label: 'Musik' }, { id: 'somfy', label: 'Screens' }, { id: 'stroem', label: 'Strøm' }, { id: 'sport', label: 'Sport' }, { id: 'tv', label: 'DR TV' }
 ];
 // Tjenester ("app store"): hver tjeneste kan slås til og fra under Indstillinger → Tjenester.
 // Slås en tjeneste fra, skjules dens side, kort, faner og felter. Kortene på forsiden huskes til den slås til igen.
@@ -93,7 +95,7 @@ const SERVICES = [
   { id: 'tv', name: 'DR TV', icon: 'tv', desc: 'Genveje til DR\'s kanaler.', pages: ['tv'], widgets: ['tv'], tabs: ['tv'] },
   { id: 'timer', name: 'Timer nedtælling', icon: 'timer', desc: 'Køkkentimer med alarm – fx til madlavning.', pages: [], widgets: ['timer'], tabs: [] },
   { id: 'el', name: 'Strøm', icon: 'bolt', desc: 'Elpriser time for time og jeres elforbrug.', pages: ['stroem'], widgets: ['elpris', 'elforbrug', 'vasketid'], tabs: ['el'] },
-  { id: 'fodbold', name: 'Fodbold', icon: 'ball', desc: 'Kampe, resultater og stillinger.', pages: [], widgets: ['fodbold', 'stilling'], tabs: ['fodbold'] },
+  { id: 'fodbold', name: 'Sport', icon: 'ball', desc: 'Fodbold, Formel 1, tennis m.m. – kampe, resultater og stillinger.', pages: ['sport'], widgets: ['fodbold', 'stilling'], tabs: ['fodbold'] },
   { id: 'nedtaelling', name: 'Nedtællinger', icon: 'cd', desc: 'Dage til juleaften, ferie og fødselsdage.', pages: [], widgets: ['nedtaelling'], tabs: [] }
 ];
 const svcOn = (id) => !settings.services || settings.services[id] !== false;
@@ -546,7 +548,7 @@ function wFodbold(size, h = 1, wd = 1) {
     const pend = FB.pending(m); const fav = favIn(m.home.id, m.comp) ? m.home.id : favIn(m.away.id, m.comp) ? m.away.id : '';
     const mid = pend ? '<span class="fb-mid">–</span>' : m.state === 'pre' ? `<span class="fb-mid time">${hhmm(m.date)}</span>` : `<span class="fb-mid"><b class="${m.home.win ? 'w' : ''}">${esc(m.home.score)}</b>–<b class="${m.away.win ? 'w' : ''}">${esc(m.away.score)}</b></span>`;
     const when = m.state === 'in' ? `<span class="fb-live">● ${esc(m.clock || m.detail || 'Live')}</span>` : pend ? 'Afventer' : m.state === 'post' ? 'Slut' : '';
-    return `<div class="fb-row ${m.state}"><span class="fb-when">${when}</span>${side(m.home, fav)}${mid}${side(m.away, fav)}</div>`;
+    return `<div class="fb-row ${m.state}" ${spRef({ kind: 'fb', m })}><span class="fb-when">${when}</span>${side(m.home, fav)}${mid}${side(m.away, fav)}</div>`;
   };
   const todays = all.filter((m) => sameDay(m.date, day)).sort((a, b) => a.date - b.date);
   if (!todays.length) return head + `<div class="empty">Ingen kampe ${sameDay(day, today) ? 'i dag' : 'denne dag'}.</div>`;
@@ -559,6 +561,171 @@ function wFodbold(size, h = 1, wd = 1) {
   }
   const blocks = keys.map((k) => `<div class="fb-grp"><div class="fb-sub">${esc(k)}</div>${groups.get(k).map(row).join('')}</div>`);
   return head + `<div class="fb-days">${blocks.join('')}</div>`;
+}
+// ---------- Sport-siden: dagens kampe i alle fulgte sportsgrene, og detaljer om den enkelte kamp ----------
+let spRefs = [];
+const spRef = (it) => { if (spRefs.length > 3000) spRefs = []; spRefs.push(it); return `data-act="spOpen" data-i="${spRefs.length - 1}" role="button" tabindex="0"`; };
+const spDay = () => addDays(startOfDay(new Date()), ui.spOff || 0);
+const dayWord = (day) => { const t = startOfDay(new Date()); return sameDay(day, t) ? 'I dag' : sameDay(day, addDays(t, 1)) ? 'I morgen' : sameDay(day, addDays(t, -1)) ? 'I går' : cap(DAYS_LONG[day.getDay()]); };
+function spLoad(day = spDay(), force = false) {
+  if (!hasProxy() || !svcOn('fodbold')) return;
+  SP.followed().forEach((sp) => { const before = (SP.dayData(sp.id, day) || {}).at;
+    SP.loadDay(sp, day, force).then((c) => { if (c && c.at !== before && ui.page === 'sport') softRender(); spModalRefresh(); }); });
+}
+const spLogo = (t) => (t.logo ? `<img src="${esc(t.logo)}" alt="" loading="lazy">` : `<i class="sp-ab">${esc(t.abbr || t.name.slice(0, 3).toUpperCase())}</i>`);
+const flag = (u) => (u ? `<img class="sp-flag" src="${esc(u)}" alt="" loading="lazy">` : '<i class="sp-flag"></i>');
+// ESPN's statustekster på dansk (fx "5:21 - 3rd" → "5:21 · 3.", "Halftime" → "Pause")
+const liveDa = (t) => String(t || '').replace(/in progress/i, 'I gang').replace(/half ?time/i, 'Pause').replace(/end of (\d)(st|nd|rd|th)/i, 'Efter $1.').replace(/(\d)(st|nd|rd|th)( quarter| period)?/gi, '$1.').replace(/\s-\s/, ' · ').replace(/round (\d)/i, 'Runde $1').replace(/overtime|\bOT\b/i, 'Forl.').replace(/final/i, 'Slut').replace(/delayed/i, 'Forsinket').replace(/suspended/i, 'Afbrudt');
+function spWhen(it) {
+  if (it.kind === 'fb' && FB.pending(it.m)) return '<span class="sp-when">Afventer</span>';
+  const x = it.m || it;
+  if (x.state === 'in') return `<span class="sp-when live">● ${esc(x.clock && !x.kind ? x.clock : liveDa(x.detail) || x.clock || 'Live')}</span>`;
+  if (x.state === 'post') return `<span class="sp-when">Slut</span>`;
+  return `<span class="sp-when time">${hhmm(x.date)}</span>`;
+}
+// Holdsport (fodbold, NBA, NFL, NHL): logo og navn på hver side, resultat eller starttid i midten
+function spTeamRow(it, favId = '') {
+  const m = it.m || it;
+  const mid = m.state === 'pre' || (it.kind === 'fb' && FB.pending(m)) ? '<span class="sp-mid vs">–</span>' : `<span class="sp-mid"><b class="${m.home.win ? 'w' : ''}">${esc(m.home.score)}</b><i>–</i><b class="${m.away.win ? 'w' : ''}">${esc(m.away.score)}</b></span>`;
+  const side = (t, r) => `<span class="sp-t${r ? ' r' : ''}${t.id && t.id === favId ? ' fav' : ''}">${spLogo(t)}<b>${esc(t.name)}</b></span>`;
+  return `<div class="sp-row ${m.state}" ${spRef(it)}>${spWhen(it)}${side(m.home)}${mid}${side(m.away, true)}</div>`;
+}
+const setCells = (p, o) => p.sets.map((s, i) => `<i class="${s.w ? 'w' : ''}">${esc(s.v)}${s.tb != null && o.sets[i] && !s.w ? `<sup>${esc(s.tb)}</sup>` : ''}</i>`).join('');
+function spTennisRow(it) {
+  const p = (a, b) => `<div class="tn-p${a.win ? ' win' : ''}">${flag(a.flag)}<b>${esc(a.name)}</b>${a.rank ? `<small>${a.rank}</small>` : ''}<span class="tn-sets">${setCells(a, b)}</span></div>`;
+  return `<div class="sp-tn ${it.state}" ${spRef(it)}>${spWhen(it)}<div class="tn-ps">${p(it.p1, it.p2)}${p(it.p2, it.p1)}</div>${it.round ? `<span class="tn-rd">${esc(it.round)}</span>` : ''}</div>`;
+}
+function spGolfRows(it, n) {
+  return `<div class="gf-rows">${it.rows.slice(0, n).map((r) => `<div class="gf-row"><span class="gf-pos">${esc(r.pos)}</span>${flag(r.flag)}<b>${esc(r.name)}</b><span class="gf-sc ${/^-/.test(r.score) ? 'under' : ''}">${esc(r.score)}</span><small>${r.thru && r.thru < 18 && it.state === 'in' ? `${r.thru} huller` : esc(r.today)}</small></div>`).join('')}</div>`;
+}
+function spF1Row(it) {
+  const r = SP.f1Result(it);
+  if (it.state === 'post' && !r) SP.loadF1Result(it).then((x) => { if (x && x.rows.length && ui.page === 'sport') softRender(); });
+  const pod = r && r.rows.length ? `<span class="f1-pod">${r.rows.slice(0, 3).map((x, i) => `<i class="p${i + 1}">${esc(x.code || x.name.split(' ').pop())}</i>`).join('')}</span>` : '';
+  return `<div class="sp-f1 ${it.state}" ${spRef(it)}>${spWhen(it)}<b>${esc(it.label)}</b>${pod}</div>`;
+}
+function spCard(ico, title, sub, body, live) {
+  return `<section class="card sp-card${live ? ' has-live' : ''}"><div class="sp-h"><span class="sp-ico">${ico}</span><b>${esc(title)}</b>${sub ? `<small>${esc(sub)}</small>` : ''}</div>${body}</section>`;
+}
+function pageSport() {
+  const day = spDay(); const off = ui.spOff || 0;
+  const nav = `<div class="sp-daynav"><button class="arr" data-act="spDay" data-dir="-1" ${off <= -7 ? 'disabled' : ''} aria-label="Dagen før">‹</button><button class="sp-day" data-act="spDay" data-dir="0" aria-label="Tilbage til i dag"><b>${dayWord(day)}</b><span>${day.getDate()}. ${MONTHS[day.getMonth()]}</span></button><button class="arr" data-act="spDay" data-dir="1" ${off >= 14 ? 'disabled' : ''} aria-label="Dagen efter">›</button></div>`;
+  const top = `<div class="ptitle"><h1>Sport</h1>${nav}<div class="tools"><button class="btn line" data-act="spRefresh" aria-label="Opdater">${svg('refresh', 18)}</button></div></div>`;
+  const fb = settings.football || {}; const hasFb = (fb.teams || []).length || (fb.follow || []).length;
+  const sps = SP.followed();
+  if (!hasFb && !sps.length) return top + `<section class="card"><div class="empty">Vælg sportsgrene under Indstillinger → Sport.</div></section>`;
+  if (!hasProxy()) return top + `<section class="card">${needProxyMsg('Sport')}</section>`;
+  const cards = []; let waiting = false; const errs = [];
+  if (hasFb) {
+    if (!FB.state.at) waiting = true;
+    const { all, order } = fbDays();
+    const lgOf = (id) => (FB.LEAGUES.find((L) => L.id === id) || {}).name;
+    const favIn = (id, comp) => (fb.teams || []).some((t) => t.id === id && (t.lg === 'nat' || lgOf(t.lg) === comp));
+    const groups = new Map(); all.filter((m) => sameDay(m.date, day)).sort((a, b) => a.date - b.date).forEach((m) => { const k = m.comp || 'Andre kampe'; if (!groups.has(k)) groups.set(k, []); groups.get(k).push(m); });
+    [...groups.keys()].sort((a, b) => { const ia = order.indexOf(a), ib = order.indexOf(b); return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib); }).forEach((k) => {
+      const ms = groups.get(k);
+      cards.push(spCard('⚽', k, '', `<div class="sp-list">${ms.map((m) => spTeamRow({ kind: 'fb', m }, favIn(m.home.id, m.comp) ? m.home.id : favIn(m.away.id, m.comp) ? m.away.id : '')).join('')}</div>`, ms.some((m) => m.state === 'in')));
+    });
+  }
+  sps.forEach((sp) => {
+    const c = SP.dayData(sp.id, day);
+    if (!c) { waiting = true; SP.loadDay(sp, day).then(() => { if (ui.page === 'sport') softRender(); }); return; }
+    if (!c.at) { waiting = true; return; }
+    if (c.error && !c.items.length) errs.push(sp.name);
+    const items = c.items.slice().sort((a, b) => (a.state === 'in' ? 0 : 1) - (b.state === 'in' ? 0 : 1) || a.date - b.date);
+    if (!items.length) return;
+    if (sp.kind === 'team') cards.push(spCard(sp.ico, sp.name, '', `<div class="sp-list">${items.map((x) => spTeamRow(x)).join('')}</div>`, items.some((x) => x.state === 'in')));
+    if (sp.kind === 'tennis') { const by = new Map(); items.forEach((x) => { if (!by.has(x.tour)) by.set(x.tour, []); by.get(x.tour).push(x); });
+      by.forEach((xs, tour) => cards.push(spCard(sp.ico, tour, sp.id === 'wta' ? 'Damer' : 'Herrer', `<div class="sp-list">${xs.map(spTennisRow).join('')}</div>`, xs.some((x) => x.state === 'in')))); }
+    if (sp.kind === 'golf') items.forEach((x) => cards.push(spCard(sp.ico, x.name, x.round ? `Runde ${x.round}` : '', `<div ${spRef(x)} class="gf-open">${spGolfRows(x, 6)}</div>`, x.state === 'in')));
+    if (sp.kind === 'f1') { const by = new Map(); items.forEach((x) => { if (!by.has(x.round)) by.set(x.round, []); by.get(x.round).push(x); });
+      by.forEach((xs) => cards.push(spCard(sp.ico, xs[0].race, xs[0].place, `<div class="sp-list">${xs.map(spF1Row).join('')}</div>`, xs.some((x) => x.state === 'in')))); }
+  });
+  cards.sort((a, b) => (b.includes('has-live') ? 1 : 0) - (a.includes('has-live') ? 1 : 0));
+  const err = errs.length ? `<div class="small err">Kunne ikke hente: ${esc(errs.join(', '))}</div>` : '';
+  if (!cards.length) return top + err + `<section class="card"><div class="empty">${waiting ? 'Henter …' : `Ingen kampe ${sameDay(day, startOfDay(new Date())) ? 'i dag' : 'denne dag'}.`}</div></section>`;
+  return top + err + `<div class="sp-grid">${cards.join('')}</div>`;
+}
+
+/* Detaljer om en kamp (vindue, der opdateres hvert halve minut, mens kampen spilles) */
+let spOpenIt = null;
+function spFresh(it) {
+  // Find den nyeste udgave af kampen i de seneste data
+  if (it.kind === 'fb') { const { all } = fbDays(); const m = all.find((x) => x.id === it.m.id); return m ? { kind: 'fb', m } : it; }
+  const sp = SP.SPORTS.find((s) => s.id === it.sport); const c = sp && SP.dayData(sp.id, startOfDay(it.date));
+  return (c && c.items.find((x) => x.id === it.id)) || it;
+}
+const LEAD_DA = { Points: 'Point', Rebounds: 'Returbolde', Assists: 'Assists', 'Passing Yards': 'Kast (yards)', 'Rushing Yards': 'Løb (yards)', 'Receiving Yards': 'Grib (yards)', Goals: 'Mål', 'Goals Against Average': 'Mål imod i snit', Saves: 'Redninger' };
+const EV_ICO = { goal: '⚽', pen: '⚽', og: '⚽', yellow: '<i class="mx-card y"></i>', red: '<i class="mx-card r"></i>', sub: '🔁' };
+function spDetailHtml(it) {
+  const when = (d) => `${cap(DAYS_LONG[d.getDay()])} ${d.getDate()}. ${MONTHS[d.getMonth()]} kl. ${hhmm(d)}`;
+  const status = (x) => (x.state === 'in' ? `<span class="mx-live">● ${esc(x.clock && !x.kind ? x.clock : liveDa(x.detail) || 'Live')}</span>` : x.state === 'post' ? '<span class="mx-st">Slut</span>' : `<span class="mx-st">${when(x.date)}</span>`);
+  const info = (rows) => rows.filter((r) => r[1]).map(([ico, t]) => `<div class="evi-row"><span>${ico}</span><span>${esc(t)}</span></div>`).join('');
+  if (it.kind === 'fb' || it.kind === 'team') {
+    const m = it.m || it; const D2 = it.kind === 'fb' ? SP.detailOf(m) : null;
+    const sc = D2 && D2.score && D2.score.home != null && m.state !== 'pre' ? D2.score : { home: m.home.score, away: m.away.score };
+    const head = `<div class="mx-top"><span>${esc(it.kind === 'fb' ? m.comp : (SP.SPORTS.find((s) => s.id === m.sport) || {}).name || '')}</span><button class="mx-x" data-close aria-label="Luk">×</button></div>
+      <div class="mx-score"><div class="mx-tm">${spLogo(m.home)}<b>${esc(m.home.full || m.home.name)}</b>${m.home.record ? `<small>${esc(m.home.record)}</small>` : ''}</div>
+      <div class="mx-res">${m.state === 'pre' ? `<b class="mx-time">${hhmm(m.date)}</b>` : `<b>${esc(sc.home)}<i>–</i>${esc(sc.away)}</b>`}${status(m)}</div>
+      <div class="mx-tm">${spLogo(m.away)}<b>${esc(m.away.full || m.away.name)}</b>${m.away.record ? `<small>${esc(m.away.record)}</small>` : ''}</div></div>`;
+    if (it.kind === 'team') {
+      const n = Math.max(m.home.lines.length, m.away.lines.length);
+      const lab = (i) => (m.sport === 'nba' || m.sport === 'nfl' ? (i < 4 ? `${i + 1}.` : 'OT') : i < 3 ? `${i + 1}.` : 'OT');
+      const tbl = n ? `<div class="mx-lines" style="--n:${n}"><span></span>${[...Array(n)].map((_, i) => `<span>${lab(i)}</span>`).join('')}<span>I alt</span>${[m.home, m.away].map((t) => `<b>${esc(t.abbr || t.name)}</b>${[...Array(n)].map((_, i) => `<span>${esc(t.lines[i] || '')}</span>`).join('')}<b>${esc(t.score)}</b>`).join('')}</div>` : '';
+      const lead = m.leaders && m.leaders.length ? `<div class="mx-sec">Bedst i kampen</div>${m.leaders.map((l) => `<div class="mx-lead"><span>${esc(LEAD_DA[l.name] || l.name)}</span><b>${esc(l.who)}</b><span>${esc(l.val)}</span></div>`).join('')}` : '';
+      return head + tbl + lead + info([['📍', m.venue]]);
+    }
+    if (!D2 || (D2.loading && !D2.at)) return head + '<div class="empty">Henter kampens detaljer …</div>' + info([['📍', m.venue]]);
+    const evs = (D2.events || []).filter((e) => e.k !== 'ht' || m.state !== 'pre');
+    const tl = evs.length ? `<div class="mx-sec">Kampens forløb</div><div class="mx-tl">${evs.map((e) => e.k === 'ht' ? '<div class="mx-ht">Pause</div>'
+      : (() => { const who = `<span class="mx-who"><span class="mx-ico">${EV_ICO[e.k] || ''}</span><span><b>${esc(e.who || (e.k === 'sub' ? 'Udskiftning' : ''))}</b>${e.k === 'pen' ? '<small>Straffe</small>' : e.k === 'og' ? '<small>Selvmål</small>' : e.k === 'sub' && e.other ? `<small>ud: ${esc(e.other)}</small>` : ''}</span></span>`;
+        return `<div class="mx-ev k-${e.k}"><span class="mx-l">${e.side === 'home' ? who : ''}</span><span class="mx-clk">${esc(e.clock)}</span><span class="mx-r">${e.side === 'away' ? who : ''}</span></div>`; })()).join('')}</div>` : m.state === 'pre' ? '' : '<div class="mx-sec">Kampens forløb</div><div class="small muted">Ingen mål eller kort endnu.</div>';
+    const st = (D2.stats || []).length ? `<div class="mx-sec">Statistik</div><div class="mx-stats">${D2.stats.map((x) => { const h = parseFloat(x.h) || 0, a = parseFloat(x.a) || 0, t = h + a || 1;
+      return `<div class="mx-stat"><b>${esc(x.h)}${x.unit}</b><span>${esc(x.label)}</span><b>${esc(x.a)}${x.unit}</b><div class="mx-bar"><i style="width:${(h / t) * 100}%"></i><i style="width:${(a / t) * 100}%"></i></div></div>`; }).join('')}</div>` : '';
+    const L = D2.lineups; const hasL = L && (L.home.starters.length || L.away.starters.length);
+    const col = (x, t) => `<div class="mx-lu"><div class="mx-luh">${spLogo(t)}<b>${esc(x.formation || '')}</b></div>${x.starters.map((p) => `<div class="mx-pl${p.out ? ' out' : ''}"><span>${esc(p.n)}</span><b>${esc(p.name)}</b>${p.out ? '<i>🔁</i>' : ''}</div>`).join('')}
+      ${x.subs.filter((p) => p.in).length ? `<div class="mx-sub">Kom ind</div>${x.subs.filter((p) => p.in).map((p) => `<div class="mx-pl in"><span>${esc(p.n)}</span><b>${esc(p.name)}</b></div>`).join('')}` : ''}</div>`;
+    const lu = hasL ? `<details class="mx-fold"${m.state === 'pre' ? ' open' : ''}><summary>Opstillinger</summary><div class="mx-lus">${col(L.home, m.home)}${col(L.away, m.away)}</div></details>` : '';
+    return head + tl + st + lu + info([['📍', D2.venue], ['👥', D2.attendance ? `${D2.attendance.toLocaleString('da-DK')} tilskuere` : ''], ['🟢', D2.referee ? `Dommer: ${D2.referee}` : '']]);
+  }
+  if (it.kind === 'tennis') {
+    const n = Math.max(it.p1.sets.length, it.p2.sets.length);
+    const rowP = (a, b) => `<div class="mx-tnr${a.win ? ' win' : ''}">${flag(a.flag)}<b>${esc(a.full || a.name)}</b>${a.rank ? `<small>nr. ${a.rank}</small>` : ''}<span class="tn-sets">${setCells(a, b)}</span></div>`;
+    return `<div class="mx-top"><span>${esc(it.tour)}</span><button class="mx-x" data-close aria-label="Luk">×</button></div><div class="mx-tn">${rowP(it.p1, it.p2)}${rowP(it.p2, it.p1)}</div><div class="mx-res solo">${status(it)}</div>${n ? '' : ''}${info([['🏆', it.round], ['📍', it.court]])}`;
+  }
+  if (it.kind === 'golf') return `<div class="mx-top"><span>${esc(it.name)}${it.round ? ` · runde ${it.round}` : ''}</span><button class="mx-x" data-close aria-label="Luk">×</button></div><div class="mx-res solo">${status(it)}</div>${spGolfRows(it, 40)}`;
+  if (it.kind === 'f1') {
+    const r = SP.f1Result(it); const st = SP.f1Standings.cache;
+    const res = r && r.rows.length ? `<div class="mx-sec">Resultat</div><div class="f1-tbl">${r.rows.slice(0, 20).map((x) => `<div class="f1-r"><span>${esc(x.pos)}</span><b>${esc(x.name)}</b><small>${esc(x.team)}</small><span>${esc(x.time)}</span>${x.pts ? `<span class="f1-pt">${esc(x.pts)} p</span>` : '<span></span>'}</div>`).join('')}</div>` : it.state === 'post' ? '<div class="small muted">Resultatet er ikke kommet endnu.</div>' : '';
+    const stand = st && st.length ? `<details class="mx-fold"><summary>VM-stilling</summary><div class="f1-tbl">${st.slice(0, 20).map((x) => `<div class="f1-r"><span>${esc(x.pos)}</span><b>${esc(x.name)}</b><small>${esc(x.team)}</small><span></span><span class="f1-pt">${esc(x.pts)} p</span></div>`).join('')}</div></details>` : '';
+    return `<div class="mx-top"><span>${esc(it.race)}</span><button class="mx-x" data-close aria-label="Luk">×</button></div><div class="mx-res solo"><b class="mx-time">${esc(it.label)}</b>${status(it)}</div>${res}${stand}${info([['📍', [it.circuit, it.place].filter(Boolean).join(' · ')]])}`;
+  }
+  return '';
+}
+function spDetailLoad(it, force = false) {
+  const redraw = () => { if (spOpenIt === it) spModalRefresh(); };
+  if (it.kind === 'fb') SP.loadDetail(it.m, force).then(redraw);
+  if (it.kind === 'f1') { SP.loadF1Result(it).then(redraw); if (!SP.f1Standings.cache) SP.f1Standings().then((x) => { SP.f1Standings.cache = x; redraw(); }).catch(() => {}); }
+}
+function showSport(it) {
+  document.getElementById('spModal')?.remove();
+  spOpenIt = it;
+  const m = document.createElement('div'); m.className = 'upd-modal'; m.id = 'spModal';
+  m.setAttribute('role', 'dialog'); m.setAttribute('aria-modal', 'true');
+  m.innerHTML = `<div class="upd-box mx">${spDetailHtml(it)}</div>`;
+  document.body.appendChild(m);
+  m.addEventListener('click', (ev) => { if (ev.target === m || ev.target.closest('[data-close]')) { m.remove(); spOpenIt = null; } });
+  spDetailLoad(it);
+}
+// Tegn vinduet igen med de nyeste data (og hent kampens detaljer igen, hvis den er i gang)
+function spModalRefresh(reload = false) {
+  const box = document.querySelector('#spModal .upd-box'); if (!box || !spOpenIt) return;
+  const it = spFresh(spOpenIt); spOpenIt = it;
+  if (reload) { const x = it.m || it; if (x.state === 'in' || (x.state === 'pre' && x.date - Date.now() < 3600000)) { spDetailLoad(it, true); if (it.kind !== 'fb') spLoad(startOfDay(x.date), true); else loadFootball(true); } return; }
+  const open = [...box.querySelectorAll('details')].map((d) => d.open); const y = box.scrollTop;
+  box.innerHTML = spDetailHtml(it);
+  box.querySelectorAll('details').forEach((d, i) => { if (open[i] != null) d.open = open[i]; });
+  box.scrollTop = y;
 }
 // ---------- Strøm ----------
 const kr = (v, d = 2) => (v === null || v === undefined ? '–' : v.toFixed(d).replace('.', ','));
@@ -847,7 +1014,9 @@ function fodboldSettings() {
     return on ? `<div class="fblg"><div class="row" style="justify-content:space-between"><b>${esc(L.name)}</b><button class="pill" data-act="fbFollow" data-id="${L.id}" aria-pressed="${fol}">${fol ? '✓' : '+'} Følg hele ligaen</button></div><div class="fbchips">${teams ? (teams.length ? teams.map(chip).join('') : '<span class="small muted">Kunne ikke hente holdene</span>') : '<span class="small muted">Henter hold …</span>'}</div></div>` : ''; };
   const prefOpts = [].concat((fb.follow || []).map((id) => ({ id, name: (FB.LEAGUES.find((L) => L.id === id) || {}).name || id }))).filter(Boolean);
   const prefSel = prefOpts.length > 1 ? `<label class="inl">Står øverst<select data-set="football.pref" aria-label="Foretrukken liga">${prefOpts.map((o) => `<option value="${o.id}"${(fb.pref || prefOpts[0].id) === o.id ? ' selected' : ''}>${esc(o.name)}</option>`).join('')}</select></label>` : '';
-  return `<section class="card"><div class="sechead2"><b>Ligaer</b>${prefSel}</div><div class="choices">${[{ id: 'nat', name: 'Landsholdet' }].concat(FB.LEAGUES).map((L) => `<button class="pill" data-act="fbLeague" data-id="${L.id}" aria-pressed="${lgs.includes(L.id)}">${lgs.includes(L.id) ? '✓' : '+'} ${esc(L.name)}</button>`).join('')}</div></section>
+  const on = (settings.sport && settings.sport.on) || [];
+  const sports = `<section class="card"><b>Sportsgrene</b><div class="choices">${SP.SPORTS.map((x) => `<button class="pill" data-act="spToggle" data-id="${x.id}" aria-pressed="${on.includes(x.id)}">${on.includes(x.id) ? '✓' : '+'} ${x.ico} ${esc(x.name)}</button>`).join('')}</div></section>`;
+  return sports + `<section class="card"><div class="sechead2"><b>Fodbold · ligaer</b>${prefSel}</div><div class="choices">${[{ id: 'nat', name: 'Landsholdet' }].concat(FB.LEAGUES).map((L) => `<button class="pill" data-act="fbLeague" data-id="${L.id}" aria-pressed="${lgs.includes(L.id)}">${lgs.includes(L.id) ? '✓' : '+'} ${esc(L.name)}</button>`).join('')}</div></section>
     <section class="card"><b>Favorithold</b>${!hasProxy() ? needProxyMsg('Fodbold') : ''}
       ${lgs.includes('nat') ? `<div class="fblg"><b>Landsholdet</b><div class="fbchips">${FB.NATIONAL.map(chip).join('')}</div></div>` : ''}
       ${FB.LEAGUES.map(leagueSec).join('') || ''}${!lgs.length ? '<span class="small muted">Vælg en liga først</span>' : ''}</section>`;
@@ -1458,7 +1627,7 @@ const SET_TABS = [
   { id: 'familie', label: 'Familie' },
   { id: 'tjenester', label: 'Tjenester' },
   { id: 'vejr', label: 'Vejret' }, { id: 'nyheder', label: 'Nyheder' }, { id: 'kalender', label: 'Kalender' }, 
-  { id: 'musik', label: 'Musik' }, { id: 'tv', label: 'DR TV' }, { id: 'somfy', label: 'Somfy' }, { id: 'fodbold', label: 'Fodbold' }, { id: 'el', label: 'Strøm' }, { id: 'udseende', label: 'Udseende' }, { id: 'forbindelse', label: 'Forbindelse' }
+  { id: 'musik', label: 'Musik' }, { id: 'tv', label: 'DR TV' }, { id: 'somfy', label: 'Somfy' }, { id: 'fodbold', label: 'Sport' }, { id: 'el', label: 'Strøm' }, { id: 'udseende', label: 'Udseende' }, { id: 'forbindelse', label: 'Forbindelse' }
 ];
 function pageIndstillinger() {
   const s = settings;
@@ -1539,7 +1708,7 @@ function pageIndstillinger() {
   <div class="form" role="tabpanel">${T[tab]()}</div>`;
 }
 
-const PAGE_RENDER = { stroem: pageStroem, somfy: pageSomfy, madro: () => '', forside: pageForside, kalender: pageKalender, vejr: pageVejr, nyheder: pageNyheder, musik: pageMusik, tv: pageTv, indstillinger: pageIndstillinger };
+const PAGE_RENDER = { sport: pageSport, stroem: pageStroem, somfy: pageSomfy, madro: () => '', forside: pageForside, kalender: pageKalender, vejr: pageVejr, nyheder: pageNyheder, musik: pageMusik, tv: pageTv, indstillinger: pageIndstillinger };
 
 // Madro vises som hele appen i en ramme, der bliver liggende (så den ikke genindlæses ved hver opdatering)
 let madroSub = '';
@@ -1660,7 +1829,7 @@ async function loadSonos(full = false) {
   if (ui.page === 'musik' || (ui.page === 'forside' && curLayout().some((x) => x.id === 'sonos'))) softRender();
 }
 function loadFootball(force = false) { if (!svcOn('fodbold') || !hasProxy()) return;
-  if (curLayout().some((x) => x.id === 'stilling')) stLeagues().forEach((L) => FB.loadTable(L.id).then(() => { if (ui.page === 'forside') softRender(); })); FB.load(force).then(() => { if (ui.page === 'forside' && curLayout().some((x) => x.id === 'fodbold')) softRender(); }); }
+  if (curLayout().some((x) => x.id === 'stilling')) stLeagues().forEach((L) => FB.loadTable(L.id).then(() => { if (ui.page === 'forside') softRender(); })); FB.load(force).then(() => { if ((ui.page === 'forside' && curLayout().some((x) => x.id === 'fodbold')) || ui.page === 'sport') softRender(); spModalRefresh(); }); }
 function loadEl(force = false) {
   // Engangs-opsætning: Energi Fyn FynskSupportEl – 8,75 øre/kWh i handels- og administrationstillæg (energifyn.dk, nov. 2026)
   if (settings.el && !settings.el.mk1) { if (!settings.el.markup) { settings.el.markup = '8,75'; settings.el.supplier = 'Energi Fyn · FynskSupportEl'; } settings.el.mk1 = true; save(); }
@@ -1675,7 +1844,7 @@ function loadAll() { loadEl(); loadFootball(); loadWeather(); loadNews(); loadCa
 
 /* ---------- Handlinger ---------- */
 const act = {
-  nav: (b) => { if (settings.navOpen) { settings.navOpen = false; save(); } ui.page = b.dataset.page; ui.editing = false; ui.fbDay = null; history.replaceState(null, '', '#' + ui.page); renderNav(); renderMain(false); $('#main').focus({ preventScroll: true }); if (ui.page === 'musik') loadSonos(); if (ui.page === 'stroem') { loadEl(); EL.loadHistory().then(() => { if (ui.page === 'stroem') softRender(); }); } },
+  nav: (b) => { if (settings.navOpen) { settings.navOpen = false; save(); } ui.page = b.dataset.page; ui.editing = false; ui.fbDay = null; history.replaceState(null, '', '#' + ui.page); renderNav(); renderMain(false); $('#main').focus({ preventScroll: true }); if (ui.page === 'musik') loadSonos(); if (ui.page === 'sport') { ui.spOff = 0; loadFootball(); spLoad(); } if (ui.page === 'stroem') { loadEl(); EL.loadHistory().then(() => { if (ui.page === 'stroem') softRender(); }); } },
   toggleNav: () => { settings.navOpen = !settings.navOpen; save(); renderNav(); },
   nextTheme: () => { const i = THEME_ORDER.indexOf(settings.theme); settings.theme = THEME_ORDER[(i + 1) % THEME_ORDER.length]; save(); applyTheme(); renderHeader(); if (ui.editing || ui.page === 'indstillinger') renderMain(); },
   setTheme: (b) => { settings.theme = b.dataset.theme; save(); applyTheme(); renderHeader(); renderMain(); },
@@ -1856,6 +2025,10 @@ const act = {
   calAdd: () => { const colors = ['#D0563C', '#4C78D0', '#D9A400', '#2E9D5B', '#7A5AC8']; const c = { id: uid(), name: 'Ny kalender', color: colors[settings.calendars.length % colors.length], url: '' }; settings.calendars.push(c); ui.calEdit = c.id; save(); renderMain(); setTimeout(() => { const el = document.querySelectorAll('.calname'); if (el.length) { el[el.length - 1].focus(); el[el.length - 1].select(); } }, 50); },
   calEdit: (b) => { ui.calEdit = ui.calEdit === b.dataset.id ? null : b.dataset.id; renderMain(); },
   calEv: (b) => { const e = calRefs[+b.dataset.i]; if (e) showEvent(e); },
+  spOpen: (b) => { const it = spRefs[+b.dataset.i]; if (it) showSport(it); },
+  spDay: (b) => { const d = +b.dataset.dir; ui.spOff = d ? Math.max(-7, Math.min(14, (ui.spOff || 0) + d)) : 0; ui.spTouched = Date.now(); spLoad(); renderMain(false); },
+  spRefresh: () => { loadFootball(true); spLoad(spDay(), true); },
+  spToggle: (b) => { const sp = settings.sport = settings.sport || { on: [] }; const id = b.dataset.id; sp.on = (sp.on || []).includes(id) ? sp.on.filter((x) => x !== id) : (sp.on || []).concat(id); save(); renderMain(); },
   fbLeague: (b) => { const fb = settings.football = settings.football || { leagues: [], teams: [] }; fb.leagues = fb.leagues || []; const id = b.dataset.id; fb.leagues = fb.leagues.includes(id) ? fb.leagues.filter((x) => x !== id) : fb.leagues.concat(id); if (!fb.leagues.includes(id)) { fb.teams = (fb.teams || []).filter((t) => t.lg !== id); fb.follow = (fb.follow || []).filter((x) => x !== id); } save(); renderMain(); loadFootball(true); },
   elRefresh: () => { loadEl(true); toast('Henter strøm-data …'); },
   elView: (b) => { ui.elView = b.dataset.v; ui.elRef = null; renderMain(); },
@@ -2132,6 +2305,8 @@ function boot() {
   setInterval(() => { if (ui.fbDay && Date.now() - (ui.fbTouched || 0) > 45000) { ui.fbDay = null; softRender(); } }, 15000); // i dag er altid standard: tilbage efter under et minut
   setInterval(loadNews, 5 * 60000);
   setInterval(() => { if (!document.hidden) loadFootball(); }, 60000);
+  setInterval(() => { if (document.hidden || ui.page !== 'sport') return; if (ui.spOff && Date.now() - (ui.spTouched || 0) > 3 * 60000 && !document.getElementById('spModal')) ui.spOff = 0; spLoad(); softRender(); }, 60000); // Sport: i dag er standard, og dagen hentes igen under kampe
+  setInterval(() => { if (!document.hidden && document.getElementById('spModal')) spModalRefresh(true); }, 30000); // åben kamp: nyt hvert halve minut, mens den spilles
   setInterval(() => { if (!document.hidden) loadEl(); }, 5 * 60000); // priserne skifter hvert kvarter; nye priser for i morgen kommer ved 13-tiden // FB.load bestemmer selv: hvert minut under kampe, ellers hvert 10. minut
   setInterval(loadCal, 5 * 60000); // kalenderen hentes hvert 5. minut (og med Opdater-knappen på Kalender-siden)
   setInterval(() => { if (S.state.connected && !document.hidden) loadSonos(); }, 8000);

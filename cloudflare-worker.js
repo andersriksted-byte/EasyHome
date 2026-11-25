@@ -33,6 +33,43 @@ function cors(env) {
 }
 const json = (env, obj, status = 200) => new Response(JSON.stringify(obj), { status, headers: { 'Content-Type': 'application/json; charset=utf-8', ...cors(env) } });
 
+// Sport: ESPN's kampdetaljer skåret ned til det, skærmen viser (mål, kort, statistik, opstillinger, stadion)
+const athName = (a) => (a ? { displayName: a.displayName || a.fullName || '', shortName: a.shortName || '' } : null);
+const subbed = (v) => v === true || !!(v && v.didSub);
+function slimPlay(e) {
+  return { type: e.type ? { type: e.type.type || '', text: e.type.text || '' } : null, clock: e.clock ? { displayValue: e.clock.displayValue || '' } : null,
+    addedClock: e.addedClock ? { displayValue: e.addedClock.displayValue || '' } : null, team: e.team ? { id: String(e.team.id || '') } : null,
+    participants: (e.participants || []).map((p) => ({ athlete: athName(p.athlete) })), athletesInvolved: (e.athletesInvolved || []).map((a) => athName(a)),
+    text: e.text || '', shortText: e.shortText || '', scoringPlay: !!e.scoringPlay, penaltyKick: !!e.penaltyKick, ownGoal: !!e.ownGoal,
+    redCard: !!e.redCard, yellowCard: !!e.yellowCard, shootout: !!e.shootout, period: e.period ? e.period.number || e.period : null };
+}
+function slimSummary(j) {
+  const hc = ((j.header || {}).competitions || [])[0] || {};
+  const g = j.gameInfo || {};
+  return {
+    header: { league: j.header && j.header.league ? { name: j.header.league.name || '' } : null,
+      competitions: [{ date: hc.date, status: hc.status, details: (hc.details || []).map(slimPlay),
+        competitors: (hc.competitors || []).map((c) => ({ id: c.id, homeAway: c.homeAway, score: c.score, winner: c.winner, shootoutScore: c.shootoutScore, linescores: c.linescores,
+          record: (c.record || [])[0] ? c.record[0].summary || c.record[0].displayValue || '' : '',
+          team: c.team ? { id: c.team.id, displayName: c.team.displayName, shortDisplayName: c.team.shortDisplayName, abbreviation: c.team.abbreviation, logo: (c.team.logos && c.team.logos[0] && c.team.logos[0].href) || c.team.logo || '' } : null })) }] },
+    keyEvents: (j.keyEvents || []).map(slimPlay),
+    boxscore: { teams: ((j.boxscore || {}).teams || []).map((t) => ({ homeAway: t.homeAway, team: { id: String((t.team || {}).id || '') }, statistics: (t.statistics || []).map((s) => ({ name: s.name, label: s.label, displayValue: s.displayValue })) })) },
+    rosters: (j.rosters || []).map((r) => ({ homeAway: r.homeAway, team: { id: String((r.team || {}).id || '') }, formation: r.formation || '',
+      roster: (r.roster || []).map((p) => ({ starter: !!p.starter, jersey: p.jersey || '', athlete: athName(p.athlete), position: p.position ? { abbreviation: p.position.abbreviation || '' } : null, subbedIn: subbed(p.subbedIn), subbedOut: subbed(p.subbedOut), formationPlace: p.formationPlace || '' })) })),
+    gameInfo: { venue: g.venue ? { fullName: g.venue.fullName || '', city: (g.venue.address || {}).city || '' } : null, attendance: g.attendance || 0,
+      officials: (g.officials || []).map((o) => ({ displayName: o.displayName || o.fullName || '', position: o.position ? o.position.displayName || '' : '' })) }
+  };
+}
+// Golf: stillingen uden hul-for-hul-data (top 40)
+function slimGolf(j) {
+  return { events: (j.events || []).map((e) => { const c = (e.competitions || [])[0] || {};
+    return { id: e.id, name: e.name, shortName: e.shortName, date: e.date, endDate: e.endDate, status: e.status || c.status || null,
+      competitions: [{ status: c.status || null, competitors: (c.competitors || []).slice().sort((a, b) => (a.order || 999) - (b.order || 999)).slice(0, 40).map((p) => ({ order: p.order, score: typeof p.score === 'object' ? (p.score || {}).displayValue : p.score,
+        athlete: p.athlete ? { displayName: p.athlete.displayName, shortName: p.athlete.shortName, flag: p.athlete.flag ? { href: p.athlete.flag.href } : null } : null,
+        status: p.status ? { position: p.status.position ? { displayName: p.status.position.displayName } : null, thru: p.status.thru, displayValue: p.status.displayValue } : null,
+        linescores: (p.linescores || []).map((l) => ({ period: l.period, value: l.value, displayValue: l.displayValue })) })) }] }; }) };
+}
+
 function hostAllowed(host, env) {
   const extra = (env.EXTRA_HOSTS || '').split(',').map((s) => s.trim()).filter(Boolean);
   return ALLOWED_HOSTS.concat(extra).some((h) => host === h || host.endsWith('.' + h));
@@ -466,17 +503,35 @@ export default {
         const o = new Response(res.body, res); for (const [k, v] of Object.entries(cors(env))) o.headers.set(k, v); return o;
       }
       if (path.startsWith('/espn/')) {
-        // Fodbold: kampe og resultater fra ESPN's offentlige data (kun læsning, kun fodbold, kort cache)
-        const sub = path.slice(6);
-        if (!/^[a-z0-9._]+\/(scoreboard|standings|teams|teams\/\d+\/schedule)$/.test(sub)) return json(env, { error: 'Ukendt' }, 404);
+        // Sport: kampe og resultater fra ESPN's offentlige data (kun læsning, kort cache).
+        // Fodbold: /espn/<liga>/... · andre sportsgrene: /espn/<sport>/<liga>/... (fx basketball/nba)
+        let sub = path.slice(6); let sport = 'soccer';
+        const first = sub.split('/')[0];
+        if (['basketball', 'football', 'hockey', 'tennis', 'golf', 'baseball'].includes(first)) { sport = first; sub = sub.slice(first.length + 1); }
+        if (!/^[a-z0-9._]+\/(scoreboard|standings|summary|teams|teams\/\d+\/schedule)$/.test(sub)) return json(env, { error: 'Ukendt' }, 404);
         const q = new URL(req.url).searchParams; const qs = new URLSearchParams();
-        for (const k of ['dates', 'fixture', 'limit']) if (q.get(k)) qs.set(k, q.get(k).slice(0, 40));
+        for (const k of ['dates', 'fixture', 'limit', 'event']) if (q.get(k)) qs.set(k, q.get(k).slice(0, 40));
         // Stillinger ligger under ESPN's v2-adresse, resten under site/v2
-        const base = sub.endsWith('/standings') ? 'https://site.api.espn.com/apis/v2/sports/soccer/' : 'https://site.api.espn.com/apis/site/v2/sports/soccer/';
+        const base = `https://site.api.espn.com/apis/${sub.endsWith('/standings') ? 'v2' : 'site/v2'}/sports/${sport}/`;
         const url = base + sub + (qs.toString() ? '?' + qs : '');
-        const ttl = sub.endsWith('/teams') ? 86400 : sub.endsWith('/standings') ? 600 : 60;
+        const ttl = sub.endsWith('/teams') ? 86400 : sub.endsWith('/standings') ? 600 : sub.endsWith('/summary') ? 30 : 60;
         const up = await fetch(url, { cf: { cacheTtl: ttl, cacheEverything: true } });
         if (!up.ok) return json(env, { error: 'ESPN svarede ' + up.status }, 502);
+        const hdr = { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'max-age=' + ttl, ...cors(env) };
+        // Kampdetaljer og golf-stillinger er meget store (op til 800 kB) – kun det, skærmen viser, sendes videre
+        if (sub.endsWith('/summary') || (sport === 'golf' && sub.endsWith('/scoreboard'))) {
+          const j = await up.json();
+          return new Response(JSON.stringify(sub.endsWith('/summary') ? slimSummary(j) : slimGolf(j)), { headers: hdr });
+        }
+        return new Response(up.body, { headers: hdr });
+      }
+      if (path.startsWith('/f1/')) {
+        // Formel 1: løbskalender, resultater og VM-stilling fra Jolpica (den åbne efterfølger til Ergast)
+        const sub = path.slice(4);
+        if (!/^current\/(races|driverStandings|constructorStandings|\d{1,2}\/(results|qualifying|sprint))$/.test(sub)) return json(env, { error: 'Ukendt' }, 404);
+        const ttl = sub.endsWith('races') ? 21600 : 300;
+        const up = await fetch('https://api.jolpi.ca/ergast/f1/' + sub + '.json', { cf: { cacheTtl: ttl, cacheEverything: true } });
+        if (!up.ok) return json(env, { error: 'F1-data svarede ' + up.status }, 502);
         return new Response(up.body, { headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'max-age=' + ttl, ...cors(env) } });
       }
       if (path === '/img') {

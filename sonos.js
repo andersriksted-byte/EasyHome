@@ -115,7 +115,9 @@ export function nowPlaying() {
   const container = m.container || {};
   const title = item ? item.name : (container.name || m.streamInfo || '');
   const artist = item && item.artist ? item.artist.name : (m.streamInfo && item ? m.streamInfo : (container.service ? container.service.name : ''));
-  const image = art(item) || art(container) || art(m.currentItem) || (item ? lookupArt(item.artist && item.artist.name, item.name) : '');
+  // Intet cover? Så vises ikonet for den favorit, der spilles fra (fx radiokanalens logo)
+  const favImg = () => { const id = currentFav(false); const f = id && state.favorites.find((x) => x.id === id); return f ? art(f) : ''; };
+  const image = art(item) || art(container) || art(m.currentItem) || (item ? lookupArt(item.artist && item.artist.name, item.name) : '') || favImg();
   const playing = state.playback && /PLAYING|BUFFERING/.test(state.playback.playbackState || '');
   const group = state.groups.find((g) => g.id === settings.sonos.groupId);
   const nx = m.nextItem && m.nextItem.track ? m.nextItem.track : null;
@@ -176,9 +178,10 @@ export async function setPlayModes(patch) {
 // Hvilken favorit spiller nu? Sammenlign det, der spilles fra, med favoritterne (id eller navn).
 let lastFav = null;
 export function markFav(id) { lastFav = { id, group: settings.sonos.groupId, at: Date.now() }; }
-export function playingFavId() {
+export function playingFavId() { return currentFav(true); }
+function currentFav(onlyPlaying) {
   const m = state.meta || {}; const c = m.container || {};
-  const playing = state.playback && /PLAYING|BUFFERING/.test(state.playback.playbackState || '');
+  const playing = !onlyPlaying || (state.playback && /PLAYING|BUFFERING/.test(state.playback.playbackState || ''));
   const n = (x) => String(x || '').trim().toLowerCase();
   const cid = c.id && c.id.objectId; const names = [c.name, m.streamInfo, m.currentItem && m.currentItem.track && m.currentItem.track.name].map(n).filter(Boolean);
   const hit = state.favorites.find((f) => { const fid = f.resource && f.resource.id && f.resource.id.objectId; return (cid && fid && cid === fid) || names.includes(n(f.name)); });
