@@ -1,5 +1,5 @@
 {
-  "version": "1.68.0",
+  "version": "1.68.1",
   "files": [
     "index.html",
     "app.js",
@@ -25,6 +25,14 @@
     "el.js"
   ],
   "notes": [
+    {
+      "version": "1.68.1",
+      "date": "25. november 2026",
+      "title": "Hvad koster det?",
+      "items": [
+        "Billig strøm viser nu, hvad det koster at køre hvert apparat på det bedste tidspunkt – og op til, hvis man rammer det dyreste i jeres tidsrum"
+      ]
+    },
     {
       "version": "1.68.0",
       "date": "25. november 2026",
