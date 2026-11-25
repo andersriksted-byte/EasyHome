@@ -1392,3 +1392,37 @@ button.w7r.sel{background:color-mix(in srgb,var(--accent) 16%,transparent);box-s
 .eldays.val .elday span{font-size:11px;white-space:nowrap}
 .vt-slot{justify-content:center}
 .vt-slot .vt-go{color:#16A34A;font-size:14px}
+
+/* Strømkort med liv: måler, anbefalinger, ikoner */
+.elhero{display:flex;align-items:center;gap:12px;position:relative}
+.elgauge{width:92px;height:56px;flex:none}
+.gknob{stroke:var(--card);stroke-width:3}.gknob.lo{fill:#16A34A}.gknob.mid{fill:#F59E0B}.gknob.hi{fill:#DC2626}
+.elhero-n{display:flex;flex-direction:column}
+.elhero-n b{font-size:clamp(30px,13cqmin,50px);font-weight:800;line-height:1;letter-spacing:-1px}
+.elhero.lo .elhero-n b{color:#16A34A}.elhero.mid .elhero-n b{color:#D97706}.elhero.hi .elhero-n b{color:#DC2626}
+.elhero-n span{font-size:13px;font-weight:700;color:var(--muted)}
+.elbadge{align-self:flex-start;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;padding:3px 8px;border-radius:99px;color:#fff}
+.elbadge.lo{background:#16A34A}.elbadge.mid{background:#D97706}.elbadge.hi{background:#DC2626}
+.eladv{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:12px;font-size:13px;font-weight:700;line-height:1.3}
+.eladv i{font-style:normal;font-size:18px}
+.eladv.lo{background:color-mix(in srgb,#16A34A 14%,transparent)}.eladv.mid{background:color-mix(in srgb,#F59E0B 16%,transparent)}.eladv.hi{background:color-mix(in srgb,#DC2626 14%,transparent)}
+.vt2{display:flex;flex-direction:column;gap:10px;flex:1;min-height:0}
+.vt-line{display:flex;gap:2px;height:16px}
+.vt-line i{flex:1;border-radius:4px;background:#D97706;opacity:.5}
+.vt-line i.lo{background:#16A34A}.vt-line i.hi{background:#DC2626}
+.vt-line i.pick{opacity:1;box-shadow:0 0 0 2px var(--text)}
+.vt-ticks{display:flex;justify-content:space-between;font-size:11px;font-weight:700;color:var(--muted);margin-top:-6px}
+.vt-apps{display:grid;gap:8px;flex:1;min-height:0;align-content:start}
+.vt-app{display:flex;align-items:center;gap:10px;padding:10px;border-radius:16px;background:var(--dayBg);min-width:0}
+.vt-app.go{background:color-mix(in srgb,#16A34A 16%,var(--dayBg));box-shadow:inset 0 0 0 2px color-mix(in srgb,#16A34A 50%,transparent)}
+.vt-ico{width:44px;height:44px;flex:none;border-radius:14px;background:var(--card);display:grid;place-items:center;font-size:24px}
+.vt-txt{display:flex;flex-direction:column;min-width:0}
+.vt-txt span{font-size:12px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vt-txt b{font-size:22px;font-weight:800;line-height:1.1}
+.vt-app.go .vt-txt b{color:#16A34A}
+.vt-txt small{font-size:12px;font-weight:700;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.elcol{display:flex;flex-direction:column;justify-content:space-between;gap:8px;min-width:0}
+.elprog{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;padding:6px 10px;border-radius:12px;background:var(--dayBg)}
+.elprog i{font-style:normal;font-size:18px}
+.vt-apps{overflow:hidden}
+.elstats{gap:6px}.elstats b{font-size:24px}

@@ -556,51 +556,63 @@ function elWait(title) {
   return '';
 }
 const LVL_TXT = { lo: 'Billig', mid: 'Middel', hi: 'Dyr' };
+// Halvcirkel-måler: hvor ligger prisen nu mellem dagens laveste og højeste
+function priceGauge(p, lo, hi, lvl) {
+  const f = hi > lo ? Math.max(0, Math.min(1, (p - lo) / (hi - lo))) : 0.5; const a = Math.PI * (1 - f);
+  const x = 60 + 46 * Math.cos(a), y = 60 - 46 * Math.sin(a);
+  return `<svg class="elgauge" viewBox="0 0 120 70" aria-hidden="true"><defs><linearGradient id="gg" x1="0" x2="1"><stop offset="0" stop-color="#16A34A"/><stop offset=".5" stop-color="#F59E0B"/><stop offset="1" stop-color="#DC2626"/></linearGradient></defs>
+    <path d="M14 60 A46 46 0 0 1 106 60" fill="none" stroke="url(#gg)" stroke-width="10" stroke-linecap="round"/>
+    <circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="8" class="gknob ${lvl}"/></svg>`;
+}
+// Anbefaling i et sprog man kan handle på
+function priceAdvice(p, lvl) {
+  const cw = EL.cheapestBetween(new Date(), new Date(Date.now() + 18 * 3600000), 2, [6, 23]);
+  if (lvl === 'lo' || !cw || cw.from <= new Date()) return { ico: '✅', txt: 'Godt tidspunkt at bruge strøm' };
+  const pct = p ? Math.round(((p - cw.avg) / p) * 100) : 0;
+  return lvl === 'hi' ? { ico: '⏳', txt: `Vent til kl. ${pad(cw.from.getHours())} hvis du kan – ${pct} % billigere` } : { ico: '💡', txt: `Billigere kl. ${pad(cw.from.getHours())}–${pad(cw.to.getHours())} (−${pct} %)` };
+}
 function wElpris(size, h = 1, wd = 1) {
   const w = elWait('Elpris'); if (w) return w;
   const p = EL.now(); const nx = EL.nextHour(); const today = EL.hours(new Date()); const tom = EL.hours(addDays(new Date(), 1));
   const lvl = p !== null ? priceLevel(p, today) : 'mid';
   const lo = today.length ? today.reduce((a, b) => (b.price < a.price ? b : a)) : null; const hi = today.length ? today.reduce((a, b) => (b.price > a.price ? b : a)) : null;
-  const head = cardHead('Elpris', `<span class="small muted">${EL.hasTariffs() ? 'inkl. alt' : 'spot + moms'} · ${EL.area()}</span>`);
-  const trend = nx !== null && p !== null ? (nx > p + 0.05 ? '↗ stiger' : nx < p - 0.05 ? '↘ falder' : '→ uændret') : '';
-  const big = `<div class="elnow ${lvl}"><span class="ellvl">${LVL_TXT[lvl]} lige nu</span><b>${kr(p)}</b><span>kr/kWh${trend ? ` · ${trend} kl. ${pad((new Date().getHours() + 1) % 24)}` : ''}</span></div>`;
+  const head = cardHead('⚡ Elpris', `<span class="small muted">${EL.hasTariffs() ? 'inkl. alt' : 'spot + moms'} · ${EL.area()}</span>`);
+  const trend = nx !== null && p !== null ? (nx > p + 0.05 ? '↗' : nx < p - 0.05 ? '↘' : '→') : '';
+  const adv = priceAdvice(p, lvl);
+  const big = `<div class="elhero ${lvl}">${lo && hi ? priceGauge(p, lo.price, hi.price, lvl) : ''}<div class="elhero-n"><b>${kr(p)}</b><span>kr/kWh ${trend}</span></div><span class="elbadge ${lvl}">${LVL_TXT[lvl]}</span></div>`;
+  const advice = `<div class="eladv ${lvl}"><i>${adv.ico}</i><span>${esc(adv.txt)}</span></div>`;
   const mm = lo && hi ? `<div class="elmm"><div><span class="dot lo"></span>Lavest <b>${kr(lo.price)}</b> kl. ${pad(lo.t.getHours())}</div><div><span class="dot hi"></span>Højest <b>${kr(hi.price)}</b> kl. ${pad(hi.t.getHours())}</div></div>` : '';
-  if (wd === 1 && h === 1) return head + big;
-  if (wd === 1) return head + `<div class="elv">${big}${mm}${priceBars(today, { labels: true, every: 6 })}</div>`;
+  if (wd === 1 && h === 1) return head + big + advice;
+  if (wd === 1) return head + `<div class="elv">${big}${advice}${mm}${priceBars(today, { labels: true, every: 6 })}</div>`;
   const hs = wd >= 3 && tom.length ? today.concat(tom) : today;
-  return head + `<div class="elw"><div class="elleft">${big}${mm}</div>${priceBars(hs, { labels: true, every: hs.length > 24 ? 6 : 3 })}</div>`;
+  return head + `<div class="elw"><div class="elleft">${big}${advice}${h >= 2 ? mm : ''}</div>${priceBars(hs, { labels: true, every: hs.length > 24 ? 6 : 3 })}</div>`;
 }
-// Billig strøm: hvornår det er billigst at vaske tøj m.m. – om dagen (7–22) og om natten (22–7), i dag, i nat, i morgen og typisk i ugen
+// Billig strøm: anbefalede starttider for husets store strømslugere de næste 24 timer + en tidslinje
+const APPLIANCES = [
+  { id: 'vask', ico: '🧺', name: 'Vaskemaskine', n: 2, win: [7, 22], kwh: 1 },
+  { id: 'opvask', ico: '🍽️', name: 'Opvasker', n: 3, win: [0, 24], kwh: 1.2 },
+  { id: 'tumbler', ico: '🌀', name: 'Tørretumbler', n: 2, win: [7, 22], kwh: 2.5 },
+  { id: 'elbil', ico: '🚗', name: 'Elbil', n: 4, win: [22, 7], kwh: 30 }
+];
 function wVasketid(size, h = 1, wd = 1, x = null) {
   const w = elWait('Billig strøm'); if (w) return w;
-  const n = Math.max(1, Math.min(4, +(x && x.hours) || 2)); const now = new Date(); const today0 = startOfDay(now);
-  const mode = x && x.win !== undefined ? x.win : 'both'; // both = dag og nat, '' = kun dag
-  const DAY = [7, 22], NIGHT = [22, 7], EVE = [16, 23], ALL = [0, 24];
-  const tTom = addDays(today0, 1), tEnd = addDays(today0, 2);
-  const cur = EL.now(); const tt = (b) => `kl. ${pad(b.from.getHours())}–${pad(b.to.getHours())}`;
-  const kwh = n * 0.5; // en vask bruger typisk ca. 1 kWh på 2 timer
-  // "Start nu" kun når det billigste tidsrum er nu; ellers hvor længe til, og hvad man sparer i forhold til at starte nu
-  const until = (t) => { const m = Math.round((t - now) / 60000); return m < 60 ? `om ${m} min` : `om ${Math.floor(m / 60)} t${m % 60 ? ' ' + (m % 60) + ' min' : ''}`; };
-  const save = (b) => { if (!b) return ''; if (b.from <= now) return '<small class="vt-go">▶ Start nu</small>'; return `<small>${until(b.from)}${cur !== null && cur > b.avg ? ` · spar ${kr((cur - b.avg) * kwh)} kr` : ''}</small>`; };
-  const slot = (lab, b, cls = '', mini = false, none = 'Ingen timer tilbage') => `<div class="vt-slot ${cls}"><span>${lab}</span>${b ? `<b>${tt(b)}</b>${mini ? '' : `<em>${kr(b.avg)} kr/kWh</em>${save(b)}`}` : `<b class="muted vt-none">${none}</b>`}</div>`;
-  const wkLine = (lab, win) => { const wk = EL.weekPattern(n, win); const b = wk.length ? wk.reduce((a, c) => (c.avg < a.avg ? c : a)) : null; return b ? `<div><em>${lab}</em> <b>${esc(cap(DAYS[b.day]).slice(0, 3))} kl. ${pad(b.h)}–${pad((b.h + n) % 24)}</b></div>` : ''; };
-  const head = (sub) => cardHead('Billig strøm', `<span class="small muted">${sub} · ${n} ${n === 1 ? 'time' : 'timer'}</span>`);
-  if (mode === 'both') {
-    const dToday = EL.cheapestBetween(now, tTom, n, DAY); const night = EL.cheapestBetween(now, new Date(+tTom + 7 * 3600000), n, NIGHT); const dTom = EL.cheapestBetween(tTom, tEnd, n, DAY);
-    const week = `<div class="vt-week"><span>Typisk i ugen</span>${wkLine('Dag', DAY)}${wkLine('Nat', NIGHT)}</div>`;
-    const slots = [slot('☀︎ I dag', dToday, 'main', wd === 1 && h < 2, 'Dagen er gået'), slot('☾ I nat', night, 'night', wd === 1), slot('☀︎ I morgen', dTom, '', wd === 1, 'Kommer ved 13-tiden')];
-    if (wd === 1) return head('dag og nat') + `<div class="vt">${slots[0]}${h >= 2 ? slots[1] + slots[2] : ''}</div>`;
-    return head('dag og nat') + `<div class="vt row">${slots.join('')}${wd >= 3 ? week : ''}</div>`;
-  }
-  const win = mode === 'all' ? ALL : mode === 'eve' ? EVE : DAY;
-  const today = EL.cheapestBetween(now, tTom, n, win); const tom = EL.cheapestBetween(tTom, tEnd, n, win);
-  const week = `<div class="vt-week"><span>Typisk i ugen</span>${wkLine('', win)}</div>`;
-  const hd = head(`kl. ${pad(win[0])}–${pad(win[1] % 24)}`);
-  if (wd === 1) return hd + `<div class="vt">${slot('I dag', today, 'main', h < 2)}${h >= 2 ? slot('I morgen', tom, '', true, 'Kommer ved 13-tiden') + week : ''}</div>`;
-  return hd + `<div class="vt row">${slot('I dag', today, 'main')}${slot('I morgen', tom, '', false, 'Kommer ved 13-tiden')}${week}</div>`;
+  const now = new Date(); const end = new Date(+now + 24 * 3600000); const cur = EL.now();
+  const until = (t) => { const m = Math.round((t - now) / 60000); return m < 60 ? `om ${m} min` : `om ${Math.floor(m / 60)} t${m % 60 >= 5 ? ' ' + (m % 60) + ' m' : ''}`; };
+  const hidden = (x && x.hide) || [];
+  const list = APPLIANCES.filter((a) => !hidden.includes(a.id)).map((a) => ({ a, b: EL.cheapestBetween(now, end, a.n, a.win) })).filter((r) => r.b);
+  // Tidslinje: de næste 24 timer farvet efter pris, med de anbefalede tidsrum markeret
+  const t0 = new Date(); t0.setMinutes(0, 0, 0);
+  const hs = EL.hours(new Date()).concat(EL.hours(addDays(new Date(), 1))).filter((x2) => x2.t >= t0).slice(0, 24);
+  const line = hs.length ? `<div class="vt-line">${hs.map((x2) => `<i class="${priceLevel(x2.price, hs)}${list.some((r) => x2.t >= r.b.from && x2.t < r.b.to && r === list[0]) ? ' pick' : ''}" title="kl. ${pad(x2.t.getHours())}: ${kr(x2.price)} kr"></i>`).join('')}</div><div class="vt-ticks">${hs.filter((_, k) => k % 6 === 0).map((x2) => `<span>${pad(x2.t.getHours())}</span>`).join('')}</div>` : '';
+  const card = (r) => { const go = r.b.from <= now; const sv = cur !== null && cur > r.b.avg ? (cur - r.b.avg) * r.a.kwh : 0;
+    return `<div class="vt-app${go ? ' go' : ''}"><div class="vt-ico">${r.a.ico}</div><div class="vt-txt"><span>${esc(r.a.name)}</span><b>${go ? 'Start nu' : `kl. ${pad(r.b.from.getHours())}`}</b><small>${go ? `til kl. ${pad(r.b.to.getHours())}` : until(r.b.from)}${sv >= 0.5 ? ` · spar ${kr(sv, sv >= 10 ? 0 : 1)} kr` : ''}</small></div></div>`; };
+  const head = cardHead('🔌 Billig strøm', '<span class="small muted">næste 24 timer</span>');
+  if (!list.length) return head + '<div class="empty">Priserne for i morgen kommer ved 13-tiden.</div>';
+  const cols = wd >= 3 ? 4 : wd === 2 ? 2 : 1; const rows = Math.max(1, h * (wd === 1 ? 2 : 1));
+  return head + `<div class="vt2">${line}<div class="vt-apps" style="grid-template-columns:repeat(${cols},minmax(0,1fr))">${list.slice(0, cols * (h >= 2 ? 2 : 1) * (wd === 1 ? h : 1)).map(card).join('')}</div></div>`;
 }
 function wElforbrug(size, h = 1, wd = 1) {
-  const head = cardHead('Elforbrug');
+  const head = cardHead('🏠 Elforbrug');
   if (!hasProxy()) return head + '<div class="empty">Kræver forbindelsen til jeres server.</div>';
   if (EL.state.status && !EL.state.status.configured) return head + '<div class="empty">Forbind Eloverblik under Indstillinger → Strøm.</div>';
   if (EL.state.usageError && !EL.state.usage.length) return head + `<div class="empty">${esc(EL.state.usageError)}</div>`;
@@ -609,11 +621,14 @@ function wElforbrug(size, h = 1, wd = 1) {
   const avg7 = ds.slice(-8, -1).reduce((s, d) => s + d.kwh, 0) / Math.max(1, ds.slice(-8, -1).length);
   const vs = avg7 ? Math.round(((last.kwh - avg7) / avg7) * 100) : null;
   const dayLbl = sameDay(last.t, addDays(new Date(), -1)) ? 'I går' : `${cap(DAYS[last.t.getDay()])} ${last.t.getDate()}/${last.t.getMonth() + 1}`;
-  const stats = `<div class="elstats"><div><span>${esc(dayLbl)}</span><b>${kr(last.kwh, 1)} <i>kWh</i></b><small>${last.cost !== null ? kr(last.cost) + ' kr' : ''}${vs !== null ? ` · <em class="${vs > 0 ? 'up' : 'down'}">${vs > 0 ? '+' : ''}${vs} %</em> mod ugen før` : ''}</small></div><div><span>${esc(cap(MONTHS[new Date().getMonth()]))} indtil nu</span><b>${kr(m.kwh, 0)} <i>kWh</i></b>${m.cost !== null ? `<small>${kr(m.cost, 0)} kr</small>` : ''}</div></div>`;
+  const stats = `<div class="elstats"><div><span>${esc(dayLbl)}</span><b>${kr(last.kwh, 1)} <i>kWh</i></b><small>${last.cost !== null ? kr(last.cost) + ' kr' : ''}${vs !== null ? ` · <em class="${vs > 0 ? 'up' : 'down'}">${vs > 0 ? '+' : ''}${vs} %</em> mod ugen før` : ''}</small></div><div><span>${esc(cap(MONTHS[new Date().getMonth()]))} indtil nu</span><b>${kr(m.kwh, 0)} <i>kWh</i></b>${m.cost !== null ? `<small>${kr(m.cost, 0)} kr${m.days ? ` · 📈 ca. ${kr((m.cost / m.days) * new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate(), 0)} kr i alt` : ''}</small>` : ''}</div></div>`;
   if (wd === 1 && h === 1) return head + stats;
   const shown = ds.slice(-(wd >= 3 ? 14 : 7)); const max = Math.max(...shown.map((d) => d.kwh)) * 1.15 || 1;
-  const bars = `<div class="eldays val">${shown.map((d, i) => `<div class="elday${i === shown.length - 1 ? ' last' : ''}" title="${d.t.getDate()}/${d.t.getMonth() + 1}: ${kr(d.kwh, 1)} kWh"><i style="height:${Math.max(3, (d.kwh / max) * 100)}%"><b>${kr(d.kwh, 0)}</b></i><span>${cap(DAYS[d.t.getDay()]).slice(0, 2)} ${d.t.getDate()}</span></div>`).join('')}</div>`;
-  return head + `<div class="${wd === 1 ? 'elv' : 'elw'}">${stats}${bars}</div>`;
+  const bars = `<div class="eldays val">${shown.map((d, i) => `<div class="elday${i === shown.length - 1 ? ' last' : ''}" title="${d.t.getDate()}/${d.t.getMonth() + 1}: ${kr(d.kwh, 1)} kWh"><i style="height:${Math.max(3, (d.kwh / max) * 100)}%"><b>${kr(d.kwh, 0)}</b></i><span>${cap(DAYS[d.t.getDay()]).slice(0, 2)}${wd >= 3 ? ' ' + d.t.getDate() : ''}</span></div>`).join('')}</div>`;
+  // Prognose for måneden og et lille "badge" der fortæller om forbruget går op eller ned
+  const dim = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate();
+  const prog = h >= 2 && m.cost !== null && m.days ? `<div class="elprog"><i>${vs !== null && vs > 5 ? '📈' : vs !== null && vs < -5 ? '📉' : '📊'}</i><span>Prognose ${esc(MONTHS[new Date().getMonth()])}: <b>ca. ${kr((m.cost / m.days) * dim, 0)} kr</b></span></div>` : '';
+  return head + `<div class="${wd === 1 ? 'elv' : 'elw'}"><div class="elcol">${stats}${prog}</div>${bars}</div>`;
 }
 function pageStroem() {
   const w = elWait('Strøm'); if (w) return `<div class="ptitle"><h1>Strøm</h1></div><section class="card">${w}</section>`;
@@ -929,8 +944,6 @@ function pageForside() {
     <section class="card w" data-wid="${x.id}" ${FIT.includes(x.id) ? `data-fit data-h="${h}"` : ''} style="--w:${w};--h:${h}">
       ${ui.editing ? `<div class="wbar"><button class="handle" aria-label="Træk for at flytte ${esc(WIDGETS[x.id])}">${GRIP}Flyt</button><span class="nm">${esc(WIDGETS[x.id])}</span>
         ${x.id === 'screens' ? `<span class="wopt" role="group" aria-label="Betjening">${[[1, 'Alle samlet'], [2, 'Hver for sig'], [3, 'Begge']].map(([v, l]) => `<button data-act="wOpt" data-id="screens" data-k="mode" data-v="${v}" aria-pressed="${(x.mode || 3) === v}">${l}</button>`).join('')}</span>` : ''}
-        ${x.id === 'vasketid' ? `<select class="wsel" data-wsel="vasketid" data-k="win" aria-label="Tidsrum">${[['both', 'Dag og nat'], ['', 'Kun dag 7–22'], ['eve', 'Eftermiddag/aften 16–23'], ['all', 'Hele døgnet']].map(([v, l]) => `<option value="${v}"${(x.win === undefined ? 'both' : x.win) === v ? ' selected' : ''}>${l}</option>`).join('')}</select>` : ''}
-        ${x.id === 'vasketid' ? `<select class="wsel" data-wsel="vasketid" data-k="hours" aria-label="Varighed">${[1, 2, 3, 4].map((v) => `<option value="${v}"${String(x.hours || 2) === String(v) ? ' selected' : ''}>${v} ${v === 1 ? 'time' : 'timer'}</option>`).join('')}</select>` : ''}
         ${x.id === 'naeste' ? `<select class="wsel" data-wsel="naeste" data-k="count" aria-label="Antal aftaler">${[1, 2, 3, 4, 5, 6].map((v) => `<option value="${v}"${String(x.count || 1) === String(v) ? ' selected' : ''}>${v === 1 ? 'Kun den næste' : v + ' aftaler'}</option>`).join('')}</select>` : ''}
         ${x.id === 'uge' ? `<select class="wsel" data-wsel="uge" data-k="days" aria-label="Antal dage">${[['', 'Automatisk'], ...[1, 2, 3, 4, 5, 6, 7].map((v) => [String(v), v === 1 ? '1 dag' : v + ' dage'])].map(([v, l]) => `<option value="${v}"${String(x.days || '') === v ? ' selected' : ''}>${l}</option>`).join('')}</select>` : ''}
         ${x.id === 'inspiration' ? `<select class="wsel" data-wsel="inspiration" data-k="meal" aria-label="Måltid">${['', ...MD.MEALS].map((m) => `<option value="${m}"${(x.meal || '') === m ? ' selected' : ''}>${m || 'Alle måltider'}</option>`).join('')}</select>` : ''}

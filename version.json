@@ -1,5 +1,5 @@
 {
-  "version": "1.65.0",
+  "version": "1.66.0",
   "files": [
     "index.html",
     "app.js",
@@ -25,6 +25,16 @@
     "el.js"
   ],
   "notes": [
+    {
+      "version": "1.66.0",
+      "date": "25. november 2026",
+      "title": "Strømkort med liv",
+      "items": [
+        "Elpris har fået en måler og et råd, fx \"Vent til kl. 21 – 53 % billigere\"",
+        "Billig strøm anbefaler starttider for vaskemaskine, opvasker, tørretumbler og elbil, med en farvet tidslinje for de næste 24 timer",
+        "Elforbrug viser forventet pris for hele måneden"
+      ]
+    },
     {
       "version": "1.65.0",
       "date": "25. november 2026",
