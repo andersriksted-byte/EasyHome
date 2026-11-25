@@ -1,5 +1,5 @@
 {
-  "version": "1.63.1",
+  "version": "1.63.2",
   "files": [
     "index.html",
     "app.js",
@@ -25,6 +25,15 @@
     "el.js"
   ],
   "notes": [
+    {
+      "version": "1.63.2",
+      "date": "25. november 2026",
+      "title": "Billig strøm dag og nat",
+      "items": [
+        "Billig strøm viser nu både den billigste tid om dagen (7–22) og om natten (22–7)",
+        "Et bredt kort viser også, hvornår det typisk er billigst dag og nat i ugen"
+      ]
+    },
     {
       "version": "1.63.1",
       "date": "25. november 2026",

@@ -1315,3 +1315,9 @@ button.w7r.sel{background:color-mix(in srgb,var(--accent) 16%,transparent);box-s
 .vt-d{flex:1;display:flex;flex-direction:column;align-items:center;padding:4px 0;border-radius:8px;background:var(--card);font-size:11px}
 .vt-d b{font-size:14px}.vt-d.best{background:#16A34A;color:#fff}
 .vt-d span{font-weight:700;opacity:.8}
+
+.vt-slot.night{background:color-mix(in srgb,#6366F1 16%,var(--dayBg))}
+.vt-slot.night b{color:#6366F1}
+.vt-none{font-size:15px!important}
+.vt-week>div{font-size:14px;line-height:1.5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.vt-week em{font-style:normal;color:var(--muted);font-weight:700}
+.vt-week>div b{font-size:15px}
