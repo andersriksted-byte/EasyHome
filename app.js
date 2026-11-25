@@ -592,7 +592,9 @@ const APPLIANCES = [
   { id: 'vask', ico: '🧺', name: 'Vaskemaskine', n: 2, win: [7, 22], kwh: 1 },
   { id: 'opvask', ico: '🍽️', name: 'Opvasker', n: 3, win: [0, 24], kwh: 1.2 },
   { id: 'tumbler', ico: '🌀', name: 'Tørretumbler', n: 2, win: [7, 22], kwh: 2.5 },
-  { id: 'elbil', ico: '🚗', name: 'Elbil', n: 4, win: [22, 7], kwh: 30 }
+  { id: 'elbil', ico: '🚗', name: 'Elbil', n: 4, win: [22, 7], kwh: 30 },
+  // Madlavning: ovn og komfur i en time (ca. 1 kWh ovn + 1,5 kWh kogeplader) – viser hvad det koster
+  { id: 'mad', ico: '🍳', name: 'Ovn + komfur', n: 1, win: [16, 20], kwh: 2.5, cost: true }
 ];
 // Apparaterne med familiens egne valg (Indstillinger → Strøm): til/fra, tidsrum, varighed og forbrug
 function elApps() {
@@ -604,7 +606,7 @@ function wVasketid(size, h = 1, wd = 1, x = null) {
   const now = new Date(); const end = new Date(+now + 24 * 3600000); const cur = EL.now();
   const until = (t) => { const m = Math.round((t - now) / 60000); return m < 60 ? `om ${m} min` : `om ${Math.floor(m / 60)} t${m % 60 >= 5 ? ' ' + (m % 60) + ' m' : ''}`; };
   // For hvert apparat: billigste tidsrum inden for jeres egne tider, sammenlignet med at starte ved første mulighed (nu, eller når tidsrummet begynder)
-  const list = elApps().filter((a) => a.on).map((a) => ({ a, b: EL.cheapestBetween(now, end, a.n, a.win), w: EL.firstBetween(now, end, a.n, a.win) })).filter((r) => r.b);
+  const list = elApps().filter((a) => a.on).sort((p, q) => (p.cost ? 0.5 : APPLIANCES.findIndex((z) => z.id === p.id)) - (q.cost ? 0.5 : APPLIANCES.findIndex((z) => z.id === q.id))).map((a) => ({ a, b: EL.cheapestBetween(now, end, a.n, a.win), w: EL.firstBetween(now, end, a.n, a.win) })).filter((r) => r.b);
   // Tidslinje: de næste 24 timer farvet efter pris, med de anbefalede tidsrum markeret
   const t0 = new Date(); t0.setMinutes(0, 0, 0);
   const hs = EL.hours(new Date()).concat(EL.hours(addDays(new Date(), 1))).filter((x2) => x2.t >= t0).slice(0, 24);
@@ -612,10 +614,17 @@ function wVasketid(size, h = 1, wd = 1, x = null) {
   const best = EL.cheapestBetween(now, end, 3, [0, 24]);
   const isBest = (t) => best && t >= best.from && t < best.to;
   const line = hs.length ? `<div class="vt-line">${hs.map((x2) => `<i class="${priceLevel(x2.price, hs)}${isBest(x2.t) ? ' pick' : ''}" title="kl. ${pad(x2.t.getHours())}: ${kr(x2.price)} kr"></i>`).join('')}</div><div class="vt-ticks">${hs.map((x2, k) => (k % 6 === 0 ? `<span style="left:${((k + 0.5) / hs.length) * 100}%">${pad(x2.t.getHours())}</span>` : '')).join('')}${best ? `<span class="vt-star" style="left:${(((hs.findIndex((x2) => isBest(x2.t)) + 1.5) / hs.length) * 100)}%">★ billigst ${pad(best.from.getHours())}–${pad(best.to.getHours())}</span>` : ''}</div>` : '';
-  const card = (r) => { const go = r.b.from <= now; const sv = r.w ? (r.w.avg - r.b.avg) * r.a.kwh : 0;
-    const first = r.w && r.w.from <= now ? 'start nu' : r.w ? `start kl. ${pad(r.w.from.getHours())}` : '';
+  const card = (r) => { if (r.a.cost) return costCard(r); const go = r.b.from <= now; const sv = r.w ? (r.w.avg - r.b.avg) * r.a.kwh : 0;
+    const first = r.w && r.w.from <= now ? 'nu' : r.w ? `kl. ${pad(r.w.from.getHours())}` : '';
     const save = sv >= 0.05 ? `<em class="vt-save">💰 spar ${kr(sv, sv >= 10 ? 0 : 2)} kr mod ${first}</em>` : go || (r.w && +r.w.from === +r.b.from) ? '<em class="vt-save">✅ billigst allerede</em>' : '';
     return `<div class="vt-app${go ? ' go' : ''}"><div class="vt-ico">${r.a.ico}</div><div class="vt-txt"><span>${esc(r.a.name)} · ${go ? `til kl. ${pad(r.b.to.getHours())}` : until(r.b.from)}</span><b>${go ? 'Start nu' : `kl. ${pad(r.b.from.getHours())}`}</b>${save}</div></div>`; };
+  // Madlavning: hvad koster en time med ovn og komfur – nu (eller når I plejer at lave mad) og på det billigste tidspunkt
+  const costCard = (r) => { const h0 = new Date(); h0.setMinutes(0, 0, 0);
+    const hrs = EL.hours(new Date()).concat(EL.hours(addDays(new Date(), 1))).filter((x2) => x2.t >= h0);
+    const inWinNow = r.a.win[0] <= r.a.win[1] ? now.getHours() >= r.a.win[0] && now.getHours() < r.a.win[1] : now.getHours() >= r.a.win[0] || now.getHours() < r.a.win[1];
+    const ref = inWinNow ? hrs[0] : hrs.find((x2) => x2.t.getHours() === r.a.win[0]);
+    const c = (x2) => x2.price * r.a.kwh; const diff = ref ? c(ref) - r.b.avg * r.a.kwh : 0;
+    return `<div class="vt-app cost"><div class="vt-ico">${r.a.ico}</div><div class="vt-txt"><span>${esc(r.a.name)} · 1 t ${ref ? (inWinNow ? 'nu' : `kl. ${pad(ref.t.getHours())}`) : ''}</span><b>${ref ? kr(c(ref)) + ' kr' : '–'}</b>${diff >= 0.05 ? `<em class="vt-save">💰 ${kr(r.b.avg * r.a.kwh)} kr kl. ${pad(r.b.from.getHours())}</em>` : `<em class="vt-save">✅ billigst ${inWinNow ? 'nu' : 'kl. ' + (ref ? pad(ref.t.getHours()) : '')}</em>`}</div></div>`; };
   const head = cardHead('🔌 Billig strøm', '<span class="small muted">næste 24 timer</span>');
   if (!list.length) return head + '<div class="empty">Priserne for i morgen kommer ved 13-tiden.</div>';
   const cols = wd >= 3 ? 4 : wd === 2 ? 2 : 1; const rows = Math.max(1, h * (wd === 1 ? 2 : 1));

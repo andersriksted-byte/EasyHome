@@ -1,5 +1,5 @@
 {
-  "version": "1.67.3",
+  "version": "1.68.0",
   "files": [
     "index.html",
     "app.js",
@@ -25,6 +25,15 @@
     "el.js"
   ],
   "notes": [
+    {
+      "version": "1.68.0",
+      "date": "25. november 2026",
+      "title": "Hvad koster aftensmaden?",
+      "items": [
+        "Billig strøm viser nu, hvad en time med ovn og komfur koster – og hvornår det er billigst",
+        "Tidsrum og forbrug for madlavning kan rettes under Indstillinger → Strøm"
+      ]
+    },
     {
       "version": "1.67.3",
       "date": "25. november 2026",
