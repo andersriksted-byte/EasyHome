@@ -480,10 +480,14 @@ function wNaeste(size, h = 1, wd = 1, x = null) {
 }
 // Flere af dagens aftaler under den næste – antallet vælges under Tilpas forside
 function later(evs, e, x) {
-  const n = Math.max(1, Math.min(6, +(x && x.count) || 1)) - 1; if (!n) return '';
-  const rest = evs.slice(1).filter((y) => sameDay(y.start, e.start)).slice(0, n);
+  // Standard: vis så mange af de følgende aftaler, som der er plads til (kortet fjerner dem, der ikke kan være der).
+  // "Kun den næste" (1) viser stadig den efterfølgende aftale som et lille praj.
+  const n = x && x.count ? Math.max(1, Math.min(6, +x.count)) - 1 : 5;
+  let rest = evs.slice(1).filter((y) => sameDay(y.start, e.start)).slice(0, Math.max(n, 1));
+  let lbl = 'Derefter';
+  if (!rest.length && evs[1]) { rest = [evs[1]]; const d = startOfDay(evs[1].start); lbl = sameDay(d, addDays(startOfDay(new Date()), 1)) ? 'I morgen' : cap(DAYS_LONG[d.getDay()]); }
   if (!rest.length) return '';
-  return `<div class="nx-later" data-trimcard>${rest.map((y) => `<div class="nx-li" ${evRef(y)} style="--c:${esc(y.color || 'var(--accent)')}"><time>${hhmm(y.start)}</time><span>${esc(y.title)}</span></div>`).join('')}</div>`;
+  return `<div class="nx-later" data-trimcard><div class="nx-lbl">${esc(lbl)}</div>${rest.map((y) => `<div class="nx-li" ${evRef(y)} style="--c:${esc(y.color || 'var(--accent)')}"><time>${y.allDay ? 'Hele dagen' : hhmm(y.start)}</time><span>${esc(y.title)}</span></div>`).join('')}</div>`;
 }
 // Fodbold: én side pr. dag (i dag først). Dagens kampe fra de fulgte ligaer og favoritholdene, delt op i ligaer.
 const dkey = (d) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
@@ -971,7 +975,7 @@ function pageForside() {
     <section class="card w" data-wid="${x.id}" ${FIT.includes(x.id) ? `data-fit data-h="${h}"` : ''} style="--w:${w};--h:${h}">
       ${ui.editing ? `<div class="wbar"><button class="handle" aria-label="Træk for at flytte ${esc(WIDGETS[x.id])}">${GRIP}Flyt</button><span class="nm">${esc(WIDGETS[x.id])}</span>
         ${x.id === 'screens' ? `<span class="wopt" role="group" aria-label="Betjening">${[[1, 'Alle samlet'], [2, 'Hver for sig'], [3, 'Begge']].map(([v, l]) => `<button data-act="wOpt" data-id="screens" data-k="mode" data-v="${v}" aria-pressed="${(x.mode || 3) === v}">${l}</button>`).join('')}</span>` : ''}
-        ${x.id === 'naeste' ? `<select class="wsel" data-wsel="naeste" data-k="count" aria-label="Antal aftaler">${[1, 2, 3, 4, 5, 6].map((v) => `<option value="${v}"${String(x.count || 1) === String(v) ? ' selected' : ''}>${v === 1 ? 'Kun den næste' : v + ' aftaler'}</option>`).join('')}</select>` : ''}
+        ${x.id === 'naeste' ? `<select class="wsel" data-wsel="naeste" data-k="count" aria-label="Antal aftaler">${[['', 'Så mange som muligt'], ...[1, 2, 3, 4, 5, 6].map((v) => [String(v), v === 1 ? 'Den næste + én til' : v + ' aftaler'])].map(([v, l]) => `<option value="${v}"${String(x.count || '') === v ? ' selected' : ''}>${l}</option>`).join('')}</select>` : ''}
         ${x.id === 'uge' ? `<select class="wsel" data-wsel="uge" data-k="days" aria-label="Antal dage">${[['', 'Automatisk'], ...[1, 2, 3, 4, 5, 6, 7].map((v) => [String(v), v === 1 ? '1 dag' : v + ' dage'])].map(([v, l]) => `<option value="${v}"${String(x.days || '') === v ? ' selected' : ''}>${l}</option>`).join('')}</select>` : ''}
         ${x.id === 'inspiration' ? `<select class="wsel" data-wsel="inspiration" data-k="meal" aria-label="Måltid">${['', ...MD.MEALS].map((m) => `<option value="${m}"${(x.meal || '') === m ? ' selected' : ''}>${m || 'Alle måltider'}</option>`).join('')}</select>` : ''}
         ${x.id === 'madplan' ? `<span class="wopt" role="group" aria-label="Antal dage">${[[1, '1 dag'], [5, '5 dage']].map(([v, l]) => `<button data-act="wOpt" data-id="madplan" data-k="days" data-v="${v}" aria-pressed="${(x.days || 5) === v}">${l}</button>`).join('')}</span>` : ''}
@@ -1570,6 +1574,7 @@ function trimCards() {
     const card = list.closest('.w'); let guard = 20;
     const bottom = () => card.getBoundingClientRect().bottom - (parseFloat(getComputedStyle(card).paddingBottom) || 0) + 1;
     while (guard-- > 0 && list.children.length && (card.scrollHeight > card.clientHeight + 1 || list.lastElementChild.getBoundingClientRect().bottom > bottom())) list.lastElementChild.remove();
+    if (list.children.length && list.lastElementChild.classList.contains('nx-lbl')) list.lastElementChild.remove();
     if (!list.children.length) list.remove();
   });
 }

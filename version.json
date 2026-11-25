@@ -1,5 +1,5 @@
 {
-  "version": "1.70.0",
+  "version": "1.70.1",
   "files": [
     "index.html",
     "app.js",
@@ -25,6 +25,16 @@
     "el.js"
   ],
   "notes": [
+    {
+      "version": "1.70.1",
+      "date": "25. november 2026",
+      "title": "Næste aftale: hvad kommer derefter",
+      "items": [
+        "Næste aftale viser nu som standard de følgende aftaler under \"Derefter\" – så mange som der er plads til",
+        "Er der ikke flere aftaler i dag, vises den næste aftale i morgen eller senere",
+        "Antallet kan vælges under Tilpas forside"
+      ]
+    },
     {
       "version": "1.70.0",
       "date": "25. november 2026",

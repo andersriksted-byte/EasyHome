@@ -1163,7 +1163,8 @@ button.w7r.sel{background:color-mix(in srgb,var(--accent) 16%,transparent);box-s
 
 /* Næste aftale: flere af dagens aftaler nedenunder */
 .nx-later{display:flex;flex-direction:column;gap:6px;margin-top:10px;min-height:0;overflow:hidden;flex:0 1 auto}
-.nx2:has(+.nx-later){flex:1 1 auto;min-height:max-content}
+.nx2:has(+.nx-later){flex:0 0 auto;min-height:max-content}
+.nx-later{flex:1 1 auto;justify-content:flex-start}
 .nx-li{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:10px;background:color-mix(in srgb,var(--c) 18%,var(--dayBg));border-left:4px solid var(--c);cursor:pointer;min-width:0;flex:none}
 .nx-li time{font-weight:800;font-size:14px;flex:none}
 .nx-li span{font-weight:700;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
@@ -1454,3 +1455,5 @@ button.w7r.sel{background:color-mix(in srgb,var(--accent) 16%,transparent);box-s
 
 .btn.spin svg{animation:spin 1s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
+
+.nx-lbl{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);flex:none}
