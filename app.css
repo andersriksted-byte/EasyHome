@@ -1451,3 +1451,6 @@ button.w7r.sel{background:color-mix(in srgb,var(--accent) 16%,transparent);box-s
 .vt-apps.compact .vt-txt span{grid-column:1/-1;font-size:11px}
 .vt-apps.compact .vt-txt b{font-size:17px}
 .vt-apps.compact .vt-save{font-size:12px;text-align:right}
+
+.btn.spin svg{animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}

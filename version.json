@@ -1,5 +1,5 @@
 {
-  "version": "1.69.2",
+  "version": "1.70.0",
   "files": [
     "index.html",
     "app.js",
@@ -25,6 +25,15 @@
     "el.js"
   ],
   "notes": [
+    {
+      "version": "1.70.0",
+      "date": "25. november 2026",
+      "title": "Kalenderen opdateres oftere",
+      "items": [
+        "Kalenderen hentes nu hvert 5. minut",
+        "Ny knap på Kalender-siden henter kalenderen med det samme"
+      ]
+    },
     {
       "version": "1.69.2",
       "date": "25. november 2026",

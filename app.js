@@ -1000,7 +1000,7 @@ function pageKalender() {
   const meK0 = meMember(); const cals = settings.calendars.filter((c) => c.url && (!meK0 || !c.owner || c.owner === meK0.id));
   const meK = meMember();
   return `<div class="ptitle"><h1>Kalender</h1><span class="muted" style="font-weight:700">${esc(title)}</span>
-      <div class="tools"><button class="btn" data-act="calPrev" aria-label="Forrige uge">‹</button><button class="btn" data-act="calToday">I dag</button><button class="btn" data-act="calNext" aria-label="Næste uge">›</button></div></div>
+      <div class="tools"><button class="btn" data-act="calPrev" aria-label="Forrige uge">‹</button><button class="btn" data-act="calToday">I dag</button><button class="btn" data-act="calNext" aria-label="Næste uge">›</button><button class="btn line" data-act="calRefresh" aria-label="Hent kalenderen nu">${svg('refresh', 18)}</button></div></div>
     ${D.cal && D.cal.demo ? '<div class="empty">Viser eksempler. Tilføj jeres kalendere under Indstillinger → Kalendere.</div>' : ''}
     ${D.cal && D.cal.errors.length ? `<div class="err">${esc(D.cal.errors.map((e) => e.cal + ': ' + e.msg).join(' · '))}</div>` : ''}
     ${calTimeGrid(days, today)}
@@ -1829,6 +1829,7 @@ const act = {
     else { const t = (lg === 'nat' ? FB.NATIONAL : (ui.fbTeams || {})[lg] || []).find((x) => x.id === id); if (t) fb.teams.push({ id: t.id, name: t.name, short: t.short, logo: t.logo, lg }); }
     save(); renderMain(); loadFootball(true); },
   calShow: (b) => { const ids = b.dataset.id.split(','); const h = settings.calHidden || []; const show = b.getAttribute('aria-pressed') !== 'true'; settings.calHidden = h.filter((x) => !ids.includes(x)).concat(show ? [] : ids); save(); renderMain(); },
+  calRefresh: (b) => { if (b.classList.contains('spin')) return; b.classList.add('spin'); C.clearCalCache(); loadCal().finally(() => { toast('Kalenderen er opdateret'); }); },
   calRm: (b) => { settings.calendars.splice(+b.dataset.i, 1); save(); C.clearCalCache(); renderMain(); loadCal(); },
   tvAdd: () => { settings.tv.channels.push({ name: 'Ny knap', url: 'https://www.dr.dk/drtv' }); save(); renderMain(); },
   tvRm: (b) => { settings.tv.channels.splice(+b.dataset.i, 1); save(); renderMain(); },
@@ -2091,7 +2092,7 @@ function boot() {
   setInterval(loadNews, 5 * 60000);
   setInterval(() => { if (!document.hidden) loadFootball(); }, 60000);
   setInterval(() => { if (!document.hidden) loadEl(); }, 5 * 60000); // priserne skifter hvert kvarter; nye priser for i morgen kommer ved 13-tiden // FB.load bestemmer selv: hvert minut under kampe, ellers hvert 10. minut
-  setInterval(loadCal, 10 * 60000);
+  setInterval(loadCal, 5 * 60000); // kalenderen hentes hvert 5. minut (og med Opdater-knappen på Kalender-siden)
   setInterval(() => { if (S.state.connected && !document.hidden) loadSonos(); }, 8000);
   // Opdater dag-visninger ved midnat
   setInterval(() => { const n = new Date(); if (n.getHours() === 0 && n.getMinutes() === 0 && n.getSeconds() < 2) softRender(); }, 1000);

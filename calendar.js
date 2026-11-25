@@ -44,7 +44,7 @@ let cache = { key: '', t: 0, data: null };
 export async function getEvents(weeksAhead = 3) {
   const cals = settings.calendars.filter((c) => c.url);
   const key = cals.map((c) => c.url + c.color + c.name).join('|');
-  if (cache.key === key && Date.now() - cache.t < 10 * 60000) return cache.data;
+  if (cache.key === key && Date.now() - cache.t < 4 * 60000) return cache.data;
   const from = addDays(startOfDay(new Date()), -7);
   const to = addDays(from, 7 * (weeksAhead + 1));
   const errors = [];
