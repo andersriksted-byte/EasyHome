@@ -450,9 +450,10 @@ function wNaeste(size, h = 1, wd = 1, x = null) {
   if (!D.cal) return cardHead('Næste') + '<div class="empty">Henter kalender …</div>';
   const now = Date.now();
   // Kun aftaler, der ikke er begyndt endnu – en aftale i gang springes over
-  const evs = D.cal.events.filter((e) => !e.allDay && e.start.getTime() > now && mineEvent(e)).sort((a, b) => a.start - b.start);
+  // En aftale, der er i gang, bliver stående, til den er slut (vises som "I gang – til kl. …")
+  const evs = D.cal.events.filter((e) => !e.allDay && e.end.getTime() > now && mineEvent(e)).sort((a, b) => a.start - b.start);
   if (!evs.length) return cardHead('Næste') + '<div class="empty">Ingen kommende aftaler.</div>';
-  const e = evs[0]; const running = false;
+  const e = evs[0]; const running = e.start.getTime() <= now;
   const mins = Math.round((e.start.getTime() - now) / 60000);
   const kind = shapeKind(wd, h);
   // Ring: hvor meget af de sidste 3 timer før aftalen der er tilbage
