@@ -618,6 +618,23 @@ function pageTodo() {
     <div class="tdweek"><div></div>${days.map((d) => `<div class="tdw-h${sameDay(d, today) ? ' today' : ''}"><b>${DAYS[d.getDay()]}</b><span>${d.getDate()}/${d.getMonth() + 1}</span></div>`).join('')}${rows}</div></section>` : '';
   return top + `<div class="tdgrid">${todayCard}${itemsCard}${weekCard}</div>`;
 }
+// Turnussens rækkefølge: nummereret liste med pile, og hvem der har den nu og næste gang
+function tdNextWho(c) {
+  const t = startOfDay(new Date()); const cur = TD.occurrence(c, t);
+  for (let i = cur ? 1 : 0; i < 400; i++) { const d = addDays(t, i); const o = TD.occurrence(c, d); if (o && (!cur || o.key !== cur.key)) return { who: TD.whoFor(c, o), occ: o, cur: cur ? TD.whoFor(c, cur) : '' }; }
+  return { who: '', cur: cur ? TD.whoFor(c, cur) : '' };
+}
+function tdOrder(c) {
+  const ppl = c.people || []; if (!ppl.length) return '';
+  const nx = tdNextWho(c); const period = c.every === 'day' ? 'dag' : c.every === 'month' ? 'måned' : 'gang';
+  return `<div class="tdord">${ppl.map((id, i) => { const m = memberOf(id) || { name: '?' };
+    const tag = nx.cur === id ? '<em class="now">Har den nu</em>' : nx.who === id ? `<em>Næste ${period}</em>` : '';
+    return `<div class="tdord-r${nx.cur === id ? ' now' : ''}"><span class="tdord-n">${i + 1}</span>${tdAv(id)}<span class="tdord-x"><b>${esc(m.name)}</b>${tag}</span>
+      <button class="fobtn" data-act="choreNow" data-id="${esc(c.id)}" data-m="${esc(id)}" aria-label="${esc(m.name)} har den nu" ${nx.cur === id ? 'disabled' : ''}>▶</button>
+      <button class="fobtn" data-act="chorePos" data-id="${esc(c.id)}" data-m="${esc(id)}" data-d="-1" ${i === 0 ? 'disabled' : ''} aria-label="Flyt ${esc(m.name)} op">${svg('up', 18)}</button>
+      <button class="fobtn" data-act="chorePos" data-id="${esc(c.id)}" data-m="${esc(id)}" data-d="1" ${i === ppl.length - 1 ? 'disabled' : ''} aria-label="Flyt ${esc(m.name)} ned">${svg('down', 18)}</button>
+      <button class="fobtn" data-act="chorePerson" data-id="${esc(c.id)}" data-m="${esc(id)}" aria-label="Fjern ${esc(m.name)}">×</button></div>`; }).join('')}</div>`;
+}
 function todoSettings() {
   const ms = members();
   const pre = `<div class="choices">${TD.PRESETS.map((p, i) => `<button class="pill" data-act="choreAdd" data-i="${i}">+ ${p.icon} ${esc(p.title)}</button>`).join('')}<button class="pill" data-act="choreAdd" data-i="">+ Egen pligt</button></div>`;
@@ -629,8 +646,7 @@ function todoSettings() {
     const mode = c.every === 'day' ? `<div class="wseg">${[['turnus', 'På skift'], ['fast', 'Fast pr. ugedag']].map(([v, l]) => `<button data-act="choreMode" data-id="${esc(c.id)}" data-v="${v}" aria-pressed="${(c.mode || 'turnus') === v}"><span>${l}</span></button>`).join('')}</div>` : '';
     const fast = c.every === 'day' && c.mode === 'fast';
     const who = fast ? `<div class="tdplan">${order.filter((d) => !c.days || !c.days.length || c.days.includes(d)).map((d) => `<label class="f">${DAYS_LONG[d]}<select data-chore="${esc(c.id)}" data-k="plan" data-wd="${d}"><option value="">–</option>${ms.map((m) => `<option value="${esc(m.id)}"${(c.plan || {})[d] === m.id ? ' selected' : ''}>${esc(m.name)}</option>`).join('')}</select></label>`).join('')}</div>`
-      : `<div class="choices">${ms.map((m) => `<button class="pill sm" data-act="chorePerson" data-id="${esc(c.id)}" data-m="${esc(m.id)}" aria-pressed="${(c.people || []).includes(m.id)}">${(c.people || []).includes(m.id) ? '✓' : '+'} ${esc(m.name)}</button>`).join('')}</div>
-        ${(c.people || []).length > 1 ? `<label class="inl">Først i turnussen<select data-chore="${esc(c.id)}" data-k="first">${c.people.map((id) => `<option value="${esc(id)}"${(c.first || c.people[0]) === id ? ' selected' : ''}>${esc((memberOf(id) || {}).name || '?')}</option>`).join('')}</select></label>` : ''}`;
+      : `<div class="choices">${ms.filter((m) => !(c.people || []).includes(m.id)).map((m) => `<button class="pill sm" data-act="chorePerson" data-id="${esc(c.id)}" data-m="${esc(m.id)}">+ ${esc(m.name)}</button>`).join('')}</div>${tdOrder(c)}`;
     return `<section class="card"><div class="tdset-h"><input class="tdicon" type="text" data-chore="${esc(c.id)}" data-k="icon" value="${esc(c.icon || '')}" aria-label="Ikon" maxlength="4"><input type="text" data-chore="${esc(c.id)}" data-k="title" value="${esc(c.title)}" placeholder="Navn" aria-label="Navn"><button class="btn" data-act="choreRm" data-id="${esc(c.id)}" aria-label="Fjern ${esc(c.title)}">Fjern</button></div>
       <div class="row"><select data-chore="${esc(c.id)}" data-k="every" aria-label="Hvor ofte">${TD.EVERY.map(([v, l]) => `<option value="${v}"${c.every === v ? ' selected' : ''}>${l}</option>`).join('')}</select>${mode}</div>
       ${when}${ms.length ? who : '<span class="small muted">Tilføj familiemedlemmer under Familie</span>'}</section>`;
@@ -2119,7 +2135,9 @@ const act = {
   choreRm: (b) => { TD.removeChore(b.dataset.id); renderMain(); },
   choreMode: (b) => { TD.setChore(b.dataset.id, 'mode', b.dataset.v); renderMain(); },
   choreDay: (b) => { const c = TD.chores().find((x) => x.id === b.dataset.id); if (!c) return; const d = +b.dataset.d; let ds = c.days && c.days.length ? c.days.slice() : [0, 1, 2, 3, 4, 5, 6]; ds = ds.includes(d) ? ds.filter((x) => x !== d) : ds.concat(d); if (!ds.length) return; TD.setChore(c.id, 'days', ds.length === 7 ? [] : ds); renderMain(); },
-  chorePerson: (b) => { const c = TD.chores().find((x) => x.id === b.dataset.id); if (!c) return; const p = c.people || []; const order = members().map((m) => m.id); const np = (p.includes(b.dataset.m) ? p.filter((x) => x !== b.dataset.m) : p.concat(b.dataset.m)).sort((x, y) => order.indexOf(x) - order.indexOf(y)); TD.setChore(c.id, 'people', np); if (!np.includes(c.first)) c.first = np[0] || ''; renderMain(); },
+  chorePerson: (b) => { const c = TD.chores().find((x) => x.id === b.dataset.id); if (!c) return; const p = c.people || []; const order = members().map((m) => m.id); const cur = tdNextWho(c).cur; const np = p.includes(b.dataset.m) ? p.filter((x) => x !== b.dataset.m) : p.concat(b.dataset.m); TD.setChore(c.id, 'people', np); c.first = np.includes(cur) ? cur : np[0] || ''; save(); renderMain(); },
+  chorePos: (b) => { const c = TD.chores().find((x) => x.id === b.dataset.id); if (!c) return; const p = (c.people || []).slice(); const i = p.indexOf(b.dataset.m); const j = i + +b.dataset.d; if (i < 0 || j < 0 || j >= p.length) return; const cur = tdNextWho(c).cur; [p[i], p[j]] = [p[j], p[i]]; TD.setChore(c.id, 'people', p); c.first = cur || p[0]; save(); renderMain(); },
+  choreNow: (b) => { TD.setChore(b.dataset.id, 'first', b.dataset.m); renderMain(); },
   spOpen: (b) => { const it = spRefs[+b.dataset.i]; if (it) showSport(it); },
   spDay: (b) => { const d = +b.dataset.dir; ui.spOff = d ? Math.max(-7, Math.min(14, (ui.spOff || 0) + d)) : 0; ui.spTouched = Date.now(); spLoad(); renderMain(false); },
   spRefresh: () => { loadFootball(true); spLoad(spDay(), true); },

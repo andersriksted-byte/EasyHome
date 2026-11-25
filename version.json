@@ -1,5 +1,5 @@
 {
-  "version": "1.74.1",
+  "version": "1.74.2",
   "files": [
     "index.html",
     "app.js",
@@ -27,6 +27,15 @@
     "todo.js"
   ],
   "notes": [
+    {
+      "version": "1.74.2",
+      "date": "25. november 2026",
+      "title": "Tydelig turnus",
+      "items": [
+        "To do: ved hver pligt står personerne nu i den rækkefølge, de har den – med \"Har den nu\" og \"Næste\".",
+        "Flyt personer op og ned med pilene, og tryk ▶ for at give en person turen nu."
+      ]
+    },
     {
       "version": "1.74.1",
       "date": "25. november 2026",
