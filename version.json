@@ -1,5 +1,5 @@
 {
-  "version": "1.95.0",
+  "version": "1.96.0",
   "files": [
     "index.html",
     "app.js",
@@ -27,6 +27,15 @@
     "todo.js"
   ],
   "notes": [
+    {
+      "version": "1.96.0",
+      "date": "26. november 2026",
+      "title": "Live på Sport",
+      "items": [
+        "\"Favoritter\" på Sport hedder nu \"Live\" og viser alle dagens kampe fra jeres ligaer og sportsgrene",
+        "Kampe med jeres favorithold står altid øverst, derefter kampe i gang og så resten efter tid"
+      ]
+    },
     {
       "version": "1.95.0",
       "date": "26. november 2026",

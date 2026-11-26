@@ -1016,7 +1016,16 @@ function pageSport() {
   const ent = (key, ico, label, t, html, fav = false, it = null) => ents.push({ it, label, live: !!(it && (it.m || it).state === 'in'), key: spColKey(key), ico, fav, t: +t || 0, html: `<div class="sp-ent" style="--sc:${SP_COL[spColKey(key)] || 'var(--accent)'}"><span class="sp-tag">${ico} ${esc(label)}</span>${html}</div>` });
   if (hasFb) {
     if (!FB.state.at) waiting = true;
-    const { all, order } = fbDays();
+    const { all: favAll, order } = fbDays();
+    // Live: alle dagens kampe fra jeres valgte ligaer (hentes løbende) + favoritholdenes kampe i andre turneringer
+    const seenM = new Set(); const all = [];
+    const dayLgs = [...new Set([...(fb.leagues || []), ...(fb.teams || []).map((t) => t.lg)])].filter((lg) => lg && lg !== 'nat' && FB.LEAGUES.some((L) => L.id === lg));
+    dayLgs.forEach((lg) => {
+      const ms = FB.matchesOn(lg, day); const liveNow = ms.some((m) => m.state === 'in' || (m.state === 'pre' && Math.abs(m.date - Date.now()) < 15 * 60000));
+      FB.loadMonths(lg, [day], liveNow ? 60000 : 10 * 60000).then((n) => { if (n && ui.page === 'sport') softRender(); });
+      ms.forEach((m) => { if (!seenM.has(m.id)) { seenM.add(m.id); all.push(m); } });
+    });
+    favAll.forEach((m) => { if (!seenM.has(m.id)) { seenM.add(m.id); all.push(m); } else { const i = all.findIndex((x) => x.id === m.id); if (i >= 0 && (m.state !== 'pre' || all[i].state === 'pre')) all[i] = m; } });
     const lgOf = (id) => (FB.LEAGUES.find((L) => L.id === id) || {}).name;
     const favIn = (id, comp) => (fb.teams || []).some((t) => t.id === id && (t.lg === 'nat' || lgOf(t.lg) === comp));
     const groups = new Map(); all.filter((m) => sameDay(m.date, day)).sort((a, b) => a.date - b.date).forEach((m) => { const k = m.comp || 'Andre kampe'; if (!groups.has(k)) groups.set(k, []); groups.get(k).push(m); });
@@ -1051,7 +1060,7 @@ function pageSport() {
   const comps = spComps();
   if (ui.spFilter && !comps.some((c) => c.key === ui.spFilter)) ui.spFilter = '';
   const f = ui.spFilter || '';
-  const chips = comps.length ? `<div class="sp-filter"><button class="sp-fchip${f ? '' : ' on'}" data-act="spFilter" data-k="">★ Favoritter</button>${comps.map((c) => `<button class="sp-fchip${f === c.key ? ' on' : ''}" data-act="spFilter" data-k="${c.key}" style="--sc:${SP_COL[c.col] || 'var(--accent)'}">${c.ico} ${esc(c.name)}${cards.some((x) => x.key === c.key && x.live) ? '<i class="lv-dot"></i>' : ''}</button>`).join('')}</div>` : '';
+  const chips = comps.length ? `<div class="sp-filter"><button class="sp-fchip${f ? '' : ' on'}" data-act="spFilter" data-k=""><i class="lv-dot"></i> Live</button>${comps.map((c) => `<button class="sp-fchip${f === c.key ? ' on' : ''}" data-act="spFilter" data-k="${c.key}" style="--sc:${SP_COL[c.col] || 'var(--accent)'}">${c.ico} ${esc(c.name)}${cards.some((x) => x.key === c.key && x.live) ? '<i class="lv-dot"></i>' : ''}</button>`).join('')}</div>` : '';
   const dnav = `<div class="sp-rnav"><button class="arr" data-act="spDay" data-dir="-1" ${off <= -7 ? 'disabled' : ''} aria-label="Dagen før">‹</button><div class="sp-rlab${off ? '' : ' cur'}"><span>${off === 0 ? 'I dag' : off === 1 ? 'I morgen' : off === -1 ? 'I går' : cap(DAYS[day.getDay()])}</span><b>${cap(DAYS_LONG[day.getDay()])} ${day.getDate()}. ${MONTHS[day.getMonth()]}</b></div><button class="arr" data-act="spDay" data-dir="1" ${off >= 14 ? 'disabled' : ''} aria-label="Dagen efter">›</button><button class="sp-today${off ? '' : ' at'}" data-act="spDay" data-dir="0">I dag</button></div>`;
   live.sort((a, b) => (b.fav ? 1 : 0) - (a.fav ? 1 : 0));
   if (f) { const c = comps.find((x) => x.key === f);
@@ -1070,8 +1079,8 @@ function pageSport() {
   const order = ['fb', 'f1', 'tennis', 'golf', 'nba', 'nfl', 'nhl'];
   const grp = new Map(); ents.forEach((x) => { if (!grp.has(x.key)) grp.set(x.key, []); grp.get(x.key).push(x); });
   const secs = [...grp.keys()].sort((a, b) => order.indexOf(a) - order.indexOf(b)).map((k) => `<section class="sp-fsec" style="--sc:${SP_COL[k] || 'var(--accent)'}"><div class="sp-fsh"><span class="sp-ico">${SP_ICO[k] || ''}</span><b>${SP_NAME[k] || k}</b><small>${grp.get(k).length}</small></div><div class="sp-list">${grp.get(k).map((x) => x.html).join('')}</div></section>`).join('');
-  // Dagens kampe: én boks pr. kamp – kampe i gang først, så jeres hold, så efter tid
-  const boxes = ents.slice().sort((a, b) => (b.live ? 1 : 0) - (a.live ? 1 : 0) || (b.fav ? 1 : 0) - (a.fav ? 1 : 0) || a.t - b.t).map(spBox).join('');
+  // Dagens kampe: én boks pr. kamp – jeres hold først, så kampe i gang, så efter tid
+  const boxes = ents.slice().sort((a, b) => (b.fav ? 1 : 0) - (a.fav ? 1 : 0) || (b.live ? 1 : 0) - (a.live ? 1 : 0) || a.t - b.t).map(spBox).join('');
   return `<div class="sp-page">${head(chips, alt)}${err}${spTeamCards()}<div class="sp-cgw sp-allw">${dnav}<div class="sp-boxes">${boxes}</div></div></div>`;
 }
 

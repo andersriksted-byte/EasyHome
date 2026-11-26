@@ -183,3 +183,9 @@ export function currentRound(rounds) {
   const i = rounds.findIndex((rd) => { const d = new Date(rd[rd.length - 1].date); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() + 2); return now < d.getTime(); });
   return i < 0 ? rounds.length - 1 : i;
 }
+
+// Alle kampe i én liga på én dag (fra sæsondata; nyeste stilling fra den løbende opdatering, hvor den findes)
+export function matchesOn(lg, day) {
+  const d = ymd(day);
+  return roundsOf(lg).flat().filter((m) => ymd(m.date) === d);
+}
