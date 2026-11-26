@@ -1,5 +1,5 @@
 {
-  "version": "1.98.0",
+  "version": "1.98.1",
   "files": [
     "index.html",
     "app.js",
@@ -27,6 +27,14 @@
     "todo.js"
   ],
   "notes": [
+    {
+      "version": "1.98.1",
+      "date": "26. november 2026",
+      "title": "Mindre datovælger på Sport",
+      "items": [
+        "Dato- og rundevælgeren på Sport er nu en lille vælger oppe i højre hjørne, så kampene får mere plads"
+      ]
+    },
     {
       "version": "1.98.0",
       "date": "26. november 2026",
