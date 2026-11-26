@@ -12,15 +12,20 @@ const api = async (path, method = 'GET', body) => {
   try { return await rawApi(path, method, body); } catch (e) {
     const m = /^\/groups\/([^/]+)(\/.*)?$/.exec(path);
     if (!m || !/HTTP 4(04|10)/.test(e.message)) throw e;
-    const old = m[1]; const pids = ((state.groups.find((g) => g.id === old) || {}).playerIds) || [];
+    // Hent grupperne igen og brug den gruppe, det samme rum nu er i
+    const old = m[1]; const og = state.groups.find((g) => g.id === old);
+    const room = og && !(og.playerIds || []).includes(anchor()) ? og.coordinatorId : anchor();
     await loadHousehold();
-    // Find den gruppe, som rummene nu er i
-    const ng = state.groups.find((g) => (g.playerIds || []).some((p) => pids.includes(p)));
-    if (ng && settings.sonos.groupId !== ng.id) { settings.sonos.groupId = ng.id; save(); }
-    const nid = settings.sonos.groupId; if (!nid || nid === old) throw e;
+    const ng = groupOfPlayer(room); const nid = ng && ng.id;
+    if (!nid || nid === old) throw e;
     return rawApi('/groups/' + nid + (m[2] || ''), method, body);
   }
 };
+// Den gruppe, denne skærm styrer, huskes som et RUM (Sonos giver grupper nye id'er, når rum flyttes – rummet er det samme).
+// Det gemmes pr. skærm, så to skærme ikke skifter hinandens gruppe.
+const anchor = () => settings.sonosRoom || '';
+const setAnchor = (pid) => { if (pid && settings.sonosRoom !== pid) { settings.sonosRoom = pid; save(); } };
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // Coverbilleder: Sonos giver enten en almindelig https-adresse, en http-adresse eller en adresse på selve
 // højttaleren i jeres net. https vises direkte; offentlige http-billeder hentes via workeren (ellers blokerer
@@ -80,9 +85,11 @@ export async function loadHousehold() {
   const g = await api(`/households/${state.household}/groups`);
   state.groups = g.groups || []; state.players = g.players || [];
   state.groupsAt = 0; // hent også, hvad de andre grupper spiller
-  if (!settings.sonos.groupId || !state.groups.find((x) => x.id === settings.sonos.groupId)) {
+  if (!state.players.some((p) => p.id === anchor())) {
+    // Første gang (eller rummet findes ikke mere): den gruppe, der var valgt før, ellers en der spiller, ellers den første
+    const old = state.groups.find((x) => x.id === (settings.sonos || {}).groupId);
     const playing = state.groups.find((x) => x.playbackState === 'PLAYBACK_STATE_PLAYING');
-    settings.sonos.groupId = (playing || state.groups[0] || {}).id || null; save();
+    const g = old || playing || state.groups[0]; if (g) setAnchor(g.coordinatorId || (g.playerIds || [])[0]);
   }
   try { const f = await api(`/households/${state.household}/favorites`); state.favorites = f.items || []; } catch (e) { state.favorites = []; }
   try { const pl = await api(`/households/${state.household}/playlists`); state.playlists = pl.playlists || []; } catch (e) { state.playlists = []; }
@@ -92,7 +99,7 @@ export async function refresh() {
   if (!state.connected) return state;
   try {
     if (!state.household) await loadHousehold();
-    const gid = settings.sonos.groupId;
+    const gid = curGid();
     if (!gid) return state;
     const [meta, pb, vol] = await Promise.all([
       api(`/groups/${gid}/playbackMetadata`), api(`/groups/${gid}/playback`), api(`/groups/${gid}/groupVolume`)
@@ -103,8 +110,8 @@ export async function refresh() {
       const vols = await Promise.all((g.playerIds || []).map((pid) => api(`/players/${pid}/playerVolume`).then((v) => [pid, v.volume]).catch(() => [pid, null])));
       state.playerVol = Object.fromEntries(vols);
     }
-    // De andre grupper (fx kontoret, der spiller sit eget): hvad spiller de? Hentes ca. hvert 20. sekund.
-    if (Date.now() - state.groupsAt > 20000) {
+    // De andre grupper (fx kontoret, der spiller sit eget): hvad spiller de? Hentes hvert 10. sekund og lige efter hvert tryk.
+    if (Date.now() - state.groupsAt > 10000) {
       state.groupsAt = Date.now();
       const gg = await api(`/households/${state.household}/groups`);
       state.groups = gg.groups || state.groups; state.players = gg.players || state.players;
@@ -127,14 +134,14 @@ export function nowPlaying() {
   const favImg = () => { const id = currentFav(false); const f = id && state.favorites.find((x) => x.id === id); return f ? art(f) : ''; };
   const image = art(item) || art(container) || art(m.currentItem) || (item ? lookupArt(item.artist && item.artist.name, item.name) : '') || favImg();
   const playing = state.playback && /PLAYING|BUFFERING/.test(state.playback.playbackState || '');
-  const group = state.groups.find((g) => g.id === settings.sonos.groupId);
+  const group = currentGroup();
   const nx = m.nextItem && m.nextItem.track ? m.nextItem.track : null;
   const next = nx ? { title: nx.name || '', artist: nx.artist ? nx.artist.name : '', image: art(nx) || lookupArt(nx.artist && nx.artist.name, nx.name) } : null;
   const modes = (state.playback && state.playback.playModes) || {};
   return { title, artist, image, playing, group: group ? (group.playerIds || []).map(playerName).sort((a, b) => a.localeCompare(b, 'da')).join(' + ') : '', volume: state.volume ? state.volume.volume : null, next, source: container.name && container.name !== title ? container.name : '', modes };
 }
 
-const gid = () => settings.sonos.groupId;
+const gid = () => curGid();
 export const togglePlay = () => api(`/groups/${gid()}/playback/togglePlayPause`, 'POST', {});
 export const next = () => api(`/groups/${gid()}/playback/skipToNextTrack`, 'POST', {});
 export const prev = () => api(`/groups/${gid()}/playback/skipToPreviousTrack`, 'POST', {});
@@ -146,34 +153,37 @@ const metaTitle = (m) => { m = m || {}; const it = m.currentItem && m.currentIte
 // Gruppens navn ud fra rummene ("Stue + Køkken") og hvad den spiller
 export function groupInfo(g) {
   const names = (g.playerIds || []).map(playerName).sort((a, b) => a.localeCompare(b, 'da'));
-  const mine = g.id === settings.sonos.groupId;
+  const mine = (g.playerIds || []).includes(anchor());
   return { label: names.join(' + '), title: mine ? nowPlaying().title : state.groupMeta[g.id] || '', playing: mine ? nowPlaying().playing : /PLAYING|BUFFERING/.test(g.playbackState || '') };
 }
 export const toggleGroupPlay = (id) => { const g = state.groups.find((x) => x.id === id); if (g) g.playbackState = /PLAYING/.test(g.playbackState || '') ? 'PLAYBACK_STATE_PAUSED' : 'PLAYBACK_STATE_PLAYING'; return api(`/groups/${id}/playback/togglePlayPause`, 'POST', {}); };
-export const currentGroup = () => state.groups.find((g) => g.id === settings.sonos.groupId) || null;
+export const currentGroup = () => groupOfPlayer(anchor());
+function curGid() { const g = currentGroup(); return g ? g.id : null; }
+// "Styr" en gruppe: husk et af dens rum (det, musikken styres fra)
+export function controlGroup(id) { const g = state.groups.find((x) => x.id === id); if (g) setAnchor(g.coordinatorId || (g.playerIds || [])[0]); }
+// Efter en ændring af grupperne: hent dem igen, til Sonos har gjort ændringen færdig
+async function settle(check = () => true) {
+  for (let i = 0; i < 6; i++) { await wait(i ? 700 : 400); await loadHousehold(); if (check()) break; }
+  state.groupsAt = 0;
+}
 export const groupOfPlayer = (pid) => state.groups.find((g) => (g.playerIds || []).includes(pid)) || null;
 
 // Sæt hvilke rum der er i den valgte gruppe. Gruppens id kan ændre sig, så vi bruger svaret fra Sonos.
 export async function setMembers(playerIds) {
-  const r = await api(`/groups/${gid()}/groups/setGroupMembers`, 'POST', { playerIds });
-  if (r && r.group && r.group.id) { settings.sonos.groupId = r.group.id; save(); }
-  state.household = null; // hent rum og grupper på ny
+  await api(`/groups/${gid()}/groups/setGroupMembers`, 'POST', { playerIds });
+  if (!playerIds.includes(anchor())) setAnchor(playerIds[0]);
+  const want = playerIds.slice().sort().join();
+  await settle(() => ((currentGroup() || {}).playerIds || []).slice().sort().join() === want);
 }
 // Tag et rum ud af gruppen – også det rum, musikken startede i (gruppens "styrer").
 // Sonos giver så styringen videre til et af de andre rum, og musikken fortsætter dér.
 export async function removePlayer(pid) {
   const g = currentGroup(); if (!g) return;
   const rest = (g.playerIds || []).filter((x) => x !== pid); if (!rest.length) return;
-  if (pid !== g.coordinatorId) return setMembers(rest);
+  // Er det rummet, skærmen styrer fra, der tages ud, så styres der videre fra et af de andre rum
+  if (pid === anchor()) setAnchor(rest[0]);
   await api(`/groups/${g.id}/groups/modifyGroupMembers`, 'POST', { playerIdsToRemove: [pid] });
-  // Find den nye gruppe med de rum, der er tilbage
-  for (let i = 0; i < 6; i++) {
-    await new Promise((r) => setTimeout(r, 600));
-    await loadHousehold();
-    const ng = state.groups.find((x) => (x.playerIds || []).includes(rest[0]));
-    if (ng && !(ng.playerIds || []).includes(pid)) { settings.sonos.groupId = ng.id; save(); break; }
-  }
-  state.household = null;
+  await settle(() => { const ng = currentGroup(); return ng && !(ng.playerIds || []).includes(pid); });
 }
 export async function soloPlayer(pid) {
   // Lav en gruppe med kun dette rum (tager det ud af den gruppe, det er i)
@@ -186,14 +196,14 @@ export const playPlaylist = (id) => api(`/groups/${gid()}/playlists`, 'POST', { 
 
 // Bland (shuffle) og gentag (repeat). Gentag skifter: fra → hele listen → én sang → fra
 export async function setPlayModes(patch) {
-  const gid = settings.sonos.groupId; if (!gid) return;
+  const gid = curGid(); if (!gid) return;
   state.playback = { ...(state.playback || {}), playModes: { ...((state.playback && state.playback.playModes) || {}), ...patch } };
   await api(`/groups/${gid}/playback/playMode`, 'POST', { playModes: patch });
 }
 
 // Hvilken favorit spiller nu? Sammenlign det, der spilles fra, med favoritterne (id eller navn).
 let lastFav = null;
-export function markFav(id) { lastFav = { id, group: settings.sonos.groupId, at: Date.now() }; }
+export function markFav(id) { lastFav = { id, group: curGid(), at: Date.now() }; }
 export function playingFavId() { return currentFav(true); }
 function currentFav(onlyPlaying) {
   const m = state.meta || {}; const c = m.container || {};
@@ -202,7 +212,7 @@ function currentFav(onlyPlaying) {
   const cid = c.id && c.id.objectId; const names = [c.name, m.streamInfo, m.currentItem && m.currentItem.track && m.currentItem.track.name].map(n).filter(Boolean);
   const hit = state.favorites.find((f) => { const fid = f.resource && f.resource.id && f.resource.id.objectId; return (cid && fid && cid === fid) || names.includes(n(f.name)); });
   if (hit) return playing ? hit.id : null;
-  if (lastFav && playing && lastFav.group === settings.sonos.groupId && Date.now() - lastFav.at < 6 * 3600000) return lastFav.id;
+  if (lastFav && playing && lastFav.group === curGid() && Date.now() - lastFav.at < 6 * 3600000) return lastFav.id;
   return null;
 }
 

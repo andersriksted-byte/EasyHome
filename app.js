@@ -2082,7 +2082,7 @@ const act = {
   newsRefresh: () => { N.clearNewsCache(); D.news = null; renderMain(); loadNews(); },
   sPlay: () => sonosDo(S.togglePlay), sNext: () => sonosDo(S.next), sPrev: () => sonosDo(S.prev),
   sFav: (b) => { S.markFav(b.dataset.id); sonosDo(() => S.playFavorite(b.dataset.id)); },
-  sGroup: (b) => { const cg = S.currentGroup(); if (cg) S.state.groupMeta[cg.id] = S.nowPlaying().title; settings.sonos.groupId = b.dataset.id; save(); S.state.playerVol = {}; S.state.meta = null; renderMain(false); loadSonos(); },
+  sGroup: (b) => { const cg = S.currentGroup(); if (cg) S.state.groupMeta[cg.id] = S.nowPlaying().title; S.controlGroup(b.dataset.id); S.state.playerVol = {}; S.state.meta = null; renderMain(false); loadSonos(); },
   sGroupPlay: (b) => { sonosDo(() => S.toggleGroupPlay(b.dataset.id)); renderMain(false); },
   sReload: () => loadSonos(true),
   sMember: (b) => {
@@ -2192,7 +2192,7 @@ function toggleNews(id) {
   save(); N.clearNewsCache(); loadNews();
 }
 let volTimer = null;
-async function sonosDo(fn) { try { await fn(); setTimeout(() => loadSonos(), 400); } catch (e) { toast('Sonos: ' + e.message); } }
+async function sonosDo(fn) { try { await fn(); S.state.groupsAt = 0; setTimeout(() => loadSonos(), 400); } catch (e) { toast('Sonos: ' + e.message); } }
 
 document.addEventListener('click', (e) => {
   const link = e.target.closest('[data-noread]') ? null : e.target.closest('a[data-read]');

@@ -1,5 +1,5 @@
 {
-  "version": "1.76.0",
+  "version": "1.76.1",
   "files": [
     "index.html",
     "app.js",
@@ -27,6 +27,16 @@
     "todo.js"
   ],
   "notes": [
+    {
+      "version": "1.76.1",
+      "date": "26. november 2026",
+      "title": "Musik i flere rum virker nu",
+      "items": [
+        "Musik: skærmen hopper ikke længere tilbage til en anden gruppe, når I tager et rum ud eller trykker \"Styr\".",
+        "Hver skærm husker selv, hvilken gruppe den styrer – skærmene skifter ikke længere hinandens gruppe.",
+        "Det, der står ved de andre grupper, passer nu med det, der faktisk spiller (opdateres efter hvert tryk og hvert 10. sekund)."
+      ]
+    },
     {
       "version": "1.76.0",
       "date": "26. november 2026",
