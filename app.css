@@ -2223,3 +2223,14 @@ html,body{overscroll-behavior:none}
 .tds-open .row{gap:8px}
 .tds .mx-fold summary{font-weight:800;color:var(--accent);cursor:pointer;padding:6px 0}
 .tds-close{align-self:flex-start}
+/* Fastlåst sidemenu: siden glider til side, så alt kan ses */
+.col{transition:margin-left .3s ease}
+.nav{transition:width .3s ease}
+body.navpinned .col{margin-left:260px}
+body.navpinned .nav.open{box-shadow:none}
+.nav.open .toggle{width:calc(100% - 64px)}
+.nav .pin{position:absolute;top:16px;right:12px;width:56px;min-height:56px;padding:0;justify-content:center;background:var(--navSoft)}
+.nav .pin[aria-pressed=true]{background:var(--accent);color:var(--onAccent)}
+.nav .pin svg{transition:transform .2s}
+.nav .pin[aria-pressed=true] svg{transform:rotate(-30deg)}
+@media (max-width:900px){body.navpinned .col{margin-left:88px}}

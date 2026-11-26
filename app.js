@@ -66,7 +66,7 @@ const ICON = {
   shuffle: 'M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5', repeat: 'M17 1l4 4-4 4M3 11V9a4 4 0 0 1 4-4h14M7 23l-4-4 4-4M21 13v2a4 4 0 0 1-4 4H3',
   madro: 'M4 11h16v5a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4zM2 11h20M9 7c0-1.2 1-1.8 1-3M14 7c0-1.2 1-1.8 1-3',
   cd: 'M12 8v5l3 2M9 2h6M12 22a8 8 0 1 0 0-16 8 8 0 0 0 0 16z', store: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z',
-  menu: 'M4 7h16M4 12h16M4 17h16', back: 'M15 6l-6 6 6 6',
+  menu: 'M4 7h16M4 12h16M4 17h16', back: 'M15 6l-6 6 6 6', pin: 'M9 4h6l-1 6 3 3v2H7v-2l3-3-1-6zM12 15v6',
   forside: 'M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z',
   kalender: 'M4 5h16v15H4zM4 10h16M9 3v4M15 3v4',
   vejr: 'M8 19h9a3.5 3.5 0 0 0 0-7 5 5 0 0 0-9.5 1.5A2.8 2.8 0 0 0 8 19zM9 3v1.5M3.5 8.5H2M5 5l1 1M14 5l-1 1',
@@ -187,12 +187,17 @@ const needProxyMsg = (what) => `<div class="empty">${esc(what)} kræver forbinde
 /* ---------- Navigation ---------- */
 function renderNav() {
   const nav = $('#nav');
+  if (settings.navPin) settings.navOpen = true; // fastlåst menu er altid åben
   nav.classList.toggle('open', settings.navOpen);
+  const was = document.body.classList.contains('navpinned');
+  document.body.classList.toggle('navpinned', !!settings.navPin);
+  // Siden glider til side – bagefter tilpasses forsiden til den nye bredde
+  if (was !== !!settings.navPin) setTimeout(() => window.dispatchEvent(new Event('resize')), 320);
   let shade = document.getElementById('navShade');
   if (!shade) { shade = document.createElement('div'); shade.id = 'navShade'; shade.className = 'navshade'; shade.dataset.act = 'toggleNav'; document.body.appendChild(shade); }
-  shade.classList.toggle('show', settings.navOpen);
+  shade.classList.toggle('show', settings.navOpen && !settings.navPin);
   const item = (p) => `<button data-act="nav" data-page="${p.id}" aria-label="${esc(p.label)}" ${ui.page === p.id ? 'aria-current="page"' : ''}>${svg(p.id)}<span class="lbl">${esc(p.label)}</span></button>`;
-  nav.innerHTML = `<button class="toggle" data-act="toggleNav" aria-expanded="${settings.navOpen}" aria-label="${settings.navOpen ? 'Luk menu' : 'Åbn menu'}">${svg(settings.navOpen ? 'back' : 'menu', 22)}<span class="lbl">Luk menu</span></button>
+  nav.innerHTML = `<button class="toggle" data-act="toggleNav" aria-expanded="${settings.navOpen}" aria-label="${settings.navOpen ? 'Luk menu' : 'Åbn menu'}">${svg(settings.navOpen ? 'back' : 'menu', 22)}<span class="lbl">Luk menu</span></button>${settings.navOpen ? `<button class="pin" data-act="pinNav" aria-pressed="${!!settings.navPin}" aria-label="${settings.navPin ? 'Lås menuen op' : 'Lås menuen åben'}">${svg('pin', 20)}</button>` : ''}
     ${PAGES.filter((p) => pageOn(p.id)).map(item).join('')}<div class="sp"></div>
     <button class="awake" data-act="awake" aria-pressed="${!!settings.keepAwake}" aria-label="${settings.keepAwake ? 'Skærmen holdes tændt – tryk for at slå fra' : 'Hold skærmen tændt'}">${svg(settings.keepAwake ? 'sunon' : 'sunoff')}<span class="lbl">${settings.keepAwake ? 'Skærmen er altid tændt' : 'Hold skærmen tændt'}</span></button>
     ${item({ id: 'indstillinger', label: 'Indstillinger' })}`;
@@ -2335,8 +2340,9 @@ function loadAll() { loadEl(); loadFootball(); loadWeather(); loadNews(); loadCa
 
 /* ---------- Handlinger ---------- */
 const act = {
-  nav: (b) => { if (settings.navOpen) { settings.navOpen = false; save(); } ui.page = b.dataset.page; ui.editing = false; ui.fbDay = null; history.replaceState(null, '', '#' + ui.page); renderNav(); renderMain(false); $('#main').focus({ preventScroll: true }); if (ui.page === 'musik') loadSonos(); if (ui.page === 'sport') { ui.spOff = 0; loadFootball(); spLoad(); } if (ui.page === 'stroem') { loadEl(); EL.loadHistory().then(() => { if (ui.page === 'stroem') softRender(); }); } },
-  toggleNav: () => { settings.navOpen = !settings.navOpen; save(); renderNav(); },
+  nav: (b) => { if (settings.navOpen && !settings.navPin) { settings.navOpen = false; save(); } ui.page = b.dataset.page; ui.editing = false; ui.fbDay = null; history.replaceState(null, '', '#' + ui.page); renderNav(); renderMain(false); $('#main').focus({ preventScroll: true }); if (ui.page === 'musik') loadSonos(); if (ui.page === 'sport') { ui.spOff = 0; loadFootball(); spLoad(); } if (ui.page === 'stroem') { loadEl(); EL.loadHistory().then(() => { if (ui.page === 'stroem') softRender(); }); } },
+  toggleNav: () => { if (settings.navPin) { settings.navPin = false; settings.navOpen = false; } else settings.navOpen = !settings.navOpen; save(); renderNav(); },
+  pinNav: () => { settings.navPin = !settings.navPin; settings.navOpen = true; save(); renderNav(); },
   nextTheme: () => { const i = THEME_ORDER.indexOf(ap('theme')); setAp('theme', THEME_ORDER[(i + 1) % THEME_ORDER.length]); applyTheme(); renderHeader(); if (ui.editing || ui.page === 'indstillinger') renderMain(); },
   apOwn: (b) => { apMakeOwn(b.dataset.v === '1'); applyTheme(); L.applyLook(); renderHeader(); renderMain(); },
   setTheme: (b) => { setAp('theme', b.dataset.theme); applyTheme(); renderHeader(); renderMain(); },

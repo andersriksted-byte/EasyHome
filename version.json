@@ -1,5 +1,5 @@
 {
-  "version": "1.91.3",
+  "version": "1.92.0",
   "files": [
     "index.html",
     "app.js",
@@ -27,6 +27,15 @@
     "todo.js"
   ],
   "notes": [
+    {
+      "version": "1.92.0",
+      "date": "26. november 2026",
+      "title": "Fastlås sidemenuen",
+      "items": [
+        "Åbn sidemenuen og tryk på knappenålen øverst for at låse den åben – den lukker så ikke, når du skifter side",
+        "Siden glider til side, så alt stadig kan ses. Tryk på knappenålen igen (eller Luk menu) for at låse op"
+      ]
+    },
     {
       "version": "1.91.3",
       "date": "26. november 2026",
