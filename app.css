@@ -2404,3 +2404,5 @@ body.navpinned .nav.open{box-shadow:none}
 .vsrc .srcheck{flex:none;width:22px;height:22px;border-radius:50%;border:2px solid var(--line);display:grid;place-items:center}
 .vsrc[aria-pressed=true]{box-shadow:inset 0 0 0 2px var(--accent)}
 .vsrc[aria-pressed=true] .srcheck{background:var(--accent);border-color:var(--accent);color:var(--onAccent)}
+.browser{z-index:75}.browser #brBack,.browser #brReload{min-width:44px;padding:0 12px;font-size:18px}
+.browser .rdbox{width:min(1200px,100%)}.browser .rdbody iframe{background:#fff}

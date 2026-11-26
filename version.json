@@ -1,5 +1,5 @@
 {
-  "version": "1.100.6",
+  "version": "1.101.0",
   "files": [
     "index.html",
     "app.js",
@@ -27,6 +27,15 @@
     "todo.js"
   ],
   "notes": [
+    {
+      "version": "1.101.0",
+      "date": "26. november 2026",
+      "title": "Intern browser",
+      "items": [
+        "\"Åbn på …\" og links i artikler åbner nu siden inde i easyHome",
+        "Brug ← for at gå tilbage og Luk for at vende tilbage til skærmen"
+      ]
+    },
     {
       "version": "1.100.6",
       "date": "26. november 2026",

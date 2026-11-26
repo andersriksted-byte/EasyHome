@@ -2684,6 +2684,9 @@ async function sonosDo(fn) { try { await fn(); S.state.groupsAt = 0; setTimeout(
 document.addEventListener('click', (e) => {
   const link = e.target.closest('[data-noread]') ? null : e.target.closest('a[data-read]');
   if (link) { e.preventDefault(); R.openReader(link.href, link.dataset.read); return; }
+  // Øvrige links ud af appen åbnes i den interne browser (DR TV-kanaler åbnes stadig i DR TV)
+  const ext = e.target.closest('a[target="_blank"]:not(.tvtile)');
+  if (ext && /^https?:/.test(ext.href)) { e.preventDefault(); R.openBrowser(ext.href); return; }
   const b = e.target.closest('[data-act]');
   if (b && act[b.dataset.act]) {
     e.preventDefault();

@@ -17,11 +17,13 @@ function loadReadability() {
   return loading;
 }
 
+// Lille script i rammen: et tryk på et link sendes til easyHome, som åbner det i den interne browser (rammen har ingen adgang til appen)
+const NAV_JS = `<script>document.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('a[href]');if(!a)return;var h=a.href;if(!/^https?:/.test(h))return;e.preventDefault();parent.postMessage({easyNav:h},'*');},true);document.addEventListener('submit',function(e){e.preventDefault();},true);<\/script>`;
 const cssVar = (n) => getComputedStyle(document.documentElement).getPropertyValue('--' + n).trim();
 const host = (url) => { try { return new URL(url).hostname.replace(/^www\./, ''); } catch (e) { return url; } };
 
 function frameDoc(inner) {
-  return `<!doctype html><html lang="da"><head><meta charset="utf-8"><base target="_blank">
+  return `<!doctype html><html lang="da"><head><meta charset="utf-8"><base target="_self">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;800&display=swap">
 <style>
 html{background:${cssVar('card')}}
@@ -44,7 +46,7 @@ blockquote{margin:16px 0;padding-left:16px;border-left:4px solid ${cssVar('line'
 .hero{float:right;width:40%;max-height:none;aspect-ratio:4/3;object-fit:cover;margin:0 0 12px 22px;border-radius:14px}
 .cut{clear:both}
 .cut{margin-top:28px;padding:16px;border-radius:12px;background:${cssVar('bg')};font-size:15px}
-</style></head><body>${inner}</body></html>`;
+</style></head><body>${inner}${NAV_JS}</body></html>`;
 }
 
 function close() {
@@ -143,7 +145,7 @@ export async function loadArticle(url, source, fallbackImg = '') {
   artCache[url] = { title: art.title || '', doc: frameDoc(inner) };
   return artCache[url];
 }
-export const articleFrame = (a) => `<iframe sandbox="allow-popups allow-popups-to-escape-sandbox" title="${esc(a.title || 'Nyhed')}" srcdoc="${esc(a.doc)}"></iframe>`;
+export const articleFrame = (a) => `<iframe sandbox="allow-scripts" title="${esc(a.title || 'Nyhed')}" srcdoc="${esc(a.doc)}"></iframe>`;
 
 export async function openReader(url, source) {
   close();
@@ -151,11 +153,12 @@ export async function openReader(url, source) {
   m.id = 'reader'; m.className = 'reader'; m.setAttribute('role', 'dialog'); m.setAttribute('aria-modal', 'true'); m.setAttribute('aria-label', 'Nyhed');
   m.innerHTML = `<div class="rdbox">
     <div class="rdtop"><span class="rdsrc">${esc(source || host(url))}</span>
-      <a class="btn line" href="${esc(url)}" target="_blank" rel="noopener">Åbn på ${esc(host(url))}</a>
+      <button class="btn line" id="rdWeb">Åbn på ${esc(host(url))}</button>
       <button class="btn dark" id="rdClose">Luk</button></div>
     <div class="rdbody"><div class="empty" style="margin:24px">Henter artiklen …</div></div></div>`;
   document.body.appendChild(m);
   m.querySelector('#rdClose').addEventListener('click', close);
+  m.querySelector('#rdWeb').addEventListener('click', () => openBrowser(url));
   m.addEventListener('click', (e) => { if (e.target === m) close(); });
   document.addEventListener('keydown', onKey);
   m.querySelector('#rdClose').focus();
@@ -171,3 +174,42 @@ export async function openReader(url, source) {
     body.innerHTML = `<div class="empty" style="margin:24px">Artiklen kunne ikke vises her${e.message === 'NO_PROXY' ? ' (forbindelsen er ikke sat op)' : ''}. Tryk <b>Åbn på ${esc(host(url))}</b> øverst for at læse den på mediets egen side.</div>`;
   }
 }
+
+// Intern browser: siden hentes via workeren og vises i en lukket ramme inde i easyHome (ingen af sidens egne scripts køres).
+// Links åbnes i samme vindue, og ← går tilbage.
+const brHist = [];
+function closeBrowser() { const m = document.getElementById('browser'); if (m) m.remove(); brHist.length = 0; }
+export async function openBrowser(url, push = true) {
+  let m = document.getElementById('browser');
+  if (!m) {
+    m = document.createElement('div'); m.id = 'browser'; m.className = 'reader browser'; m.setAttribute('role', 'dialog'); m.setAttribute('aria-modal', 'true'); m.setAttribute('aria-label', 'Browser');
+    m.innerHTML = `<div class="rdbox"><div class="rdtop"><button class="btn line" id="brBack" aria-label="Tilbage">←</button><span class="rdsrc" id="brHost"></span><button class="btn line" id="brReload" aria-label="Genindlæs">↻</button><button class="btn dark" id="brClose">Luk</button></div><div class="rdbody"></div></div>`;
+    document.body.appendChild(m);
+    m.querySelector('#brClose').addEventListener('click', closeBrowser);
+    m.querySelector('#brBack').addEventListener('click', () => { if (brHist.length > 1) { brHist.pop(); openBrowser(brHist[brHist.length - 1], false); } else closeBrowser(); });
+    m.querySelector('#brReload').addEventListener('click', () => { if (brHist.length) openBrowser(brHist[brHist.length - 1], false); });
+    m.addEventListener('click', (e) => { if (e.target === m) closeBrowser(); });
+  }
+  if (push) brHist.push(url);
+  m.querySelector('#brHost').textContent = host(url);
+  m.querySelector('#brBack').disabled = false;
+  const body = m.querySelector('.rdbody');
+  body.innerHTML = '<div class="empty" style="margin:24px">Henter siden …</div>';
+  try {
+    const html = await fetchText(url, { allowPublic: settings.news.publicProxyForTest });
+    if (brHist[brHist.length - 1] !== url) return; // en anden side er valgt imens
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    doc.querySelectorAll('script:not([type="application/ld+json"]),iframe,object,embed').forEach((x) => x.remove());
+    doc.querySelectorAll('noscript').forEach((n) => { const t = document.createElement('div'); t.innerHTML = n.textContent; n.replaceWith(...t.childNodes); });
+    doc.querySelectorAll('img').forEach((img) => { const ds = img.getAttribute('data-src') || img.getAttribute('data-lazy-src'); const src = img.getAttribute('src') || ''; if (ds && (!src || /^data:/.test(src))) img.setAttribute('src', ds); img.removeAttribute('loading'); });
+    doc.querySelectorAll('meta[http-equiv]').forEach((x) => x.remove());
+    let base = doc.querySelector('base'); if (!base) { base = doc.createElement('base'); doc.head.prepend(base); } base.href = url; base.target = '_self';
+    const out = '<!doctype html>' + doc.documentElement.outerHTML.replace(/<\/body>/i, NAV_JS + '</body>');
+    body.innerHTML = `<iframe sandbox="allow-scripts" title="${esc(host(url))}"></iframe>`;
+    body.firstChild.srcdoc = out;
+  } catch (e) {
+    body.innerHTML = `<div class="empty" style="margin:24px">Siden kunne ikke hentes${e.message === 'NO_PROXY' ? ' (forbindelsen er ikke sat op)' : ''}.</div>`;
+  }
+}
+// Links i læsevisningen og i den interne browser
+window.addEventListener('message', (e) => { const u = e.data && e.data.easyNav; if (typeof u === 'string' && /^https?:/.test(u)) openBrowser(u); });
