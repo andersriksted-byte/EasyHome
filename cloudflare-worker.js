@@ -719,6 +719,7 @@ export default {
       if (path.startsWith('/el/')) return await el(req, env, path, ctx);
       if (path === '/podcast/resolve' && req.method === 'POST') return await podcastResolve(req, env);
       if (path === '/route') return await route(req, env, ctx);
+      if (path === '/geocode') { const q = (new URL(req.url).searchParams.get('q') || '').trim().slice(0, 200); if (!q) return json(env, { error: 'Mangler adresse' }, 400); return json(env, { found: await geocode(env, q) }); }
       if (path === '/health') return json(env, { ok: true, sonosConfigured: sonosReady(env), version: 4, podcast: true });
       if (path === '/proxy') return await proxy(req, env, ctx);
       if (path === '/art') {

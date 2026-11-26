@@ -1,5 +1,5 @@
 {
-  "version": "1.104.1",
+  "version": "1.105.0",
   "files": [
     "index.html",
     "app.js",
@@ -31,6 +31,15 @@
     "leaflet.css"
   ],
   "notes": [
+    {
+      "version": "1.105.0",
+      "date": "26. november 2026",
+      "title": "Jeres hjemmeadresse",
+      "items": [
+        "Indtast jeres præcise hjemmeadresse under Indstillinger → Trafik",
+        "Ruter, køretider og trafik regnes nu fra jeres dør i stedet for midt i byen"
+      ]
+    },
     {
       "version": "1.104.1",
       "date": "26. november 2026",

@@ -128,6 +128,8 @@ const shapeIcon = (w, h) => `<svg aria-hidden="true" width="26" height="26" view
 const D = { weather: null, weatherErr: null, wx: {}, wxErr: {}, compare: null, news: null, cal: null };
 // Steder: det første sted er 'hjem' og bruges i header og tema
 const home = () => settings.places[0];
+// Udgangspunkt for ture og trafik: jeres præcise hjemmeadresse (Indstillinger → Trafik), ellers hjem-stedet fra vejret
+const travelHome = () => (settings.homeAddr && settings.homeAddr.lat ? settings.homeAddr : settings.places[0]);
 const placeLabel = (p) => p.label || p.name;
 const placeById = (id) => settings.places.find((p) => p.id === id) || home();
 const ui = { n1Idx: 0, n1At: Date.now(), sfMsg: '', inspIdx: 0, inspAt: Date.now(), calEdit: null, famMsg: null, cdIdx: 0, cdAt: Date.now(), cdMsg: null, bgMsg: null, sizeFor: null, newsIdx: 0, newsAt: Date.now(), feedMsg: null, feedDraft: null, page: pageFromHash(), setTab: 'familie', wPlace: null, fpPlace: 0, fpTouched: 0, editing: false, calWeek: 0, geo: null, geoMsg: '', tick: 0, connMsg: '' };
@@ -583,8 +585,8 @@ const ROUTES = {};
 const isPlace = (loc) => loc && !/^https?:|teams|zoom|meet\.google|online|virtuel/i.test(loc) && loc.trim().length > 2;
 function routeFor(e) {
   if (!hasProxy() || !isPlace(e.location)) return null;
-  const home = settings.places[0]; if (!home) return null;
-  const key = e.location + '|' + e.start.toISOString();
+  const home = travelHome(); if (!home) return null;
+  const key = e.location + '|' + e.start.toISOString() + '|' + home.lat;
   const r = ROUTES[key];
   if (!r || Date.now() - r.at > 10 * 60000) {
     ROUTES[key] = { at: Date.now(), data: r && r.data };
@@ -595,7 +597,7 @@ function routeFor(e) {
 // Rute fra hjem til et af jeres steder (til Trafik-siden)
 function routeToPlace(p) {
   if (!hasProxy() || !p || !p.lat) return null;
-  const h = home(); const key = 'p|' + p.lat + ',' + p.lon;
+  const h = travelHome(); const key = 'p|' + p.lat + ',' + p.lon + '|' + h.lat;
   const r = ROUTES[key];
   if (!r || Date.now() - r.at > 10 * 60000) {
     ROUTES[key] = { at: Date.now(), data: r && r.data };
@@ -631,7 +633,7 @@ function wNaeste(size, h = 1, wd = 1, x = null) {
     const traf = !rt.traffic ? '' : rt.delayMin <= 2 ? 'Trafikken er let' : rt.delayMin <= 9 ? 'Lidt trafik' : 'Tæt trafik';
     // Trafikmeldinger på vejen (Vejdirektoratet), når Trafik er slået til
     let warn = '';
-    if (svcOn('trafik') && rt.lat && lm <= 180) { trafikLoad(); const on = TR.along(home(), rt, rt).filter((y) => y.kind !== 'vejarbejde'); if (on.length) warn = `⚠ ${on.length} ${on.length === 1 ? 'melding' : 'meldinger'} på vejen`; }
+    if (svcOn('trafik') && rt.lat && lm <= 180) { trafikLoad(); const on = TR.along(travelHome(), rt, rt).filter((y) => y.kind !== 'vejarbejde'); if (on.length) warn = `⚠ ${on.length} ${on.length === 1 ? 'melding' : 'meldinger'} på vejen`; }
     drive = `<div class="nx2-drive ${cls}"><b>${lm <= 0 ? 'Kør nu!' : 'Kør kl. ' + hhmm(leave)}</b><span>${[warn, traf, durTxt(rt.min) + ' i bil'].filter(Boolean).join(' · ')}</span></div>`;
   }
   const until = running ? `I gang – til ${hhmm(e.end)}` : mins < 60 ? `om ${Math.max(1, mins)} min` : sameDay(e.start, new Date()) ? `om ${durTxt(mins)}` : day.toLowerCase();
@@ -2024,7 +2026,7 @@ function pageMusik() {
 }
 
 /* ---------- Trafik ---------- */
-function trafikLoad(dest) { TR.load(TR.bboxFor(home(), dest || null, TR.cfg().radius)).then((ch) => { if (ch) softRender(); }); }
+function trafikLoad(dest) { TR.load(TR.bboxFor(travelHome(), dest || null, TR.cfg().radius)).then((ch) => { if (ch) softRender(); }); }
 const ago = (d) => { const m = Math.round((Date.now() - d.getTime()) / 60000); return m < 1 ? 'lige nu' : m < 60 ? `for ${m} min siden` : m < 24 * 60 ? `for ${Math.floor(m / 60)} t siden` : `for ${Math.floor(m / 1440)} d siden`; };
 const trWhen = (x) => { if (x.kind !== 'vejarbejde' && x.from) return 'Meldt ' + ago(x.from) + (x.seen && Date.now() - x.seen > 5 * 60000 ? ' · sidst set ' + ago(x.seen) : ''); return trWhen2(x); };
 const trWhen2 = (x) => { const f = x.from; const t = x.to; const d = (v) => (sameDay(v, new Date()) ? hhmm(v) : `${v.getDate()}/${v.getMonth() + 1}`); return [f ? 'Fra ' + d(f) : '', t ? 'til ' + d(t) : ''].filter(Boolean).join(' '); };
@@ -2038,7 +2040,7 @@ function wTrafik(size, h = 1, wd = 1) {
   const c = TR.cfg(); const head = (r) => cardHead('Trafik', r);
   if (!hasProxy()) return head('') + '<div class="empty">Kræver forbindelsen.</div>';
   if (!TR.state.items) return head('') + `<div class="empty">${TR.state.err ? 'Kunne ikke hente trafikken.' : 'Henter trafikken …'}</div>`;
-  const all = TR.near(home()); const acute = all.filter((x) => x.kind !== 'vejarbejde');
+  const all = TR.near(travelHome()); const acute = all.filter((x) => x.kind !== 'vejarbejde');
   const kind = shapeKind(wd, h);
   const rad = c.radius ? `${c.radius} km` : 'Hele landet';
   if (!all.length) return head(esc(rad)) + '<div class="tr-ok"><span>✓</span><b>Ingen trafikmeldinger</b></div>';
@@ -2058,13 +2060,13 @@ function pageTrafik() {
   if (dest.place) { const r = routeToPlace(dest.place); if (r && r.found) dest.rt = r; }
   trafikLoad(dest.rt ? null : dest.to); // med en rigtig rute kommer TomTom's trafik med ruten – så hentes der kun omkring hjem
   if (!TR.state.items) return `<div class="empty">${TR.state.err ? 'Kunne ikke hente trafikken fra Vejdirektoratet.' : 'Henter trafikken …'}</div>`;
-  const all = dest.to ? TR.along(home(), dest.to, dest.rt) : TR.near(home());
+  const all = dest.to ? TR.along(travelHome(), dest.to, dest.rt) : TR.near(travelHome());
   const acute = all.filter((x) => x.kind !== 'vejarbejde');
   const sum = dest.to ? `<div class="tr-sum ${acute.length ? 'warn' : 'ok'}"><span>${acute.length ? '⚠' : '✓'}</span><div><b>${acute.length ? `${acute.length} ${acute.length === 1 ? 'melding' : 'meldinger'} på vejen` : 'Fri vej'}${dest.rt ? ` · ${durTxt(dest.rt.min)} i bil${dest.rt.traffic && dest.rt.delayMin > 2 ? ` (+${dest.rt.delayMin} min pga. trafik)` : ''}` : ''}</b><small>${esc(dest.label.replace(/^\S+ /, ''))}${all.length - acute.length ? ` · 🚧 ${all.length - acute.length} vejarbejde` : ''}</small></div></div>` : '';
   const counts = {}; all.forEach((x) => { counts[x.kind] = (counts[x.kind] || 0) + 1; });
   const chips = [['alle', 'Alle', all.length]].concat(Object.keys(TR.KINDS).filter((k) => counts[k]).map((k) => [k, TR.KINDS[k].icon + ' ' + TR.KINDS[k].label, counts[k]]));
   const list = f === 'alle' ? all : all.filter((x) => x.kind === f);
-  ui.trMapArgs = { home: home(), dest: dest.to || null, route: dest.rt && dest.rt.points || null, items: list, flow: TR.state.flow, radius: TR.cfg().radius };
+  ui.trMapArgs = { home: travelHome(), dest: dest.to || null, route: dest.rt && dest.rt.points || null, items: list, flow: TR.state.flow, radius: TR.cfg().radius };
   setTimeout(() => { const el = document.getElementById('trMap'); if (el && ui.trMapArgs) TRM.sync(el, { ...ui.trMapArgs, dark: document.documentElement.style.colorScheme === 'dark' }); }, 0);
   return `<div class="tr-page">
     ${dests.length > 1 ? `<div class="tr-chips tr-dests">${dests.map((d) => `<button class="chip${d.id === dest.id ? ' accent' : ''}" data-act="trDest" data-k="${esc(d.id)}">${esc(d.label)}</button>`).join('')}</div>` : ''}
@@ -2078,7 +2080,12 @@ function pageTrafik() {
 }
 function trafikSettings() {
   const c = TR.cfg();
-  return `<section class="card"><div class="sechead2"><b>Område</b></div><div class="row">${[10, 30, 60, 0].map((r) => `<button class="pill" data-act="trRadius" data-v="${r}" aria-pressed="${c.radius === r}">${r ? r + ' km fra hjem' : 'Hele landet'}</button>`).join('')}</div></section>
+  const ha = settings.homeAddr;
+  return `<section class="card wide"><div class="sechead2"><b>Hjemmeadresse</b></div>
+    ${ha && ha.lat ? `<div class="row"><span class="ha-found">🏠 ${esc(ha.name)}</span><button class="btn line" data-act="haClear">Skift</button></div>`
+      : `<div class="row" style="flex-wrap:nowrap"><input type="text" id="haQ" placeholder="Vej og husnummer, postnr. by" aria-label="Hjemmeadresse" autocomplete="street-address" value="${esc(ui.haDraft || '')}"><button class="btn primary" data-act="haSave">Gem</button></div>`}
+    ${ui.haMsg ? `<div class="small ${ui.haMsg.err ? 'err' : 'muted'}">${esc(ui.haMsg.text)}</div>` : ''}</section>
+    <section class="card"><div class="sechead2"><b>Område</b></div><div class="row">${[10, 30, 60, 0].map((r) => `<button class="pill" data-act="trRadius" data-v="${r}" aria-pressed="${c.radius === r}">${r ? r + ' km fra hjem' : 'Hele landet'}</button>`).join('')}</div></section>
     <section class="card"><div class="sechead2"><b>Meldinger</b></div><button class="svc2-r${c.roadworks ? ' on' : ''}" data-act="trRoadworks" role="switch" aria-checked="${c.roadworks}" style="--tc:#F97316"><i class="tab-ic">🚧</i><b>Vis vejarbejde</b><span class="tgl" aria-hidden="true"><i></i></span></button></section>`;
 }
 
@@ -2705,6 +2712,16 @@ const act = {
     renderMain();
   },
   trFocus: (b) => { TRM.focus(+b.dataset.lat, +b.dataset.lon); },
+  haSave: async () => {
+    const q = ($('#haQ') || {}).value || ''; ui.haDraft = q; if (!q.trim()) return;
+    ui.haMsg = { err: false, text: 'Finder adressen …' }; renderMain(false);
+    try { const r = await (await workerFetch('/geocode?q=' + encodeURIComponent(q.trim()))).json();
+      if (!r.found) { ui.haMsg = { err: true, text: 'Adressen blev ikke fundet. Prøv med postnummer og by.' }; }
+      else { settings.homeAddr = { name: r.found.name || q.trim(), lat: r.found.lat, lon: r.found.lon }; save(); ui.haMsg = null; ui.haDraft = ''; for (const k in ROUTES) delete ROUTES[k]; }
+    } catch (e) { ui.haMsg = { err: true, text: e.message === 'NO_PROXY' ? 'Opsæt forbindelsen først.' : 'Kunne ikke finde adressen lige nu.' }; }
+    renderMain(false);
+  },
+  haClear: () => { ui.haDraft = settings.homeAddr ? settings.homeAddr.name : ''; settings.homeAddr = null; save(); renderMain(false); },
   trDest: (b) => { ui.trDest = b.dataset.k; ui.trFilter = 'alle'; renderMain(false); },
   trFilter: (b) => { ui.trFilter = b.dataset.k; renderMain(false); },
   trRadius: (b) => { settings.trafik = { ...TR.cfg(), radius: +b.dataset.v }; save(); renderMain(false); },
@@ -2784,7 +2801,7 @@ document.addEventListener('input', (e) => {
   if (t.hasAttribute && t.hasAttribute('data-seekbar')) { ui.seeking = true; const el = t.closest('.mseek'); el.querySelector('[data-seekpos]').textContent = fmtMs(+t.value); el.querySelector('[data-seekleft]').textContent = '−' + fmtMs(+t.max - +t.value); }
   if (t.hasAttribute && t.hasAttribute('data-look-alpha')) { L.setLook({ alpha: +t.value }); const lab = t.previousElementSibling; if (lab) lab.textContent = t.value + ' %'; }
 });
-document.addEventListener('keydown', (e) => { if (e.key !== 'Enter') return; if (e.target.id === 'geoQ') act.geoSearch(); else if (e.target.dataset && e.target.dataset.place !== undefined) e.target.blur(); });
+document.addEventListener('keydown', (e) => { if (e.key !== 'Enter') return; if (e.target.id === 'geoQ') act.geoSearch(); else if (e.target.id === 'haQ') act.haSave(); else if (e.target.dataset && e.target.dataset.place !== undefined) e.target.blur(); });
 document.addEventListener('submit', (e) => {
   const tf = e.target.closest('[data-todoadd]');
   if (tf) { e.preventDefault(); const v = tf.t.value.trim(); if (!v) return; ui.tdNewWho = tf.w.value; TD.addItem({ title: v, who: tf.w.value, due: tf.d.value }); renderMain(); const n = document.querySelector('.tdadd input[name=t]'); if (n) n.focus(); return; }
