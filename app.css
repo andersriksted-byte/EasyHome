@@ -2379,3 +2379,28 @@ body.navpinned .nav.open{box-shadow:none}
 .mfavsecs .mlogos{grid-template-columns:repeat(auto-fill,66px);gap:8px}
 .mfavsecs .mlogo{scroll-snap-align:start}
 .mfavsecs .mlogo>i{border-radius:12px}
+/* Tjenester: kompakte rækker med farvet ikon og kontakt, fem i bredden */
+.svc2{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:8px}
+.svc2-r{display:flex;align-items:center;gap:10px;min-height:52px;padding:6px 10px 6px 6px;border:0;border-radius:14px;background:var(--bg);color:var(--text);text-align:left;min-width:0}
+.svc2-r>b{flex:1;min-width:0;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.svc2-r:not(.on) .tab-ic{background:var(--line);color:var(--muted)}
+.svc2-r:not(.on)>b{color:var(--muted)}
+.navord2{display:grid;grid-auto-flow:column;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px 8px}
+.navord2 .navord-r{grid-template-columns:18px 28px minmax(0,1fr) 34px 34px;gap:6px;min-height:44px;padding:4px 6px}
+.navord2 .navord-r b{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.navord2 .fobtn{width:34px;height:34px;min-height:0;padding:0;display:grid;place-items:center}
+.navord-n{font-size:12px;font-weight:800;color:var(--muted);text-align:right}
+.tab-ic.sm{width:28px;height:28px;border-radius:8px}
+@media (max-width:900px){.navord2{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.svc2-r.on .tgl{background:var(--accent)}.svc2-r.on .tgl i{left:23px}
+.svc2-r .tgl{flex:none}
+/* Vejr-indstillinger: steder til venstre, kilde og interval til højre */
+.vset-places .prow{min-height:54px;padding:6px 10px;gap:10px}
+.vset-places .pico{width:36px;height:36px}
+.vset-places .pname input{font-size:16px}
+.vset-places .ibtn{min-height:38px;width:38px;padding:0;justify-content:center}
+.vsrcs{display:flex;flex-direction:column;gap:6px}
+.vsrc{display:flex;align-items:center;gap:10px;min-height:44px;padding:6px 12px;border:0;border-radius:12px;background:var(--bg);color:var(--text);text-align:left;font-size:14px}
+.vsrc .srcheck{flex:none;width:22px;height:22px;border-radius:50%;border:2px solid var(--line);display:grid;place-items:center}
+.vsrc[aria-pressed=true]{box-shadow:inset 0 0 0 2px var(--accent)}
+.vsrc[aria-pressed=true] .srcheck{background:var(--accent);border-color:var(--accent);color:var(--onAccent)}

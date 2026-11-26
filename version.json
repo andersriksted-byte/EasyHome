@@ -1,5 +1,5 @@
 {
-  "version": "1.100.0",
+  "version": "1.100.1",
   "files": [
     "index.html",
     "app.js",
@@ -27,6 +27,16 @@
     "todo.js"
   ],
   "notes": [
+    {
+      "version": "1.100.1",
+      "date": "26. november 2026",
+      "title": "Pænere Tjenester og Vejret",
+      "items": [
+        "Tjenester står kompakt med farvede ikoner – alt kan ses uden at scrolle",
+        "Rækkefølgen i sidemenuen er nummereret og står i fire kolonner",
+        "Vejr-indstillinger: steder til venstre, vejrkilde og interval til højre"
+      ]
+    },
     {
       "version": "1.100.0",
       "date": "26. november 2026",

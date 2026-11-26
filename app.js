@@ -2083,31 +2083,29 @@ function vejrSettings() {
         <span class="psub">${i === 0 ? '<b class="hometag">Hjem</b>' : ''}${esc(p.name)}${w ? ` · nu ${fmtTemp(w.now.temp)}` : ''}</span>
       </div>
       <div class="pact">
-        ${i > 0 ? `<button class="ibtn" data-act="placeHome" data-i="${i}" aria-label="Gør ${esc(placeLabel(p))} til hjem">${ico('home', 18)}<span>Gør til hjem</span></button>` : ''}
+        ${i > 0 ? `<button class="ibtn" data-act="placeHome" data-i="${i}" aria-label="Gør ${esc(placeLabel(p))} til hjem">${ico('home', 18)}</button>` : ''}
         ${many ? `<button class="ibtn danger" data-act="placeRm" data-i="${i}" aria-label="Fjern ${esc(placeLabel(p))}">${ico('trash', 18)}</button>` : ''}
       </div></li>`;
   }).join('');
   const results = ui.geo ? (ui.geo.length ? `<ul class="glist">${ui.geo.map((g, i) => `<li><button data-act="geoPick" data-i="${i}"><span class="gname"><b>${esc(g.name)}</b><span class="psub">${esc(g.area)}</span></span><span class="gadd">${ico('plus', 18)} Tilføj</span></button></li>`).join('')}</ul>` : '<div class="empty">Ingen steder fundet. Prøv et andet navn.</div>') : '';
   const sources = W.MODELS.map((m) => {
     const on = s.weather.model === m.id;
-    return `<button class="srcard" data-act="wModel" data-model="${m.id}" aria-pressed="${on}"><span class="srhead"><b>${esc(m.name)}</b><span class="srcheck">${on ? ico('check', 16) : ''}</span></span><span class="psub">${esc(m.desc)}</span></button>`;
+    return `<button class="vsrc" data-act="wModel" data-model="${m.id}" aria-pressed="${on}" title="${esc(m.desc)}"><span class="srcheck">${on ? ico('check', 14) : ''}</span><b>${esc(m.name)}</b></button>`;
   }).join('');
   return `
-    <section class="card wide">
-      <div class="sechead"><div><h2>Steder</h2></div></div>
+    <section class="card vset-places">
+      <div class="sechead2"><b>Steder</b></div>
       <ul class="plist">${rows}</ul>
       <div class="addbox">
-        <label class="search">${ico('search', 20)}<input type="text" id="geoQ" placeholder="Tilføj sted – søg fx Skagen eller Spodsbjerg" aria-label="Søg efter et sted at tilføje" enterkeyhint="search"></label>
+        <label class="search">${ico('search', 20)}<input type="text" id="geoQ" placeholder="Tilføj sted" aria-label="Søg efter et sted at tilføje" enterkeyhint="search"></label>
         <button class="btn primary" data-act="geoSearch">Søg</button>
       </div>
       ${results}${ui.geoMsg ? `<div class="err">${esc(ui.geoMsg)}</div>` : ''}
     </section>
-    <section class="card wide">
-      <div class="sechead"><div><h2>Vejrkilde</h2></div></div>
-      <div class="srgrid">${sources}</div>
-    </section>
     <section class="card">
-      <div class="sechead"><div><h2>Interval i vejrkortet</h2></div></div>
+      <div class="sechead2"><b>Vejrkilde</b></div>
+      <div class="vsrcs">${sources}</div>
+      <div class="sechead2" style="margin-top:14px"><b>Interval i vejrkortet</b></div>
       <div class="row">${[[15, '15 min'], [30, '30 min'], [60, '1 time']].map(([v, l]) => `<button class="pill" data-act="wStepSet" data-v="${v}" aria-pressed="${(+s.weather.step || 60) === v}">${l}</button>`).join('')}</div>
     </section>`;
 }
@@ -2152,9 +2150,11 @@ function pageIndstillinger() {
   const tab = tabs.some((t) => t.id === ui.setTab) ? ui.setTab : 'familie';
   const needsConn = ['nyheder', 'kalender', 'musik'].includes(tab) && !hasProxy();
   const T = {
-    tjenester: () => `<section class="card wide"><div class="store">${SERVICES.filter((x) => x.pages.length).map((x) => { const on = svcOn(x.id); return `<button class="svc ${on ? 'on' : ''}" data-act="svcToggle" data-id="${x.id}" role="switch" aria-checked="${on}">
-      <span class="appico">${svg(x.icon, 30)}</span><span class="appmain"><b>${esc(x.name)}</b><span>${esc(x.desc)}</span></span><span class="tgl" aria-hidden="true"><i></i></span></button>`; }).join('')}</div></section>
-    <section class="card"><b>Rækkefølge i sidemenuen</b><div class="navord">${navPages().map((p, i, all) => `<div class="navord-r"><span class="navord-i">${svg(p.id, 20)}</span><b>${esc(p.label)}</b><button class="fobtn" data-act="navMove" data-id="${p.id}" data-d="-1" ${i === 0 ? 'disabled' : ''} aria-label="Flyt ${esc(p.label)} op">${svg('up', 18)}</button><button class="fobtn" data-act="navMove" data-id="${p.id}" data-d="1" ${i === all.length - 1 ? 'disabled' : ''} aria-label="Flyt ${esc(p.label)} ned">${svg('down', 18)}</button></div>`).join('')}</div></section>`,
+    tjenester: () => { const col = (id) => (SET_TABS.find((t) => t.id === id || (id === 'madro' && t.id === 'todo')) || {}).c || '#64748B';
+      const SC = { madro: '#F59E0B', kalender: '#EF4444', vejr: '#0EA5E9', nyheder: '#F97316', musik: '#EC4899', tv: '#3B82F6', somfy: '#14B8A6', el: '#EAB308', fodbold: '#16A34A', todo: '#22A35A', stroem: '#EAB308', sport: '#16A34A', forside: '#6E56CF', indstillinger: '#64748B' };
+      const svcs = SERVICES.filter((x) => x.pages.length); const nav = navPages(); const rows = Math.ceil(nav.length / (innerWidth > 900 ? 4 : 2));
+      return `<section class="card wide"><div class="sechead2"><b>Tjenester</b></div><div class="svc2">${svcs.map((x) => { const on = svcOn(x.id); return `<button class="svc2-r${on ? ' on' : ''}" data-act="svcToggle" data-id="${x.id}" role="switch" aria-checked="${on}" style="--tc:${SC[x.id] || col(x.id)}"><i class="tab-ic">${svg(x.icon, 20)}</i><b>${esc(x.name.replace(/ \(.*\)$/, ''))}</b><span class="tgl" aria-hidden="true"><i></i></span></button>`; }).join('')}</div></section>
+    <section class="card wide"><div class="sechead2"><b>Rækkefølge i sidemenuen</b></div><div class="navord2" style="grid-template-rows:repeat(${rows},auto)">${nav.map((p, i, all) => `<div class="navord-r" style="--tc:${SC[p.id] || '#64748B'}"><span class="navord-n">${i + 1}</span><i class="tab-ic sm">${svg(p.id, 16)}</i><b>${esc(p.label)}</b><button class="fobtn" data-act="navMove" data-id="${p.id}" data-d="-1" ${i === 0 ? 'disabled' : ''} aria-label="Flyt ${esc(p.label)} op">${svg('up', 16)}</button><button class="fobtn" data-act="navMove" data-id="${p.id}" data-d="1" ${i === all.length - 1 ? 'disabled' : ''} aria-label="Flyt ${esc(p.label)} ned">${svg('down', 16)}</button></div>`).join('')}</div></section>`; },
     vejr: () => vejrSettings(),
     fodbold: () => fodboldSettings(),
     todo: () => todoSettings(),
