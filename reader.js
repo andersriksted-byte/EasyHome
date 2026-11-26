@@ -64,7 +64,10 @@ const artCache = {};
 // giver ellers store huller i teksten (fx Ekstra Bladet)
 // Henter afsnit, mellemrubrikker, citater og billeder fra artiklens hovedområde i rækkefølge
 function collectBlocks(doc) {
-  const roots = [...doc.querySelectorAll('article, main, [itemprop="articleBody"], [class*="article-body"], [class*="ArticleBody"]')];
+  let roots = [...doc.querySelectorAll('article, [itemprop="articleBody"], [class*="article-body"], [class*="ArticleBody"]')];
+  if (!roots.length) roots = [...doc.querySelectorAll('main')];
+  // Tekster der går igen flere gange på siden (fx reklamen "Spar op til …") er aldrig artikeltekst
+  const count = {}; doc.querySelectorAll('p, li, h2, h3').forEach((el) => { const t = el.textContent.replace(/\s+/g, ' ').trim(); if (t) count[t] = (count[t] || 0) + 1; });
   let best = { len: 0, html: '' };
   roots.forEach((root) => {
     const parts = []; let len = 0; const seen = new Set();
@@ -75,13 +78,14 @@ function collectBlocks(doc) {
       if (el.tagName === 'FIGURE') { const im = el.querySelector('img'); if (im) { seen.add(el); parts.push(el.outerHTML); } return; }
       if (el.tagName === 'LI' && (t.length < 40 || el.querySelector('a') && el.querySelector('a').textContent.trim().length > t.length * 0.6)) return;
       if (el.tagName === 'P' && t.length < 25) return;
-      if (!t) return;
+      if (!t || count[t] > 1 || el.closest('a, [class*="promo"], [class*="offer"], [class*="ad-"], [class*="campaign"]')) return;
       const linky = [...el.querySelectorAll('a')].reduce((n, a) => n + a.textContent.length, 0);
       if (linky > t.length * 0.6) return;
       seen.add(el); len += t.length;
       parts.push(`<${el.tagName.toLowerCase()}>${el.tagName === 'BLOCKQUOTE' || el.tagName === 'LI' ? esc(t) : el.innerHTML}</${el.tagName.toLowerCase()}>`);
     });
-    if (len > best.len) best = { len, html: parts.join('') };
+    const real = parts.filter((x) => /^<p>/.test(x) && x.length > 90).length;
+    if (real >= 3 && len > best.len) best = { len, html: parts.join('') };
   });
   return best;
 }
@@ -106,6 +110,9 @@ export function tidy(body, url) {
   body.querySelectorAll('[width],[height]').forEach((x) => { if (x.tagName !== 'IMG') { x.removeAttribute('width'); x.removeAttribute('height'); } });
   // Tomme blokke (ingen tekst og intet billede/video) fjernes – indefra og ud
   [...body.querySelectorAll('div,p,section,figure,span,li,ul,h2,h3,h4,a')].reverse().forEach((x) => { if (!x.textContent.replace(/[\s\u00a0\u200b]+/g, '') && !x.querySelector('img,video')) x.remove(); });
+  // Afsnit med præcis samme tekst flere gange (reklamer o.l.) fjernes helt
+  const seen = {}; body.querySelectorAll('p,li,h2,h3,div').forEach((x) => { if (x.querySelector('p,li,div')) return; const t = x.textContent.replace(/\s+/g, ' ').trim(); if (t) (seen[t] = seen[t] || []).push(x); });
+  Object.values(seen).forEach((els) => { if (els.length > 1) els.forEach((x) => x.remove()); });
   // Flere linjeskift i træk bliver til ét
   body.querySelectorAll('br').forEach((br) => { let n = br.nextSibling; while (n && n.nodeType === 3 && !n.textContent.trim()) n = n.nextSibling; if (n && n.nodeName === 'BR') br.remove(); });
 }
