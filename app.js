@@ -769,11 +769,17 @@ function todoSettings() {
     const fast = c.every === 'day' && c.mode === 'fast';
     const who = fast ? `<div class="tdplan">${order.filter((d) => !c.days || !c.days.length || c.days.includes(d)).map((d) => `<label class="f">${DAYS_LONG[d]}<select data-chore="${esc(c.id)}" data-k="plan" data-wd="${d}"><option value="">–</option>${ms.map((m) => `<option value="${esc(m.id)}"${(c.plan || {})[d] === m.id ? ' selected' : ''}>${esc(m.name)}</option>`).join('')}</select></label>`).join('')}</div>`
       : `<div class="choices">${ms.filter((m) => !(c.people || []).includes(m.id)).map((m) => `<button class="pill sm" data-act="chorePerson" data-id="${esc(c.id)}" data-m="${esc(m.id)}">+ ${esc(m.name)}</button>`).join('')}</div>${tdOrder(c)}`;
-    return `<section class="card"><div class="tdset-h"><input class="tdicon" type="text" data-chore="${esc(c.id)}" data-k="icon" value="${esc(c.icon || '')}" aria-label="Ikon" maxlength="4"><input type="text" data-chore="${esc(c.id)}" data-k="title" value="${esc(c.title)}" placeholder="Navn" aria-label="Navn"><button class="btn" data-act="choreRm" data-id="${esc(c.id)}" aria-label="Fjern ${esc(c.title)}">Fjern</button></div>
+    // Lukket: én linje med det vigtigste. Åben: redigering
+    const everyL = (TD.EVERY.find(([v]) => v === c.every) || [, ''])[1];
+    const whenL = c.every === 'day' ? (c.days && c.days.length && c.days.length < 7 ? order.filter((d) => c.days.includes(d)).map((d) => DAYS[d]).join(' ') : '') : c.every === 'month' ? '' : `${c.at === 'on' ? '' : 'senest '}${DAYS_LONG[c.day ?? 6]}`;
+    const ppl = fast ? 'Fast pr. ugedag' : (c.people || []).map((id) => (ms.find((m) => m.id === id) || {}).name).filter(Boolean).join(' → ');
+    if (ui.tdOpen !== c.id) return `<button class="tds-row" data-act="tdsOpen" data-id="${esc(c.id)}"><span class="tds-ico">${esc(c.icon || '✅')}</span><span class="tds-t"><b>${esc(c.title || 'Ny pligt')}</b><small>${esc([everyL, whenL].filter(Boolean).join(' · '))}${ppl ? ' · ' + esc(ppl) : ''}${c.carry ? ' · flyttes' : ''}</small></span><span class="tds-who">${tdAv(TD.whoFor(c, TD.occurrence(c, new Date()) || { key: '', due: new Date(), n: 0 }) || '')}</span><span class="tds-chev">›</span></button>`;
+    return `<section class="tds-open"><button class="tds-close" data-act="tdsOpen" data-id="" aria-label="Luk">‹ Faste pligter</button><div class="tdset-h"><input class="tdicon" type="text" data-chore="${esc(c.id)}" data-k="icon" value="${esc(c.icon || '')}" aria-label="Ikon" maxlength="4"><input type="text" data-chore="${esc(c.id)}" data-k="title" value="${esc(c.title)}" placeholder="Navn" aria-label="Navn"><button class="btn" data-act="choreRm" data-id="${esc(c.id)}" aria-label="Fjern ${esc(c.title)}">Fjern</button></div>
       <div class="row"><select data-chore="${esc(c.id)}" data-k="every" aria-label="Hvor ofte">${TD.EVERY.map(([v, l]) => `<option value="${v}"${c.every === v ? ' selected' : ''}>${l}</option>`).join('')}</select>${mode}</div>
       ${when}${carry}${ms.length ? who : '<span class="small muted">Tilføj familiemedlemmer under Familie</span>'}</section>`;
   };
-  return `<section class="card wide"><b>Faste pligter</b>${pre}</section>${TD.chores().map(one).join('')}`;
+  if (ui.tdOpen && TD.chores().some((c) => c.id === ui.tdOpen)) return `<section class="card wide tds">${one(TD.chores().find((c) => c.id === ui.tdOpen))}</section>`;
+  return `<section class="card wide tds"><b>Faste pligter</b><div class="tds-list">${TD.chores().map(one).join('') || '<span class="muted small">Ingen faste pligter endnu</span>'}</div><details class="mx-fold"><summary>+ Tilføj pligt</summary>${pre}</details></section>`;
 }
 // Klubnavne deles kun mellem ord: er et ord for langt, bliver skriften mindre – og ellers bruges forkortelsen (aldrig halve navne)
 function spFitNames() {
@@ -2449,6 +2455,7 @@ const act = {
   ipSelect: () => { if (ui.ipMode === 'menu') { const f = S.favorites()[ui.ipSel || 0]; ui.ipMode = 'now'; renderMain(); if (f) act.sFav({ dataset: { id: f.id } }); } else sonosDo(S.togglePlay); },
   sonosSkin: (b) => { settings.sonos.skin = b.dataset.v; ui.ipMode = 'now'; save(); renderMain(); },
   choreAt: (b) => { const c = TD.chores().find((x) => x.id === b.dataset.id); if (c) { c.at = b.dataset.v; save(); renderMain(); } },
+  tdsOpen: (b) => { ui.tdOpen = b.dataset.id || null; renderMain(); },
   sFav: (b) => { S.markFav(b.dataset.id); sonosDo(async () => { const pod = await S.playFav(b.dataset.id); if (pod && pod.count) toast(`${pod.count} afsnit af ${pod.name} er sat i kø`); }); },
   sGroup: (b) => { const cg = S.currentGroup(); if (cg) { const np = S.nowPlaying(); S.state.groupMeta[cg.id] = { title: np.title, image: np.image }; } S.controlGroup(b.dataset.id); S.state.playerVol = {}; S.state.meta = null; renderMain(false); loadSonos(); },
   sGroupPlay: (b) => { sonosDo(() => S.toggleGroupPlay(b.dataset.id)); renderMain(false); },
@@ -2523,7 +2530,7 @@ const act = {
   todoRm: (b) => { TD.removeItem(b.dataset.id); renderMain(); },
   todoWho: (b) => { ui.tdWho = b.dataset.id; ui.tdNewWho = undefined; renderMain(); },
   todoWeek: (b) => { ui.tdWeek = (ui.tdWeek || 0) + +b.dataset.dir; renderMain(); },
-  choreAdd: (b) => { const p = b.dataset.i === '' ? {} : TD.PRESETS[+b.dataset.i]; TD.addChore(p); renderMain(); },
+  choreAdd: (b) => { const p = b.dataset.i === '' ? {} : TD.PRESETS[+b.dataset.i]; const c = TD.addChore(p); ui.tdOpen = c.id; renderMain(); },
   choreRm: (b) => { TD.removeChore(b.dataset.id); renderMain(); },
   choreMode: (b) => { TD.setChore(b.dataset.id, 'mode', b.dataset.v); renderMain(); },
   choreDay: (b) => { const c = TD.chores().find((x) => x.id === b.dataset.id); if (!c) return; const d = +b.dataset.d; let ds = c.days && c.days.length ? c.days.slice() : [0, 1, 2, 3, 4, 5, 6]; ds = ds.includes(d) ? ds.filter((x) => x !== d) : ds.concat(d); if (!ds.length) return; TD.setChore(c.id, 'days', ds.length === 7 ? [] : ds); renderMain(); },

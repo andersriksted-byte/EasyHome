@@ -2202,3 +2202,24 @@ html,body{overscroll-behavior:none}
 /* Ingen sideoverskrifter – siden ses i sidemenuen */
 .ptitle h1,.sp-title h1{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .ptitle:not(:has(>:not(h1))){display:none}
+/* Indstillinger → To do: kompakt liste, åbn én pligt ad gangen */
+.tds-list{display:flex;flex-direction:column;gap:6px;margin:8px 0}
+.tds-row{display:grid;grid-template-columns:36px minmax(0,1fr) auto 16px;align-items:center;gap:10px;padding:8px 12px;border:0;border-radius:12px;background:var(--bg);color:var(--text);font:inherit;text-align:left;min-height:52px}
+.tds-ico{font-size:20px;text-align:center}
+.tds-t{display:flex;flex-direction:column;min-width:0}
+.tds-t b{font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tds-t small{font-size:12px;color:var(--muted);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tds-chev{color:var(--muted);font-size:20px;font-weight:700}
+.tds-who .tdav{width:28px;height:28px;font-size:12px}
+.tds-close{border:0;background:transparent;color:var(--accent);font:inherit;font-weight:800;font-size:14px;padding:0 0 8px}
+.tds-open{display:flex;flex-direction:column;gap:10px}
+.tds-open .tdset-h{grid-template-columns:48px minmax(0,1fr) auto}
+.tds-open input,.tds-open select{min-height:40px;font-size:14px}
+.tds-open .pill.sm{min-height:32px;padding:0 10px;font-size:12px}
+.tds-open .wseg button{min-height:34px}
+.tds-open .tdord-r{min-height:40px;padding:3px 8px}
+.tds-open .tdord-r .fobtn{width:32px;height:32px}
+.tds-open .tdord-r .tdav{width:26px;height:26px;font-size:12px}
+.tds-open .row{gap:8px}
+.tds .mx-fold summary{font-weight:800;color:var(--accent);cursor:pointer;padding:6px 0}
+.tds-close{align-self:flex-start}

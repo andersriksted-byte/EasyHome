@@ -1,5 +1,5 @@
 {
-  "version": "1.91.2",
+  "version": "1.91.3",
   "files": [
     "index.html",
     "app.js",
@@ -27,6 +27,15 @@
     "todo.js"
   ],
   "notes": [
+    {
+      "version": "1.91.3",
+      "date": "26. november 2026",
+      "title": "Overskuelige To do-indstillinger",
+      "items": [
+        "Indstillinger → To do viser nu de faste pligter som en kort liste med hvor ofte, hvem og hvem der har den nu",
+        "Tryk på en pligt for at rette den – nye pligter tilføjes under \"+ Tilføj pligt\""
+      ]
+    },
     {
       "version": "1.91.2",
       "date": "26. november 2026",
