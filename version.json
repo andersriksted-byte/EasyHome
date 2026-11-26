@@ -1,5 +1,5 @@
 {
-  "version": "1.80.0",
+  "version": "1.81.0",
   "files": [
     "index.html",
     "app.js",
@@ -27,6 +27,16 @@
     "todo.js"
   ],
   "notes": [
+    {
+      "version": "1.81.0",
+      "date": "26. november 2026",
+      "title": "Afspiller med drejehjul",
+      "items": [
+        "Nyt udseende til Musik: en klassisk afspiller med drejehjul – vælg det under Indstillinger → Musik → Udseende",
+        "Drej på hjulet for at skrue op og ned. MENU viser favoritterne, drej for at vælge og tryk i midten for at spille",
+        "Det høje og det store Musik-kort på forsiden får samme udseende"
+      ]
+    },
     {
       "version": "1.80.0",
       "date": "26. november 2026",

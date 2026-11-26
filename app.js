@@ -436,6 +436,55 @@ function seekTick() {
     el.querySelector('[data-seekpos]').textContent = fmtMs(p.pos); el.querySelector('[data-seekleft]').textContent = '−' + fmtMs(p.dur - p.pos);
   });
 }
+
+// Drejehjul-afspiller: et alternativt udseende (Indstillinger → Musik). Hjulet drejes for lydstyrke – eller for at vælge i MENU
+const ipSkin = () => (settings.sonos || {}).skin === 'wheel';
+function ipodHtml(compact = false) {
+  const np = S.nowPlaying(); const p = S.position();
+  const menu = ui.ipMode === 'menu'; const fl = S.favorites();
+  const sel = Math.max(0, Math.min(fl.length - 1, ui.ipSel || 0));
+  const head = `<div class="ip-bar"><span>${menu ? 'Favoritter' : esc(np.group || 'Musik')}</span><i class="ip-play-ico">${np.playing ? '▶' : '❚❚'}</i><i class="ip-batt"></i></div>`;
+  const now = `<div class="ip-now"><div class="ip-art" style="${np.image ? `background-image:url('${esc(np.image)}')` : ''}"></div><div class="ip-txt"><b>${esc(np.title || 'Intet spiller')}</b><span>${esc(np.artist || '')}</span></div></div>
+    ${p ? `<div class="ip-prog"><i data-ipprog style="width:0%"></i></div><div class="ip-times"><span data-seekpos></span><span data-seekleft></span></div>` : ''}
+    <div class="ip-vol${ui.ipVolShow ? ' on' : ''}"><span>🔈</span><div class="ip-prog"><i data-ipvol style="width:${np.volume || 0}%"></i></div><span>🔊</span></div>`;
+  const list = `<div class="ip-list">${fl.map((f, i) => `<div class="ip-li${i === sel ? ' sel' : ''}" data-ipi="${i}">${esc(f.name)}<i>›</i></div>`).join('') || '<div class="ip-li">Ingen favoritter</div>'}</div>`;
+  return `<div class="ipod${compact ? ' ip-compact' : ''}"><div class="ip-screen">${head}${menu ? list : now}</div>
+    <div class="ip-wheel" data-wheel><button class="ip-k ip-menu" data-act="ipMenu" aria-label="Menu">MENU</button><button class="ip-k ip-prev" data-act="sPrev" aria-label="Forrige">${fillSvg('prev', 16)}</button><button class="ip-k ip-next" data-act="sNext" aria-label="Næste">${fillSvg('next', 16)}</button><button class="ip-k ip-pp" data-act="sPlay" aria-label="Afspil/pause">${fillSvg('play', 12)}${fillSvg('pause', 12)}</button><button class="ip-center" data-act="ipSelect" aria-label="${menu ? 'Vælg' : 'Afspil/pause'}"></button></div></div>`;
+}
+function ipTick() {
+  const p = S.position();
+  document.querySelectorAll('.ipod').forEach((el) => { const b = el.querySelector('[data-ipprog]'); if (b && p) b.style.width = (p.pos / p.dur) * 100 + '%';
+    const a = el.querySelector('.ip-times [data-seekpos]'); if (a && p) { a.textContent = fmtMs(p.pos); el.querySelector('.ip-times [data-seekleft]').textContent = '−' + fmtMs(p.dur - p.pos); } });
+}
+// Drej på hjulet: hvert 18. grad er ét trin
+let ipDrag = null; let ipVolTimer = null; let ipHideTimer = null;
+function ipStep(dir) {
+  if (ui.ipMode === 'menu') {
+    const n = S.favorites().length; if (!n) return;
+    ui.ipSel = Math.max(0, Math.min(n - 1, (ui.ipSel || 0) + dir));
+    document.querySelectorAll('.ip-list').forEach((l) => { l.querySelectorAll('.ip-li').forEach((x) => x.classList.toggle('sel', +x.dataset.ipi === ui.ipSel)); const s2 = l.querySelector('.sel'); if (s2) s2.scrollIntoView({ block: 'nearest' }); });
+    return;
+  }
+  const v0 = ui.ipVol ?? (S.state.volume ? S.state.volume.volume : 0); const v = Math.max(0, Math.min(100, v0 + dir * 2)); ui.ipVol = v;
+  if (S.state.volume) S.state.volume.volume = v;
+  ui.ipVolShow = true; document.querySelectorAll('.ip-vol').forEach((x) => { x.classList.add('on'); x.querySelector('[data-ipvol]').style.width = v + '%'; });
+  clearTimeout(ipVolTimer); ipVolTimer = setTimeout(() => { ui.ipVol = null; sonosDo(() => S.setVolume(v)); }, 350);
+  clearTimeout(ipHideTimer); ipHideTimer = setTimeout(() => { ui.ipVolShow = false; document.querySelectorAll('.ip-vol').forEach((x) => x.classList.remove('on')); }, 2000);
+}
+document.addEventListener('pointerdown', (e) => {
+  const w = e.target.closest && e.target.closest('[data-wheel]'); if (!w || e.target.closest('.ip-center')) return;
+  const r = w.getBoundingClientRect(); const cx = r.left + r.width / 2; const cy = r.top + r.height / 2;
+  ipDrag = { cx, cy, a: Math.atan2(e.clientY - cy, e.clientX - cx), acc: 0, moved: false };
+});
+document.addEventListener('pointermove', (e) => {
+  if (!ipDrag) return;
+  const a = Math.atan2(e.clientY - ipDrag.cy, e.clientX - ipDrag.cx); let d = a - ipDrag.a; if (d > Math.PI) d -= 2 * Math.PI; if (d < -Math.PI) d += 2 * Math.PI;
+  ipDrag.a = a; ipDrag.acc += d; const step = Math.PI / 10;
+  while (Math.abs(ipDrag.acc) >= step) { const dir = ipDrag.acc > 0 ? 1 : -1; ipDrag.acc -= dir * step; ipDrag.moved = true; ipStep(dir); }
+  if (ipDrag.moved) e.preventDefault();
+}, { passive: false });
+document.addEventListener('pointerup', () => { if (ipDrag && ipDrag.moved) { ui.ipNoClick = Date.now(); } ipDrag = null; });
+document.addEventListener('click', (e) => { if (ui.ipNoClick && Date.now() - ui.ipNoClick < 250 && e.target.closest && e.target.closest('[data-wheel]')) { e.stopImmediatePropagation(); e.preventDefault(); ui.ipNoClick = 0; } }, true);
 const favBadge = (k) => `<em class="mkind k-${k}" aria-label="${FAVK[k][1]}">${FAVK[k][0]}</em>`;
 function wSonos(size, h = 1, wd = 1, x = {}) {
   if (!S.state.connected) return `${cardHead('Musik')}<div class="empty">Sonos er ikke forbundet endnu.</div><button class="btn line" data-act="nav" data-page="musik">Gå til Musik</button>`;
@@ -449,6 +498,7 @@ function wSonos(size, h = 1, wd = 1, x = {}) {
   const favs = fl.length ? `<div class="mwfavs mlogos" data-trim>${fl.map((f) => favLogo('sFav', f.id, f.name, S.art(f), S.favKind(f), f.id === S.playingFavId())).join('')}</div>` : '';
   if (kind === 'tiny') return `<div class="mw mw-tiny" style="${art}"><div class="mwshade">${info}${ctl}</div></div>`;
   if (kind === 'wide') return `<div class="mw mw-wide" style="grid-template-columns:auto minmax(0,1fr)${wd >= 3 ? ` minmax(0,${wd - 2}fr)` : ''}"><div class="mwart" style="${art}"></div><div class="mwside">${info}${ctl}${vol}</div>${wd >= 3 ? `<div class="mwfavcol">${favs}</div>` : ''}</div>`;
+  if (ipSkin() && (kind === 'tall' || kind === 'big')) return `<div class="mw mw-ip">${ipodHtml(true)}</div>`;
   if (kind === 'tall') return `<div class="mw mw-tall"><div class="mwart" style="${art}"></div>${info}${ctl}${vol}${favs}</div>`;
   return `<div class="mw mw-big"><div class="mwtop"><div class="mwart" style="${art}"></div><div class="mwside">${info}${seekBar(false)}${ctl}${vol}</div></div>${favs}</div>`;
 }
@@ -1250,7 +1300,7 @@ function renderTmPicker() {
   </div>`;
 }
 function timerTick() {
-  TM.tick(); seekTick();
+  TM.tick(); seekTick(); ipTick();
   TM.timers().forEach((t) => {
     const el = document.querySelector(`[data-tleft="${t.id}"]`); if (el) el.textContent = t.done ? 'Færdig!' : TM.fmt(TM.left(t));
     const bar = document.querySelector(`[data-tbar="${t.id}"]`); if (bar && t.total) bar.style.width = Math.max(0, Math.min(100, (TM.left(t) / t.total) * 100)) + '%';
@@ -1655,7 +1705,7 @@ function pageMusik() {
   const sec = (k) => (grp[k].length ? `<div class="mgrp-sec"><div class="mgrp-h">${FAVK[k][0]} ${FAVK[k][1]}</div><div class="mlogos mgrp-list">${grp[k].join('')}</div></div>` : '');
   const favs = sec('radio') + sec('playlist') + sec('podcast') + sec('other');
   return `<div class="music">
-    <section class="player mplayer">
+    ${ipSkin() ? `<section class="player mplayer ip-host">${ipodHtml()}</section>` : ''}<section class="player mplayer${ipSkin() ? ' ip-off' : ''}">
       <div class="art" style="${np.image ? `background-image:url('${esc(np.image)}')` : ''}"></div>
       <div class="mnow"><b>${esc(np.title || 'Intet spiller')}</b><span>${esc(np.artist || '')}</span><span class="mgrp">${esc(np.group)}</span></div>
       ${seekBar()}
@@ -1835,7 +1885,8 @@ function pageIndstillinger() {
         <label class="f">Efter solnedgang<select data-set="nightTheme">${Object.keys(THEMES).map((k) => `<option value="${k}" ${s.nightTheme === k ? 'selected' : ''}>${THEMES[k].label}</option>`).join('')}</select></label></div>` : ''}</section>`,
     musik: () => {
       const fav = S.favorites(true); const hidden = settings.sonos.favHidden || [];
-      return `<section class="card wide"><b>Favoritter</b>
+      return `<section class="card"><b>Udseende</b><label class="f">Afspiller<select data-sonosskin><option value="">Standard</option><option value="wheel"${ipSkin() ? ' selected' : ''}>Klassisk med drejehjul</option></select></label></section>
+      <section class="card wide"><b>Favoritter</b>
         ${!S.state.connected ? '<div class="muted">Forbind Sonos under Forbindelse for at se jeres favoritter.</div>' : !fav.length ? '<div class="muted">Ingen favoritter i Sonos endnu.</div>' : `<div class="favorder">${fav.map((f, i) => `<div class="forow${hidden.includes(f.id) ? ' off' : ''}">
           <span class="foart" style="${S.art(f) ? `background-image:url('${esc(S.art(f))}')` : ''}"></span><b title="${esc(f.name)}">${esc(f.name)}</b>
           <button class="fobtn" data-act="favMove" data-id="${esc(f.id)}" data-d="-1" ${i === 0 ? 'disabled' : ''} aria-label="Flyt ${esc(f.name)} op">${svg('up', 18)}</button>
@@ -1904,7 +1955,7 @@ function renderMain(keepScroll = true) {
   priceGauge.n = 0; // samme id'er ved hver tegning
   const html = PAGE_RENDER[ui.page]();
   // Forsiden: tegn kun de kort om, der har ændret sig – ellers blinker billeder og logoer ved hver opdatering
-  if (ui.page === 'forside' && patchGrid(m, html)) { seekTick(); if (keepScroll) m.scrollTop = y; return; }
+  if (ui.page === 'forside' && patchGrid(m, html)) { seekTick(); ipTick(); if (keepScroll) m.scrollTop = y; return; }
   m.innerHTML = html;
   if (ui.page === 'forside') { const g = document.getElementById('grid'); m._rest = (() => { const c = m.cloneNode(true); const gg = c.querySelector('#grid'); if (gg) gg.innerHTML = ''; return c.innerHTML; })(); if (g) [...g.children].forEach((c) => { c._src = stableSrc(c.outerHTML); }); scaleGrid(); fitCards(); trimCards(); seekTick(); }
   if (ui.page === 'sport') spFitNames();
@@ -2178,6 +2229,8 @@ const act = {
   sPlay: () => sonosDo(S.togglePlay), sNext: () => sonosDo(S.next), sPrev: () => sonosDo(S.prev),
   sSeekBy: (b) => { sonosDo(() => S.seekBy(+b.dataset.d)).then(seekTick); seekTick(); },
   elAppMove: (b) => { const ids = elApps().map((a) => a.id); const i = ids.indexOf(b.dataset.id); const j = i + +b.dataset.d; if (i < 0 || j < 0 || j >= ids.length) return; [ids[i], ids[j]] = [ids[j], ids[i]]; settings.el = settings.el || {}; settings.el.order = ids; save(); renderMain(); },
+  ipMenu: () => { ui.ipMode = ui.ipMode === 'menu' ? 'now' : 'menu'; if (ui.ipMode === 'menu') { const i = S.favorites().findIndex((f) => f.id === S.playingFavId()); ui.ipSel = i < 0 ? 0 : i; } renderMain(); },
+  ipSelect: () => { if (ui.ipMode === 'menu') { const f = S.favorites()[ui.ipSel || 0]; ui.ipMode = 'now'; renderMain(); if (f) act.sFav({ dataset: { id: f.id } }); } else sonosDo(S.togglePlay); },
   sFav: (b) => { S.markFav(b.dataset.id); sonosDo(async () => { const pod = await S.playFav(b.dataset.id); if (pod && pod.count) toast(`${pod.count} afsnit af ${pod.name} er sat i kø`); }); },
   sGroup: (b) => { const cg = S.currentGroup(); if (cg) { const np = S.nowPlaying(); S.state.groupMeta[cg.id] = { title: np.title, image: np.image }; } S.controlGroup(b.dataset.id); S.state.playerVol = {}; S.state.meta = null; renderMain(false); loadSonos(); },
   sGroupPlay: (b) => { sonosDo(() => S.toggleGroupPlay(b.dataset.id)); renderMain(false); },
@@ -2319,6 +2372,7 @@ document.addEventListener('submit', (e) => {
 });
 document.addEventListener('change', (e) => {
   const t = e.target;
+  if (t.hasAttribute('data-sonosskin')) { settings.sonos.skin = t.value; ui.ipMode = 'now'; save(); renderMain(); return; }
   if (t.dataset.favpod) { settings.sonos.favPod = { ...(settings.sonos.favPod || {}), [t.dataset.favpod]: t.value.trim() }; save(); return; }
   if (t.dataset.favkind) { settings.sonos.favKind = { ...(settings.sonos.favKind || {}), [t.dataset.favkind]: t.value }; save(); renderMain(); return; }
   if (t.dataset.chore) { const c = TD.chores().find((x) => x.id === t.dataset.chore); if (!c) return;
