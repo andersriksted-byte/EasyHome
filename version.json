@@ -1,5 +1,5 @@
 {
-  "version": "1.86.3",
+  "version": "1.86.4",
   "files": [
     "index.html",
     "app.js",
@@ -27,6 +27,15 @@
     "todo.js"
   ],
   "notes": [
+    {
+      "version": "1.86.4",
+      "date": "26. november 2026",
+      "title": "Jeres hold står tydeligt frem",
+      "items": [
+        "Kampe med jeres hold har nu farvet baggrund og en stribe i siden – holdet står i farve med ★",
+        "I Live nu har jeres hold en farvet ramme og mærket \"★ Jeres hold\""
+      ]
+    },
     {
       "version": "1.86.3",
       "date": "26. november 2026",

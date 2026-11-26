@@ -808,7 +808,8 @@ function spTeamRow(it, favId = '') {
   const m = it.m || it;
   const pre = m.state === 'pre' || (it.kind === 'fb' && FB.pending(m));
   const line = (t, o) => `<div class="tm-l${!pre && t.win ? ' win' : ''}${t.id && t.id === favId ? ' mine' : ''}">${spLogo(t)}<b data-abbr="${esc(t.abbr || '')}">${esc(t.name)}</b>${pre ? '' : `<span class="tm-s">${esc(t.score)}</span>`}</div>`;
-  return `<div class="sp-row ${m.state}" ${spRef(it)}>${spWhen(it)}<div class="tm-ls">${line(m.home)}${line(m.away)}</div></div>`;
+  const mine = favId && (m.home.id === favId || m.away.id === favId);
+  return `<div class="sp-row ${m.state}${mine ? ' has-mine' : ''}" ${spRef(it)}>${spWhen(it)}<div class="tm-ls">${line(m.home)}${line(m.away)}</div></div>`;
 }
 // Stor resultattavle til "Live nu"
 function spLiveTile(it, key) {
@@ -816,7 +817,7 @@ function spLiveTile(it, key) {
     return `<div class="lv k-${key}" ${spRef(it)}><div class="lv-top"><span class="lv-dot"></span><span>${esc(liveDa(it.detail) || 'I gang')}</span><em>${esc(it.tour || '')}</em></div>${p(it.p1, it.p2)}${p(it.p2, it.p1)}</div>`; }
   const m = it.m || it;
   const side = (t) => `<div class="lv-team">${spLogo(t)}<b data-abbr="${esc(t.abbr || '')}">${esc(t.name)}</b></div>`;
-  return `<div class="lv k-${key}" ${spRef(it)}><div class="lv-top"><span class="lv-dot"></span><span>${esc(m.clock && it.kind === 'fb' ? m.clock : liveDa(m.detail) || m.clock || 'Live')}</span><em>${esc(m.comp || '')}</em></div>
+  return `<div class="lv k-${key}${spIsFav(m) ? ' mine' : ''}" ${spRef(it)}><div class="lv-top"><span class="lv-dot"></span>${spIsFav(m) ? '<span class="lv-mine">★ Jeres hold</span>' : ''}<span>${esc(m.clock && it.kind === 'fb' ? m.clock : liveDa(m.detail) || m.clock || 'Live')}</span><em>${esc(m.comp || '')}</em></div>
     <div class="lv-mid">${side(m.home)}<div class="lv-score"><b class="${m.home.win ? 'won' : ''}">${esc(m.home.score)}</b><i>–</i><b class="${m.away.win ? 'won' : ''}">${esc(m.away.score)}</b></div>${side(m.away)}</div></div>`;
 }
 const setCells = (p, o) => p.sets.map((s, i) => `<i class="${s.w ? 'won' : ''}">${esc(s.v)}${s.tb != null && o.sets[i] && !s.w ? `<sup>${esc(s.tb)}</sup>` : ''}</i>`).join('');

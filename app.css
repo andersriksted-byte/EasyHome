@@ -2146,3 +2146,11 @@ html,body{overscroll-behavior:none}
 .sp-all>.sp-ent:nth-child(-n+2){border-top:0}
 .sp-all{align-items:start}
 .tm-l.mine b{font-weight:900}
+/* Jeres hold: tydelig markering af hele kampen */
+.sp-row.has-mine{background:color-mix(in srgb,var(--accent) 13%,var(--card))!important;box-shadow:inset 5px 0 0 var(--accent);border-radius:12px!important;padding-left:12px!important;border-top-color:transparent!important}
+.sp-row.has-mine+*{border-top-color:transparent!important}
+.tm-l.mine b{color:var(--accent);font-weight:900}
+.tm-l.mine b::after{content:'★';display:inline-grid;place-items:center;width:20px;height:20px;margin-left:8px;border-radius:50%;background:var(--accent);color:var(--onAccent,#fff);font-size:12px;vertical-align:2px}
+.lv.mine{box-shadow:0 0 0 3px var(--accent),0 6px 18px color-mix(in srgb,var(--accent) 35%,transparent)}
+.lv-mine{background:var(--accent);color:var(--onAccent,#fff);border-radius:99px;padding:2px 8px;font-size:11px;font-weight:800;white-space:nowrap}
+.sp-lvrow{padding:4px 4px 8px}
