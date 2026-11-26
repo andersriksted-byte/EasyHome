@@ -1,5 +1,5 @@
 {
-  "version": "1.93.2",
+  "version": "1.93.3",
   "files": [
     "index.html",
     "app.js",
@@ -27,6 +27,15 @@
     "todo.js"
   ],
   "notes": [
+    {
+      "version": "1.93.3",
+      "date": "26. november 2026",
+      "title": "To do nederst i kalenderen",
+      "items": [
+        "To do står nu i en række nederst i kalenderen i stedet for øverst",
+        "Knappen \"✅ To do\" kan læses i mørkt tema og lyser grønt, når den er slået til"
+      ]
+    },
     {
       "version": "1.93.2",
       "date": "26. november 2026",

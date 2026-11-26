@@ -2234,3 +2234,9 @@ body.navpinned .nav.open{box-shadow:none}
 .nav .pin svg{transition:transform .2s}
 .nav .pin[aria-pressed=true] svg{transform:rotate(-30deg)}
 @media (max-width:900px){body.navpinned .col{margin-left:88px}}
+.caltd-btn{display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:6px 16px;border-radius:99px;border:2px solid var(--line);background:var(--card);color:var(--text);font:inherit;font-size:15px;font-weight:700}
+.caltd-btn[aria-pressed=true]{background:#2E9D5B;border-color:#2E9D5B;color:#fff}
+.tg-todo{border-bottom:0;border-top:2px solid var(--line)}
+.tg-todo>div{padding:6px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.tdev{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tdev.done{opacity:.5;text-decoration:line-through}

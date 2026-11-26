@@ -161,7 +161,7 @@ function eventsOn(day, page = false) {
   if (!D.cal) return [];
   const s = startOfDay(day); const e = addDays(s, 1); const hid = page ? settings.calHidden || [] : [];
   const evs = D.cal.events.filter((ev) => ev.start < e && ev.end > s && mineEvent(ev) && !hid.includes(ev.cal));
-  return page && settings.calTodo ? todoEvents(s, e).concat(evs) : evs;
+  return evs;
 }
 // To do i kalenderen (kan slås til nederst i Kalender): gøremål på deres dato og faste pligter på deres dag
 function todoEvents(s, e) {
@@ -169,7 +169,7 @@ function todoEvents(s, e) {
   const items = TD.items().filter((i) => i.due && !i.done && (!me || !i.who || i.who === me) && sameDay(TD.fromIso(i.due), s))
     .map((i) => ({ allDay: true, start: s, end: e, title: `✅ ${i.title}${i.who && !me ? ' · ' + name(i.who) : ''}`, color: '#2E9D5B', cal: '__todo', todo: true }));
   const ch = TD.choresOn(s).filter((x) => !x.late && (x.c.every === 'day' || sameDay(x.occ.due, s)) && (!me || !x.who || x.who === me))
-    .map((x) => ({ allDay: true, start: s, end: e, title: `${x.done ? '✓ ' : ''}${x.c.icon || '✅'} ${x.c.title}${x.who && !me ? ' · ' + name(x.who) : ''}`, color: '#8E5BD0', cal: '__todo', todo: true }));
+    .map((x) => ({ allDay: true, start: s, end: e, title: `${x.done ? '✓ ' : ''}${x.c.icon || '✅'} ${x.c.title}${x.who && !me ? ' · ' + name(x.who) : ''}`, color: '#8E5BD0', cal: '__todo', todo: true, done: !!x.done }));
   return ch.concat(items);
 }
 const evTime = (ev, day) => (ev.allDay ? 'Hele dagen' : (ev.start < startOfDay(day) ? 'Fortsat' : hhmm(ev.start)));
@@ -1625,7 +1625,7 @@ function pageKalender() {
     ${D.cal && D.cal.demo ? '<div class="empty">Viser eksempler. Tilføj jeres kalendere under Indstillinger → Kalendere.</div>' : ''}
     ${D.cal && D.cal.errors.length ? `<div class="err">${esc(D.cal.errors.map((e) => e.cal + ': ' + e.msg).join(' · '))}</div>` : ''}
     ${calTimeGrid(days, today)}
-    ${`<div class="legend"><button class="lchip${settings.calTodo ? '' : ' off'}" data-act="calTodo" aria-pressed="${!!settings.calTodo}" style="--c:#2E9D5B;--l:#d9f0e1">✅ To do</button>${cals.length ? calGroups(cals).map((g) => { const on = g.ids.some((id) => !(settings.calHidden || []).includes(id)); return `<button class="lchip${on ? '' : ' off'}" data-act="calShow" data-id="${esc(g.ids.join(','))}" aria-pressed="${on}" style="--c:${esc(g.color)};--l:${lighten(g.color)}"><i></i>${esc(g.name)}</button>`; }).join('') : ''}</div>`}`;
+    ${`<div class="legend"><button class="caltd-btn" data-act="calTodo" aria-pressed="${!!settings.calTodo}">✅ To do</button>${cals.length ? calGroups(cals).map((g) => { const on = g.ids.some((id) => !(settings.calHidden || []).includes(id)); return `<button class="lchip${on ? '' : ' off'}" data-act="calShow" data-id="${esc(g.ids.join(','))}" aria-pressed="${on}" style="--c:${esc(g.color)};--l:${lighten(g.color)}"><i></i>${esc(g.name)}</button>`; }).join('') : ''}</div>`}`;
 }
 // Ugen som timegitter: heldagsaftaler øverst, aftaler placeret efter klokkeslæt, dagens menu nederst
 const CAL_HH = 52; // højde pr. time i px
@@ -1655,8 +1655,11 @@ function calTimeGrid(days, today) {
   }).join('');
   const menus = days.map((d) => (settings.calMenu === false ? '' : dayMenu(d)));
   const menu = menus.some(Boolean) ? `<div class="tg-row tg-menu" style="${cols}"><span></span>${menus.map((m) => `<div>${m}</div>`).join('')}</div>` : '';
+  // To do nederst i kalenderen (slås til med knappen under kalenderen)
+  const tds = settings.calTodo ? days.map((d) => todoEvents(startOfDay(d), addDays(startOfDay(d), 1))) : [];
+  const todoRow = tds.some((l) => l.length) ? `<div class="tg-row tg-todo" style="${cols}"><span class="tg-lab">To do</span>${tds.map((l) => `<div>${l.map((e) => `<div class="ev tdev${e.done ? ' done' : ''}" ${evRef(e)} style="${evStyle(e)}">${esc(e.title)}</div>`).join('')}</div>`).join('')}</div>` : '';
   requestAnimationFrame(calScroll);
-  return `<div class="tgrid" data-swipe="cal">${head}${ad}<div class="tg-body" id="tgBody"><div class="tg-inner" style="${cols};height:${24 * CAL_HH}px"><div class="tg-hours">${hours}</div>${body}</div></div>${menu}</div>`;
+  return `<div class="tgrid" data-swipe="cal">${head}${ad}<div class="tg-body" id="tgBody"><div class="tg-inner" style="${cols};height:${24 * CAL_HH}px"><div class="tg-hours">${hours}</div>${body}</div></div>${todoRow}${menu}</div>`;
 }
 // Info om en aftale
 function showEvent(e) {
