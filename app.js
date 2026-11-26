@@ -923,14 +923,18 @@ function spStandings(c) {
   const wait = (t) => card('Stilling', `<div class="empty">${t}</div>`);
   if (c.kind === 'fb') {
     const T = FB.tables[c.lg];
-    if (!T || !T.at) { if (!T) FB.loadTable(c.lg).then(() => { if (ui.page === 'sport') softRender(); }); return wait('Henter stillingen …'); }
+    // Den officielle stilling hentes igen hvert 10. minut; imens regnes kampene i gang med (live-stilling)
+    { const at0 = T && T.at; FB.loadTable(c.lg).then(() => { const T2 = FB.tables[c.lg]; if (T2 && T2.at !== at0 && ui.page === 'sport') softRender(); }); }
+    if (!T || !T.at) return wait('Henter stillingen …');
     if (!T.groups.length) return wait('Ingen stilling for turneringen.');
     const favIds = ((settings.football || {}).teams || []).filter((t) => t.lg === c.lg).map((t) => t.id);
     const n = (v) => (v === null || v === undefined ? '' : v);
     const hdr = '<div class="st-row st-h wide"><span>#</span><span></span><span>K</span><span>V</span><span>U</span><span>T</span><span>+/-</span><span>P</span></div>';
-    const row = (t) => `<div class="st-row wide${favIds.includes(t.id) ? ' st-fav' : ''}${t.note ? ' noted' : ''}"${t.note ? ` style="--nc:${esc(t.note.color)}"` : ''}><span class="st-rk">${n(t.rank)}</span><span class="st-tm">${t.logo ? `<img src="${esc(t.logo)}" alt="" loading="lazy">` : ''}<b>${esc(t.name)}</b></span><span>${n(t.gp)}</span><span>${n(t.w)}</span><span>${n(t.d)}</span><span>${n(t.l)}</span><span>${t.gd > 0 ? '+' : ''}${n(t.gd)}</span><span class="st-p">${n(t.pts)}</span></div>`;
+    const mv = (t) => (t.move > 0 ? `<i class="st-mv up">▲${t.move}</i>` : t.move < 0 ? `<i class="st-mv dn">▼${-t.move}</i>` : '');
+    const row = (t) => `<div class="st-row wide${favIds.includes(t.id) ? ' st-fav' : ''}${t.note ? ' noted' : ''}${t.live ? ' is-live' : ''}"${t.note ? ` style="--nc:${esc(t.note.color)}"` : ''}><span class="st-rk">${n(t.rank)}</span><span class="st-tm">${t.logo ? `<img src="${esc(t.logo)}" alt="" loading="lazy">` : ''}<b>${esc(t.name)}</b>${t.live ? `<span class="st-live ${t.live.res}${t.live.state === 'in' ? ' on' : ''}">${t.live.state === 'in' ? '<i class="lv-dot"></i>' : ''}${esc(t.live.score)}</span>` : ''}${mv(t)}</span><span>${n(t.gp)}</span><span>${n(t.w)}</span><span>${n(t.d)}</span><span>${n(t.l)}</span><span>${t.gd > 0 ? '+' : ''}${n(t.gd)}</span><span class="st-p">${n(t.pts)}</span></div>`;
     const notes = new Map(); T.groups.forEach((g) => g.rows.forEach((t) => { if (t.note && !notes.has(t.note.text)) notes.set(t.note.text, t.note.color); }));
-    return card('Stilling', T.groups.map((g) => `${T.groups.length > 1 && g.name ? `<div class="sp-dayhd">${esc(g.name)}</div>` : ''}${hdr}${g.rows.map(row).join('')}`).join('') + (notes.size ? `<div class="st-legend">${[...notes].map(([t, k]) => `<span style="--nc:${esc(k)}"><i></i>${esc(t)}</span>`).join('')}</div>` : ''));
+    const LG = FB.liveGroups(c.lg); const isLive = LG.some((g) => g.live);
+    return card(isLive ? 'Stilling · live' : 'Stilling', LG.map((g) => `${T.groups.length > 1 && g.name ? `<div class="sp-dayhd">${esc(g.name)}</div>` : ''}${hdr}${g.rows.map(row).join('')}`).join('') + (notes.size ? `<div class="st-legend">${[...notes].map(([t, k]) => `<span style="--nc:${esc(k)}"><i></i>${esc(t)}</span>`).join('')}</div>` : ''));
   }
   if (c.kind === 'team') {
     const S2 = SP.standingsOf(c.sp.id);
@@ -1461,18 +1465,23 @@ function wStilling(size, h = 1, wd = 1) {
   const n = lgs.length; const idx = (((ui.stIdx || 0) % n) + n) % n; const L = lgs[idx];
   const head = cardHead(L.name, pageArrows('st', idx, n, 'liga'));
   const T = FB.tables[L.id];
-  if (!T || !T.at) { if (!T && hasProxy()) FB.loadTable(L.id).then(() => setTimeout(softRender, 0)); return head + '<div class="empty">Henter stillingen …</div>'; }
-  if (!T.groups.length) return head + '<div class="empty">Ingen stilling lige nu.</div>';
+  // Live: officiel stilling (hentes hvert 10. min) + dagens kampe i gang
+  if (hasProxy()) { const at0 = T && T.at; FB.loadTable(L.id).then(() => { const T2 = FB.tables[L.id]; if (T2 && T2.at !== at0) setTimeout(softRender, 0); });
+    const ms = FB.matchesOn(L.id, new Date()); const liveNow = ms.some((m) => m.state === 'in' || (m.state === 'pre' && Math.abs(m.date - Date.now()) < 15 * 60000));
+    FB.loadMonths(L.id, [new Date()], liveNow ? 60000 : 30 * 60000).then((x) => { if (x) setTimeout(softRender, 0); }); }
+  if (!T || !T.at) return head + '<div class="empty">Henter stillingen …</div>';
+  const LG = FB.liveGroups(L.id);
+  if (!LG.length) return head + '<div class="empty">Ingen stilling lige nu.</div>';
   const favIds = ((settings.football || {}).teams || []).filter((t) => t.lg === L.id).map((t) => t.id); // kun hold, der følges i netop denne liga
   const wide = wd >= 2; const num = (v) => (v === null || v === undefined ? '' : v);
   const hdr = `<div class="st-row st-h${wide ? ' wide' : ''}"><span>#</span><span></span>${wide ? '<span>K</span><span>V</span><span>U</span><span>T</span>' : ''}<span>+/-</span><span>P</span></div>`;
-  const row = (t) => `<div class="st-row${wide ? ' wide' : ''}${favIds.includes(t.id) ? ' st-fav' : ''}${t.note ? ' noted' : ''}"${t.note ? ` style="--nc:${esc(t.note.color)}" title="${esc(t.note.text)}"` : ''}><span class="st-rk">${num(t.rank)}</span><span class="st-tm">${t.logo ? `<img src="${esc(t.logo)}" alt="" loading="lazy">` : ''}<b data-abbr="${esc(t.abbr || t.name)}">${esc(t.name)}</b></span>${wide ? `<span>${num(t.gp)}</span><span>${num(t.w)}</span><span>${num(t.d)}</span><span>${num(t.l)}</span>` : ''}<span>${t.gd > 0 ? '+' : ''}${num(t.gd)}</span><span class="st-p">${num(t.pts)}</span></div>`;
+  const row = (t) => `<div class="st-row${wide ? ' wide' : ''}${favIds.includes(t.id) ? ' st-fav' : ''}${t.note ? ' noted' : ''}"${t.note ? ` style="--nc:${esc(t.note.color)}" title="${esc(t.note.text)}"` : ''}><span class="st-rk">${num(t.rank)}</span><span class="st-tm">${t.logo ? `<img src="${esc(t.logo)}" alt="" loading="lazy">` : ''}<b data-abbr="${esc(t.abbr || t.name)}">${esc(t.name)}</b>${t.live ? `<span class="st-live ${t.live.res}${t.live.state === 'in' ? ' on' : ''}">${esc(t.live.score)}</span>` : ''}</span>${wide ? `<span>${num(t.gp)}</span><span>${num(t.w)}</span><span>${num(t.d)}</span><span>${num(t.l)}</span>` : ''}<span>${t.gd > 0 ? '+' : ''}${num(t.gd)}</span><span class="st-p">${num(t.pts)}</span></div>`;
   // Forklaring på farverne (mesterskab, Europa, op- og nedrykning)
-  const notes = new Map(); T.groups.forEach((g) => g.rows.forEach((t) => { if (t.note && !notes.has(t.note.text)) notes.set(t.note.text, t.note.color); }));
+  const notes = new Map(); LG.forEach((g) => g.rows.forEach((t) => { if (t.note && !notes.has(t.note.text)) notes.set(t.note.text, t.note.color); }));
   const legend = notes.size ? `<div class="st-legend">${[...notes].map(([t, c]) => `<span style="--nc:${esc(c)}"><i></i>${esc(t)}</span>`).join('')}</div>` : '';
   // Lave kort: start ved holdet I følger (én plads over), så det altid kan ses. Kun hele rækker vises
-  const from = (g) => { if (h > 1 || T.groups.length > 1) return 0; const i = g.rows.findIndex((t) => favIds.includes(t.id)); return Math.max(0, i - 1); };
-  return head + `<div class="st-wrap${h === 1 ? ' low' : ''}" data-trim>${T.groups.map((g) => `${T.groups.length > 1 && g.name ? `<div class="fb-sub">${esc(g.name)}</div>` : ''}${hdr}${g.rows.slice(from(g)).map(row).join('')}`).join('')}${legend}</div>`;
+  const from = (g) => { if (h > 1 || LG.length > 1) return 0; const i = g.rows.findIndex((t) => favIds.includes(t.id)); return Math.max(0, i - 1); };
+  return head + `<div class="st-wrap${h === 1 ? ' low' : ''}" data-trim>${LG.map((g) => `${LG.length > 1 && g.name ? `<div class="fb-sub">${esc(g.name)}</div>` : ''}${hdr}${g.rows.slice(from(g)).map(row).join('')}`).join('')}${legend}</div>`;
 }
 function fodboldSettings() {
   const fb = settings.football || { leagues: [], teams: [] };

@@ -189,3 +189,33 @@ export function matchesOn(lg, day) {
   const d = ymd(day);
   return roundsOf(lg).flat().filter((m) => ymd(m.date) === d);
 }
+
+// Live-stilling: den officielle stilling + kampe, der spilles nu (eller lige er slut og endnu ikke talt med).
+// Hver række får live (kampens stilling lige nu) og move (pladser op/ned i forhold til den officielle stilling)
+export function liveGroups(lg) {
+  const T = tables[lg]; if (!T || !T.groups) return [];
+  const today = new Date();
+  const seen = new Set(); const ms = [];
+  matchesOn(lg, today).concat((state.matches || []).filter((m) => m.lg === lg && ymd(m.date) === ymd(today))).forEach((m) => { if (!seen.has(m.id)) { seen.add(m.id); ms.push(m); } });
+  const counted = (m) => m.state === 'in' || (m.state === 'post' && +m.date + 110 * 60000 > (T.at || 0));
+  const act = ms.filter((m) => counted(m) && m.home.score !== '' && m.away.score !== '');
+  return T.groups.map((g) => {
+    const rows = g.rows.map((r) => ({ ...r, rank0: r.rank, gd0: r.gd }));
+    let any = false;
+    act.forEach((m) => {
+      const h = rows.find((r) => r.id === m.home.id); const a = rows.find((r) => r.id === m.away.id);
+      if (!h || !a) return; any = true;
+      const hs = +m.home.score || 0; const as = +m.away.score || 0;
+      [[h, hs, as], [a, as, hs]].forEach(([r, f, x]) => {
+        r.gp = (+r.gp || 0) + 1; r.gd = (+r.gd || 0) + f - x;
+        if (f > x) { r.w = (+r.w || 0) + 1; r.pts = (+r.pts || 0) + 3; } else if (f === x) { r.d = (+r.d || 0) + 1; r.pts = (+r.pts || 0) + 1; } else r.l = (+r.l || 0) + 1;
+        r.live = { score: `${f}–${x}`, state: m.state, res: f > x ? 'w' : f === x ? 'd' : 'l' };
+      });
+    });
+    if (any) {
+      rows.sort((p, q) => (+q.pts || 0) - (+p.pts || 0) || (+q.gd || 0) - (+p.gd || 0) || (p.rank0 || 99) - (q.rank0 || 99));
+      rows.forEach((r, i) => { r.rank = i + 1; r.move = (r.rank0 || r.rank) - r.rank; });
+    }
+    return { ...g, rows, live: any };
+  });
+}

@@ -2361,3 +2361,13 @@ body.navpinned .nav.open{box-shadow:none}
 .tm-l.mine b::after{background:var(--favc)}
 .lv.mine{box-shadow:0 0 0 3px var(--favc),0 6px 18px color-mix(in srgb,var(--favc) 35%,transparent)}
 .lv-mine{background:var(--favc)}
+/* Live-stilling */
+.st-live{flex:none;display:inline-flex;align-items:center;gap:4px;margin-left:6px;padding:1px 7px;border-radius:99px;font-size:11px;font-weight:800;font-variant-numeric:tabular-nums;background:var(--dayBg);color:var(--muted)}
+.st-live.on{background:color-mix(in srgb,#E5484D 14%,transparent);color:#C62F35}
+.st-live.on .lv-dot{width:6px;height:6px}
+.st-live.w{box-shadow:inset 0 0 0 1px #16A34A}.st-live.l{box-shadow:inset 0 0 0 1px #DC2626}
+.st-mv{flex:none;font-style:normal;font-size:10px;font-weight:800;margin-left:4px}
+.st-mv.up{color:#16A34A}.st-mv.dn{color:#DC2626}
+.st-row.is-live .st-p{color:#C62F35}
+.st-tm{min-width:0}
+.st-tm b{min-width:0}

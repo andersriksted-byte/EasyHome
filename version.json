@@ -1,5 +1,5 @@
 {
-  "version": "1.98.3",
+  "version": "1.99.0",
   "files": [
     "index.html",
     "app.js",
@@ -27,6 +27,16 @@
     "todo.js"
   ],
   "notes": [
+    {
+      "version": "1.99.0",
+      "date": "26. november 2026",
+      "title": "Stillingen opdateres live",
+      "items": [
+        "Stillingen regner kampene med, mens de spilles – både på Sport-siden og på forsiden",
+        "Holdene i en kamp viser den aktuelle stilling ved navnet",
+        "Pile viser, hvor mange pladser et hold er rykket op eller ned"
+      ]
+    },
     {
       "version": "1.98.3",
       "date": "26. november 2026",
