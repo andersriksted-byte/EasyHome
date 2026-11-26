@@ -1703,3 +1703,6 @@ button.w7r.sel{background:color-mix(in srgb,var(--accent) 16%,transparent);box-s
 .tdord-r .fobtn:disabled{opacity:.25}
 .tdord-x{display:flex;flex-direction:column;min-width:0;line-height:1.2}
 .tdord-r .fobtn{width:36px;height:36px}
+.upd-actions{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap}
+.upd-actions .btn{min-height:48px;padding:0 18px}
+.upd-box p{margin:0}

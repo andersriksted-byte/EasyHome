@@ -1,5 +1,5 @@
 {
-  "version": "1.74.3",
+  "version": "1.74.4",
   "files": [
     "index.html",
     "app.js",
@@ -27,6 +27,15 @@
     "todo.js"
   ],
   "notes": [
+    {
+      "version": "1.74.4",
+      "date": "26. november 2026",
+      "title": "Fjern kort sammen med tjenesten",
+      "items": [
+        "Slår I en tjeneste fra, og den har kort på forsiden, bliver I spurgt, om kortene også skal fjernes.",
+        "Vælg \"Behold\" for kun at fjerne punktet i menuen."
+      ]
+    },
     {
       "version": "1.74.3",
       "date": "25. november 2026",

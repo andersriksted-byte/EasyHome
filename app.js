@@ -568,6 +568,26 @@ function wFodbold(size, h = 1, wd = 1) {
   const blocks = keys.map((k) => `<div class="fb-grp"><div class="fb-sub">${esc(k)}</div>${groups.get(k).map(row).join('')}</div>`);
   return head + `<div class="fb-days">${blocks.join('')}</div>`;
 }
+// Når en tjeneste slås fra: tilbyd også at fjerne dens kort fra forsiden (alle profiler)
+function askRemoveWidgets(id) {
+  const x = SERVICES.find((y) => y.id === id); if (!x) return;
+  const all = [settings.layout || []].concat(Object.values(settings.layouts || {}));
+  const n = all.reduce((k, l) => k + (l || []).filter((w) => x.widgets.includes(w.id)).length, 0);
+  if (!n) return;
+  document.getElementById('svcAsk')?.remove();
+  const m = document.createElement('div'); m.className = 'upd-modal'; m.id = 'svcAsk'; m.setAttribute('role', 'dialog'); m.setAttribute('aria-modal', 'true');
+  m.innerHTML = `<div class="upd-box"><h2>${esc(x.name)} er fjernet fra menuen</h2><p>Fjern også ${n === 1 ? 'kortet' : `de ${n} kort`} fra forsiden?</p>
+    <div class="upd-actions"><button class="btn" data-keep>Behold</button><button class="btn primary" data-rm>Fjern fra forsiden</button></div></div>`;
+  document.body.appendChild(m);
+  m.addEventListener('click', (ev) => {
+    if (ev.target.closest('[data-rm]')) {
+      settings.layout = (settings.layout || []).filter((w) => !x.widgets.includes(w.id));
+      Object.keys(settings.layouts || {}).forEach((k) => { settings.layouts[k] = (settings.layouts[k] || []).filter((w) => !x.widgets.includes(w.id)); });
+      save(); renderAll(); toast('Kortene er fjernet');
+    }
+    if (ev.target === m || ev.target.closest('[data-rm],[data-keep]')) m.remove();
+  });
+}
 // ---------- To do: gøremål og faste pligter på skift ----------
 const memberOf = (id) => members().find((m) => m.id === id);
 const tdAv = (id, big) => { const m = memberOf(id); return m ? `<span class="tdav${big ? ' big' : ''}" style="--c:${esc(m.color)}" title="${esc(m.name)}">${esc(initials(m.name))}</span>` : `<span class="tdav none${big ? ' big' : ''}" title="Alle">👪</span>`; };
@@ -1967,7 +1987,7 @@ const act = {
   svcToggle: (b) => {
     const id = b.dataset.id; settings.services = { ...(settings.services || {}), [id]: !svcOn(id) }; save();
     if (!pageOn(ui.page)) ui.page = 'forside';
-    renderAll(); if (svcOn(id)) loadAll();
+    renderAll(); if (svcOn(id)) loadAll(); else askRemoveWidgets(id);
   },
   wStepSet: (b) => { settings.weather.step = +b.dataset.v; save(); renderMain(); },
   awake: () => { settings.keepAwake = !settings.keepAwake; save(); applyWakeLock(); renderNav(); toast(settings.keepAwake ? 'Skærmen holdes tændt' : 'Skærmen må slukke igen'); },

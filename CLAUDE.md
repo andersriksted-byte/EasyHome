@@ -16,7 +16,7 @@ Familie-dashboard (web-app på GitHub Pages) til en touchskærm/iPad på væggen
 - Forsiden er et gitter (rækkehøjden tilpasses skærmen, så 3 rækker kort altid kan ses uden scroll; Store/Mellem/Små = 4/5/6 i bredden, skaleret med zoom); kort har w×h (1–4 i bredden, 1–4 i højden eller 2×2). Hvert kort SKAL udfylde sin form (brug `shapeKind`: tiny/wide/tall/big) – intet tomt hvidt rum, og intet indhold må skæres over (lister bruger `data-trim`, kalenderen `FIT` – kompakt visning og derefter scroll inde i kortet). Kortets størrelse er brugerens valg og må ALDRIG ændres automatisk.
 
 - Strenge rammer for udseendet: alle kort bruger `cardHead(titel, højre)` – én linje i fast højde (36px); for lang tekst forkortes med … (aldrig ombrydning, der flytter indholdet). Tekster i kort har fast maks. antal linjer (line-clamp) eller ellipsis, så lange navne aldrig ændrer opsætningen.
-- Tjenester (Indstillinger → Tjenester) slår KUN sidens punkt i sidemenuen til/fra – aldrig kort, indstillinger, header eller bundlinje.
+- Tjenester (Indstillinger → Tjenester) slår KUN sidens punkt i sidemenuen til/fra – aldrig kort, indstillinger, header eller bundlinje. Har tjenesten kort på forsiden, spørges der (som valg), om de også skal fjernes.
 - Ingen forklaringstekster i UI'et (brugeren læser dem ikke). Kun korte etiketter; nødvendige vejledninger gemmes bag et fold-ud-punkt.
 - Indstillinger er kompakte: kort står to og to; kun sektioner med meget indhold er `wide`.
 
