@@ -1,5 +1,5 @@
 {
-  "version": "1.86.1",
+  "version": "1.86.2",
   "files": [
     "index.html",
     "app.js",
@@ -27,6 +27,14 @@
     "todo.js"
   ],
   "notes": [
+    {
+      "version": "1.86.2",
+      "date": "26. november 2026",
+      "title": "Jeres hold først",
+      "items": [
+        "På Sport står kampe med jeres hold (★) altid først – i Live nu, i listen under Alle og i runderne"
+      ]
+    },
     {
       "version": "1.86.1",
       "date": "26. november 2026",
