@@ -1739,9 +1739,9 @@ button.w7r.sel{background:color-mix(in srgb,var(--accent) 16%,transparent);box-s
 @media (prefers-reduced-motion:reduce){.eq i{animation:none;height:8px}}
 /* Musik: radio, playlister og andet har hver sin faste del af pladsen og ruller for sig */
 .mfavsecs{flex:1;min-height:0;display:flex;flex-direction:column;gap:12px;overflow:hidden}
-.mgrp-sec{flex:1 1 0;min-height:94px;display:flex;flex-direction:column}
+.mgrp-sec{flex:0 1 auto;min-height:94px;display:flex;flex-direction:column}
 .mgrp-sec .mgrp-h{margin:0 0 8px;flex:none}
-.mgrp-list{min-height:66px;overflow-y:auto;overscroll-behavior:contain;align-content:start;padding-bottom:2px}
+.mgrp-list{min-height:66px;overflow-y:auto;scroll-snap-type:y mandatory;overscroll-behavior:contain;align-content:start;padding-bottom:2px}
 /* Favoritter som logoer */
 .mlogos{display:grid;grid-template-columns:repeat(auto-fill,78px);gap:8px;align-content:start}
 .mwfavs.mlogos{grid-template-columns:repeat(auto-fill,64px);gap:6px}
@@ -2371,3 +2371,8 @@ body.navpinned .nav.open{box-shadow:none}
 .st-row.is-live .st-p{color:#C62F35}
 .st-tm{min-width:0}
 .st-tm b{min-width:0}
+
+/* Favoritter på Musik-siden: mindre ikoner, og hver gruppe fylder kun det, den skal bruge */
+.mfavsecs .mlogos{grid-template-columns:repeat(auto-fill,66px);gap:8px}
+.mfavsecs .mlogo{scroll-snap-align:start}
+.mfavsecs .mlogo>i{border-radius:12px}

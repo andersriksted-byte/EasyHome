@@ -1,5 +1,5 @@
 {
-  "version": "1.99.2",
+  "version": "1.99.3",
   "files": [
     "index.html",
     "app.js",
@@ -27,6 +27,15 @@
     "todo.js"
   ],
   "notes": [
+    {
+      "version": "1.99.3",
+      "date": "26. november 2026",
+      "title": "Favoritter i Musik",
+      "items": [
+        "Favoritterne er lidt mindre, så flere kan ses på én gang",
+        "Hver gruppe fylder kun den plads, den skal bruge – ikoner skæres ikke længere over"
+      ]
+    },
     {
       "version": "1.99.2",
       "date": "26. november 2026",
