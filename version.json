@@ -1,5 +1,5 @@
 {
-  "version": "1.85.1",
+  "version": "1.85.2",
   "files": [
     "index.html",
     "app.js",
@@ -27,6 +27,14 @@
     "todo.js"
   ],
   "notes": [
+    {
+      "version": "1.85.2",
+      "date": "26. november 2026",
+      "title": "Sport: datovælger ved kampene",
+      "items": [
+        "Når en turnering er valgt, sidder vælgeren for dag eller runde nu øverst i kortet med kampene"
+      ]
+    },
     {
       "version": "1.85.1",
       "date": "26. november 2026",
