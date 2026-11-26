@@ -1,5 +1,5 @@
 // easyHome – hovedprogram
-import { esc, pad, DAYS, DAYS_LONG, MONTHS, cap, hhmm, startOfDay, addDays, sameDay, longDate, relTime, uid, settings, save, setPath, replaceSettings, hasProxy, workerFetch } from './util.js';
+import { esc, pad, DAYS, DAYS_LONG, MONTHS, cap, hhmm, startOfDay, addDays, sameDay, longDate, relTime, uid, settings, save, setPath, replaceSettings, hasProxy, workerFetch, ap, setAp, apOwn, apMakeOwn } from './util.js';
 import * as W from './weather.js';
 import * as N from './news.js';
 import * as C from './calendar.js';
@@ -39,8 +39,8 @@ function isNight() {
   return now.getHours() < 7 || now.getHours() >= 18;
 }
 function currentThemeId() {
-  if (settings.theme === 'auto') return isNight() ? settings.nightTheme : settings.dayTheme;
-  return THEMES[settings.theme] ? settings.theme : 'sand';
+  if (ap('theme') === 'auto') return isNight() ? ap('nightTheme') : ap('dayTheme');
+  return THEMES[ap('theme')] ? ap('theme') : 'sand';
 }
 function applyTheme() {
   const T = THEMES[currentThemeId()];
@@ -709,7 +709,7 @@ function wTodo(size, h = 1, wd = 1, x = {}) {
   const its = TD.openItems(me);
   const open = ch.filter((x) => !x.done).length + its.length;
   const mm = members().find((m) => m.id === me);
-  const head = cardHead(mm ? `${mm.name}s to do` : 'To do', open ? `<span class="small muted">${open}</span>` : '');
+  const head = cardHead(mm ? `${gen(mm.name)} to do` : 'To do', open ? `<span class="small muted">${open}</span>` : '');
   if (!ch.length && !its.length) return head + `<div class="empty">${TD.chores().length || TD.items().length ? 'Alt er klaret ✓' : 'Ingen gøremål.'}</div>`;
   const chHtml = ch.map(tdChoreRow).join(''); const itHtml = its.map((i) => tdItemRow(i)).join('');
   if (wd >= 2 && ch.length && its.length) return head + `<div class="tdcols${h === 1 ? ' tdlow' : ''}"><div class="tdlist" data-trimcard><div class="tdsub">I dag</div>${chHtml}</div><div class="tdlist" data-trimcard><div class="tdsub">Gøremål</div>${itHtml}</div></div>`;
@@ -1558,7 +1558,7 @@ const WRENDER = { todo: wTodo, vasketid: wVasketid, elpris: wElpris, elforbrug: 
 function pageForside() {
   const inLayout = (id) => curLayout().some((x) => x.id === id);
   const edit = ui.editing ? `<section class="card editpanel">
-      <div class="row" style="justify-content:space-between"><span class="lab">${meMember() ? `${esc(meMember().name)}s forside${settings.layouts && settings.layouts[settings.me] ? ` · <button class="linkbtn" data-act="resetMyLayout">brug familiens forside</button>` : ''}` : 'Familiens forside'}</span><span class="wopt" role="group" aria-label="Størrelse på kortene">${[[4, 'Store'], [5, 'Mellem'], [6, 'Små']].map(([v, l]) => `<button data-act="gridCols" data-v="${v}" aria-pressed="${gcols() === v}">${l}</button>`).join('')}</span></div>
+      <div class="row" style="justify-content:space-between"><span class="lab">${meMember() ? `${esc(gen(meMember().name))} forside${settings.layouts && settings.layouts[settings.me] ? ` · <button class="linkbtn" data-act="resetMyLayout">brug familiens forside</button>` : ''}` : 'Familiens forside'}</span><span class="wopt" role="group" aria-label="Størrelse på kortene">${[[4, 'Store'], [5, 'Mellem'], [6, 'Små']].map(([v, l]) => `<button data-act="gridCols" data-v="${v}" aria-pressed="${gcols() === v}">${l}</button>`).join('')}</span></div>
       <div class="choices">${Object.entries(WIDGETS).filter(([id]) => widgetOn(id)).map(([id, name]) => `<button class="pill" data-act="toggleW" data-id="${id}" aria-pressed="${inLayout(id)}">${inLayout(id) ? '✓' : '+'} ${esc(name)}</button>`).join('')}</div>
     </section>` : '';
   const cards = curLayout().filter((x) => WIDGETS[x.id] && widgetOn(x.id)).map((x) => {
@@ -1585,8 +1585,8 @@ function pageForside() {
 function themePicker() {
   return `<div class="themes">${THEME_ORDER.map((id) => {
     const t = id === 'auto' ? null : THEMES[id];
-    const sw = t ? [t.bg, t.nav, t.accent, t.warn] : [THEMES[settings.dayTheme].bg, THEMES[settings.dayTheme].accent, THEMES[settings.nightTheme].bg, THEMES[settings.nightTheme].accent];
-    return `<button class="theme" data-act="setTheme" data-theme="${id}" aria-pressed="${settings.theme === id}"><span class="sw">${sw.map((c) => `<i style="background:${c}"></i>`).join('')}</span>${esc(themeLabel(id))}</button>`;
+    const sw = t ? [t.bg, t.nav, t.accent, t.warn] : [THEMES[ap('dayTheme')].bg, THEMES[ap('dayTheme')].accent, THEMES[ap('nightTheme')].bg, THEMES[ap('nightTheme')].accent];
+    return `<button class="theme" data-act="setTheme" data-theme="${id}" aria-pressed="${ap('theme') === id}"><span class="sw">${sw.map((c) => `<i style="background:${c}"></i>`).join('')}</span>${esc(themeLabel(id))}</button>`;
   }).join('')}</div>`;
 }
 
@@ -2008,6 +2008,14 @@ function vejrSettings() {
     </section>`;
 }
 
+// Ejefald på dansk: Anders' / Bittens
+const gen = (n) => (/[sxz]$/i.test(n) ? n + "'" : n + 's');
+// Hvis udseende: familiens eller den valgte persons eget
+function apWho() {
+  const me = meMember();
+  if (!me) return `<section class="card wide apwho"><b>Familiens udseende</b><span class="small muted">Vælg en person øverst for at give vedkommende sit eget</span></section>`;
+  return `<section class="card wide apwho"><b>${apOwn() ? esc(gen(me.name)) + ' eget udseende' : 'Familiens udseende'}</b><span class="wseg"><button data-act="apOwn" data-v="0" aria-pressed="${!apOwn()}"><span>Familiens</span></button><button data-act="apOwn" data-v="1" aria-pressed="${apOwn()}"><span>${esc(gen(me.name))} eget</span></button></span></section>`;
+}
 function lookSettings() {
   const lk = L.getLook();
   const tiles = L.BACKGROUNDS.map((b) => `<button class="bgtile" data-act="bgPick" data-id="${b.id}" aria-pressed="${lk.bg === b.id}"><span class="bgprev" style="background:${b.css || 'var(--bg)'}"></span><span>${esc(b.name)}</span></button>`).join('')
@@ -2057,10 +2065,10 @@ function pageIndstillinger() {
     tv: () => `
     <section class="card"><b>DR TV-knapper</b>${s.tv.channels.map((c, i) => `<div class="calrow" style="grid-template-columns:1fr 2fr auto"><input type="text" data-tv="${i}" data-field="name" value="${esc(c.name)}" aria-label="Navn"><input type="url" data-tv="${i}" data-field="url" value="${esc(c.url)}" aria-label="Adresse"><button class="btn" data-act="tvRm" data-i="${i}">Fjern</button></div>`).join('')}
       <div><button class="btn" data-act="tvAdd">+ Tilføj knap</button></div></section>`,
-    udseende: () => lookSettings() + `
+    udseende: () => apWho() + lookSettings() + `
     <section class="card wide"><b>Farvetema</b>${themePicker()}
-      ${s.theme === 'auto' ? `<div class="form"><label class="f">Om dagen<select data-set="dayTheme">${Object.keys(THEMES).map((k) => `<option value="${k}" ${s.dayTheme === k ? 'selected' : ''}>${THEMES[k].label}</option>`).join('')}</select></label>
-        <label class="f">Efter solnedgang<select data-set="nightTheme">${Object.keys(THEMES).map((k) => `<option value="${k}" ${s.nightTheme === k ? 'selected' : ''}>${THEMES[k].label}</option>`).join('')}</select></label></div>` : ''}</section>`,
+      ${ap('theme') === 'auto' ? `<div class="form"><label class="f">Om dagen<select data-set="dayTheme">${Object.keys(THEMES).map((k) => `<option value="${k}" ${ap('dayTheme') === k ? 'selected' : ''}>${THEMES[k].label}</option>`).join('')}</select></label>
+        <label class="f">Efter solnedgang<select data-set="nightTheme">${Object.keys(THEMES).map((k) => `<option value="${k}" ${ap('nightTheme') === k ? 'selected' : ''}>${THEMES[k].label}</option>`).join('')}</select></label></div>` : ''}</section>`,
     musik: () => {
       const fav = S.favorites(true); const hidden = settings.sonos.favHidden || [];
       const skinTile = (v, name, prev) => `<button class="skin-t${(ipSkin() ? 'wheel' : '') === v ? ' on' : ''}" data-act="sonosSkin" data-v="${v}" aria-pressed="${(ipSkin() ? 'wheel' : '') === v}"><span class="skin-p ${prev}"><i></i><i></i></span><b>${name}</b></button>`;
@@ -2322,8 +2330,9 @@ function loadAll() { loadEl(); loadFootball(); loadWeather(); loadNews(); loadCa
 const act = {
   nav: (b) => { if (settings.navOpen) { settings.navOpen = false; save(); } ui.page = b.dataset.page; ui.editing = false; ui.fbDay = null; history.replaceState(null, '', '#' + ui.page); renderNav(); renderMain(false); $('#main').focus({ preventScroll: true }); if (ui.page === 'musik') loadSonos(); if (ui.page === 'sport') { ui.spOff = 0; loadFootball(); spLoad(); } if (ui.page === 'stroem') { loadEl(); EL.loadHistory().then(() => { if (ui.page === 'stroem') softRender(); }); } },
   toggleNav: () => { settings.navOpen = !settings.navOpen; save(); renderNav(); },
-  nextTheme: () => { const i = THEME_ORDER.indexOf(settings.theme); settings.theme = THEME_ORDER[(i + 1) % THEME_ORDER.length]; save(); applyTheme(); renderHeader(); if (ui.editing || ui.page === 'indstillinger') renderMain(); },
-  setTheme: (b) => { settings.theme = b.dataset.theme; save(); applyTheme(); renderHeader(); renderMain(); },
+  nextTheme: () => { const i = THEME_ORDER.indexOf(ap('theme')); setAp('theme', THEME_ORDER[(i + 1) % THEME_ORDER.length]); applyTheme(); renderHeader(); if (ui.editing || ui.page === 'indstillinger') renderMain(); },
+  apOwn: (b) => { apMakeOwn(b.dataset.v === '1'); applyTheme(); L.applyLook(); renderHeader(); renderMain(); },
+  setTheme: (b) => { setAp('theme', b.dataset.theme); applyTheme(); renderHeader(); renderMain(); },
   edit: () => { ui.editing = !ui.editing; renderHeader(); renderMain(); },
   toggleW: (b) => {
     const id = b.dataset.id; const i = editLayout().findIndex((x) => x.id === id);
@@ -2396,7 +2405,7 @@ const act = {
     S.state.volume.volume = v; renderFooter();
     clearTimeout(volTimer); volTimer = setTimeout(() => sonosDo(() => S.setVolume(v)), 350);
   },
-  pickMe: (b) => { settings.me = settings.me === b.dataset.id ? '' : b.dataset.id; save(); renderHeader(); renderMain(); },
+  pickMe: (b) => { settings.me = settings.me === b.dataset.id ? '' : b.dataset.id; save(); applyTheme(); L.applyLook(); renderHeader(); renderMain(); },
   memAdd: () => { const colors = ['#D0563C', '#4C78D0', '#D9A400', '#2E9D5B', '#7A5AC8', '#C2407E']; const m = settings.family.members; m.push({ id: uid(), name: '', color: colors[m.length % colors.length] }); save(); renderMain(); setTimeout(() => { const el = document.querySelectorAll('[data-mem][data-field=name]'); if (el.length) el[el.length - 1].focus(); }, 50); },
   memRm: (b) => { const [m] = settings.family.members.splice(+b.dataset.i, 1); if (m) { settings.calendars.forEach((c) => { if (c.owner === m.id) c.owner = ''; }); if (settings.me === m.id) settings.me = ''; } save(); renderHeader(); renderMain(); },
   famCodeSave: async () => {
@@ -2597,7 +2606,7 @@ document.addEventListener('change', (e) => {
   if (t.dataset.wsel) { const x = editLayout().find((y) => y.id === t.dataset.wsel); if (x) { x[t.dataset.k] = t.value; ui.inspIdx = 0; ui.inspAt = Date.now(); save(); renderMain(); } return; }
   if (t.dataset.set) {
     const v = t.type === 'checkbox' ? t.checked : t.value.trim();
-    setPath(t.dataset.set, v);
+    if (t.dataset.set === 'dayTheme' || t.dataset.set === 'nightTheme') setAp(t.dataset.set, v); else setPath(t.dataset.set, v);
     if (t.dataset.set.startsWith('proxy.')) { S.state.checked = false; }
     if (t.dataset.set === 'weather.model') { D.wx = {}; loadWeather(); }
     if (t.dataset.set.startsWith('el.')) { loadEl(true); renderMain(); }

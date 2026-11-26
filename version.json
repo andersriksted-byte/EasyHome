@@ -1,5 +1,5 @@
 {
-  "version": "1.90.0",
+  "version": "1.91.0",
   "files": [
     "index.html",
     "app.js",
@@ -27,6 +27,15 @@
     "todo.js"
   ],
   "notes": [
+    {
+      "version": "1.91.0",
+      "date": "26. november 2026",
+      "title": "Eget udseende pr. person",
+      "items": [
+        "Hver person kan få sit eget farvetema og sin egen baggrund: vælg personen øverst, gå til Indstillinger → Udseende og tryk på \"… eget\"",
+        "Skærmen skifter udseende, når en anden person vælges – uden valgt person bruges familiens udseende"
+      ]
+    },
     {
       "version": "1.90.0",
       "date": "26. november 2026",

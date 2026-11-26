@@ -143,3 +143,20 @@ export async function fetchText(url, { allowPublic = false } = {}) {
   }
   throw new Error('NO_PROXY');
 }
+
+// Udseende pr. bruger: er en person valgt på skærmen og har vedkommende eget udseende, bruges det (ellers familiens)
+export const AP_KEYS = ['theme', 'dayTheme', 'nightTheme', 'look'];
+export const apOwn = () => !!(settings.me && settings.lookBy && settings.lookBy[settings.me]);
+export function ap(k) { const o = settings.me && settings.lookBy && settings.lookBy[settings.me]; return o && o[k] !== undefined ? o[k] : settings[k]; }
+export function setAp(k, v) {
+  if (apOwn()) { settings.lookBy[settings.me][k] = v; } else settings[k] = v;
+  save();
+}
+// Giv den valgte person sit eget udseende (startende som en kopi af familiens) – eller gå tilbage til familiens
+export function apMakeOwn(on) {
+  if (!settings.me) return;
+  settings.lookBy = settings.lookBy || {};
+  if (on) settings.lookBy[settings.me] = Object.fromEntries(AP_KEYS.map((k) => [k, JSON.parse(JSON.stringify(settings[k] ?? null))]));
+  else delete settings.lookBy[settings.me];
+  save();
+}

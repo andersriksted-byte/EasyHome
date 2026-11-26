@@ -1,5 +1,5 @@
 // easyHome – baggrund og gennemsigtige kort
-import { settings, save, hasProxy, workerFetch } from './util.js';
+import { settings, save, hasProxy, workerFetch, ap, setAp } from './util.js';
 
 export const BACKGROUNDS = [
   { id: 'theme', name: 'Temaets farve', css: '' },
@@ -13,7 +13,7 @@ export const BACKGROUNDS = [
 ];
 
 const IMG_KEY = 'easyhome.bgImage';
-const look = () => settings.look || { bg: 'theme', url: '', imageId: '', alpha: 100, blur: true };
+const look = () => ap('look') || { bg: 'theme', url: '', imageId: '', alpha: 100, blur: true };
 let localImg = null;
 try { localImg = JSON.parse(localStorage.getItem(IMG_KEY) || 'null'); } catch (e) { localImg = null; }
 
@@ -50,7 +50,7 @@ async function fetchImage(id) {
   } catch (e) { /* prøv igen senere */ } finally { fetching = null; }
 }
 
-export function setLook(patch) { settings.look = { ...look(), ...patch }; save(); applyLook(); }
+export function setLook(patch) { setAp('look', { ...look(), ...patch }); applyLook(); }
 
 // Skaler billedet ned (maks 1920 px) og gem det lokalt og i workeren, så de andre skærme også får det
 export async function uploadImage(file) {
