@@ -1,5 +1,5 @@
 {
-  "version": "1.99.0",
+  "version": "1.99.1",
   "files": [
     "index.html",
     "app.js",
@@ -27,6 +27,14 @@
     "todo.js"
   ],
   "notes": [
+    {
+      "version": "1.99.1",
+      "date": "26. november 2026",
+      "title": "To do i kalenderen",
+      "items": [
+        "Lange opgaver i kalenderen står nu på to linjer i stedet for at blive skåret af"
+      ]
+    },
     {
       "version": "1.99.0",
       "date": "26. november 2026",
