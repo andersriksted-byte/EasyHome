@@ -1,5 +1,5 @@
 {
-  "version": "1.100.2",
+  "version": "1.100.3",
   "files": [
     "index.html",
     "app.js",
@@ -27,6 +27,15 @@
     "todo.js"
   ],
   "notes": [
+    {
+      "version": "1.100.3",
+      "date": "26. november 2026",
+      "title": "Pænere artikler",
+      "items": [
+        "Store tomme huller i artikler (fx fra Ekstra Bladet) er fjernet",
+        "Billeder, der før manglede i artiklen, vises nu"
+      ]
+    },
     {
       "version": "1.100.2",
       "date": "26. november 2026",

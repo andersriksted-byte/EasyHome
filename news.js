@@ -18,7 +18,7 @@ export function allSources() {
   return SOURCES.concat((settings.news.custom || []).map((c) => ({ ...c, group: c.name, custom: true })));
 }
 
-const strip = (s) => String(s || '').replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+const strip = (s) => String(s || '').replace(/<[^>]*>/g, ' ').replace(/&nbsp;|&#160;/g, ' ').replace(/[\u00ad\u200b-\u200d\ufeff]/g, '').replace(/\s+/g, ' ').trim();
 const txt = (el, tag) => { const n = el.getElementsByTagName(tag)[0]; return n ? n.textContent : ''; };
 
 export function parseFeed(xml, src) {

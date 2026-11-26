@@ -31,7 +31,10 @@ h2,h3{line-height:1.3}
 .meta{font-size:13px;font-weight:800;color:${cssVar('hot')};text-transform:none}
 .by{font-size:14px;color:${cssVar('muted')};margin:-6px 0 16px}
 .lead{font-size:20px;font-weight:600;color:${cssVar('text2')}}
-img,video{max-width:100%;height:auto;border-radius:12px}
+img,video{max-width:100%;height:auto;border-radius:12px;display:block}
+p:empty,div:empty,figure:empty{display:none}
+*{max-width:100%;box-sizing:border-box}
+body *{min-height:0!important}
 figure{margin:18px 0}figcaption{font-size:13px;color:${cssVar('muted')};margin-top:6px}
 a{color:${cssVar('accent')}}
 blockquote{margin:16px 0;padding-left:16px;border-left:4px solid ${cssVar('line')};color:${cssVar('text2')}}
@@ -51,6 +54,29 @@ export const isOpen = () => !!document.getElementById('reader');
 
 // Henter en artikel og bygger læsevisningen (stort billede øverst). Bruges af både popup-læseren og siden Nyheder.
 const artCache = {};
+// Rydder op i artiklen: billeder der først hentes ved scroll (lazy), tomme reklamepladser, iframes og stribevis af linjeskift
+// giver ellers store huller i teksten (fx Ekstra Bladet)
+export function tidy(body, url) {
+  const abs = (u) => { try { return new URL(u, url).href; } catch (e) { return ''; } };
+  const fromSet = (v) => (v || '').split(',').map((x) => x.trim().split(/\s+/)[0]).filter(Boolean).pop() || '';
+  body.querySelectorAll('img').forEach((img) => {
+    let src = img.getAttribute('src') || '';
+    if (!src || /^data:|placeholder|blank|spacer|1x1|pixel/i.test(src)) {
+      src = img.getAttribute('data-src') || img.getAttribute('data-lazy-src') || img.getAttribute('data-original') || fromSet(img.getAttribute('data-srcset')) || fromSet(img.getAttribute('srcset')) || '';
+      const pic = img.closest('picture'); if (!src && pic) { const so = pic.querySelector('source[srcset],source[data-srcset]'); if (so) src = fromSet(so.getAttribute('srcset') || so.getAttribute('data-srcset')); }
+    }
+    if (!src || /^data:/.test(src)) { (img.closest('figure') || img).remove(); return; }
+    img.setAttribute('src', abs(src)); ['width', 'height', 'style', 'srcset', 'sizes', 'loading'].forEach((a) => img.removeAttribute(a));
+  });
+  body.querySelectorAll('picture source').forEach((x) => x.remove());
+  body.querySelectorAll('iframe,embed,object,svg,script,style,noscript,form,button,input,aside,[aria-hidden="true"]').forEach((x) => x.remove());
+  body.querySelectorAll('[style]').forEach((x) => x.removeAttribute('style'));
+  body.querySelectorAll('[width],[height]').forEach((x) => { if (x.tagName !== 'IMG') { x.removeAttribute('width'); x.removeAttribute('height'); } });
+  // Tomme blokke (ingen tekst og intet billede/video) fjernes – indefra og ud
+  [...body.querySelectorAll('div,p,section,figure,span,li,ul,h2,h3,h4,a')].reverse().forEach((x) => { if (!x.textContent.replace(/[\s\u00a0\u200b]+/g, '') && !x.querySelector('img,video')) x.remove(); });
+  // Flere linjeskift i træk bliver til ét
+  body.querySelectorAll('br').forEach((br) => { let n = br.nextSibling; while (n && n.nodeType === 3 && !n.textContent.trim()) n = n.nextSibling; if (n && n.nodeName === 'BR') br.remove(); });
+}
 export function cachedArticle(url) { return artCache[url] || null; }
 export async function loadArticle(url, source, fallbackImg = '') {
   if (artCache[url]) return artCache[url];
@@ -61,6 +87,7 @@ export async function loadArticle(url, source, fallbackImg = '') {
   const art = new window.Readability(doc, { charThreshold: 200 }).parse();
   if (!art || !art.content) throw new Error('Ingen tekst');
   const body = new DOMParser().parseFromString('<div>' + art.content + '</div>', 'text/html').body.firstChild;
+  tidy(body, url);
   const stem = (u) => (u || '').split('?')[0].split('/').pop();
   if (ogImg) { const dup = [...body.querySelectorAll('img')].find((i) => stem(i.getAttribute('src')) === stem(ogImg)); if (dup) (dup.closest('figure') || dup).remove(); }
   const short = (art.textContent || '').trim().length < 600;

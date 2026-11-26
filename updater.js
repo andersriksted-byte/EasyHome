@@ -2,7 +2,7 @@
 // Ved hver ny version: hæv APP_VERSION her OG "version" i version.json, og skriv noterne i version.json.
 import { esc } from './util.js';
 
-export const APP_VERSION = '1.100.2';
+export const APP_VERSION = '1.100.3';
 const SEEN_KEY = 'easyhome.seenVersion';
 const CHECK_EVERY = 2 * 60000;
 
