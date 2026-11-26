@@ -843,7 +843,10 @@ function spCard(ico, title, sub, body, live, key = '') {
 }
 function spComps() {
   const fb = settings.football || {}; const out = [];
-  (fb.follow || []).forEach((lg) => out.push({ key: 'fb:' + lg, kind: 'fb', lg, name: (FB.LEAGUES.find((L) => L.id === lg) || {}).name || lg, ico: '⚽', col: 'fb' }));
+  // Alle valgte ligaer – både dem, man følger helt, og dem, man har valgt hold i
+  const lgs = [...new Set([...(fb.leagues || []), ...(fb.follow || []), ...(fb.teams || []).map((t) => t.lg)])].filter((lg) => lg && lg !== 'nat' && FB.LEAGUES.some((L) => L.id === lg));
+  lgs.sort((a, b) => FB.LEAGUES.findIndex((L) => L.id === a) - FB.LEAGUES.findIndex((L) => L.id === b));
+  lgs.forEach((lg) => out.push({ key: 'fb:' + lg, kind: 'fb', lg, name: (FB.LEAGUES.find((L) => L.id === lg) || {}).name || lg, ico: '⚽', col: 'fb' }));
   SP.followed().forEach((sp) => out.push({ key: sp.id, kind: sp.kind, sp, name: sp.kind === 'tennis' ? (sp.id === 'wta' ? 'Tennis damer' : 'Tennis herrer') : sp.kind === 'golf' ? 'Golf' : sp.kind === 'f1' ? 'Formel 1' : sp.id.toUpperCase(), ico: sp.ico, col: sp.kind === 'tennis' ? 'tennis' : sp.kind === 'golf' ? 'golf' : sp.id }));
   return out;
 }

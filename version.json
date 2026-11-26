@@ -1,5 +1,5 @@
 {
-  "version": "1.86.2",
+  "version": "1.86.3",
   "files": [
     "index.html",
     "app.js",
@@ -27,6 +27,14 @@
     "todo.js"
   ],
   "notes": [
+    {
+      "version": "1.86.3",
+      "date": "26. november 2026",
+      "title": "Alle jeres ligaer på Sport",
+      "items": [
+        "Alle ligaer, I har valgt under Indstillinger → Sport, har nu en knap øverst på Sport – også dem, hvor I kun følger et enkelt hold"
+      ]
+    },
     {
       "version": "1.86.2",
       "date": "26. november 2026",
