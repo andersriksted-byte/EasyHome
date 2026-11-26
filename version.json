@@ -1,5 +1,5 @@
 {
-  "version": "1.77.1",
+  "version": "1.77.2",
   "files": [
     "index.html",
     "app.js",
@@ -27,6 +27,14 @@
     "todo.js"
   ],
   "notes": [
+    {
+      "version": "1.77.2",
+      "date": "26. november 2026",
+      "title": "Sonos-kortet rettet",
+      "items": [
+        "Sonos-kortet: coveret går ikke længere ned over logoerne, og der er ikke længere et stort hul mellem rækkerne."
+      ]
+    },
     {
       "version": "1.77.1",
       "date": "26. november 2026",

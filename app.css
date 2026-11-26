@@ -166,10 +166,11 @@ a{color:var(--accent)}
 .mwfavcol{min-width:0;min-height:0;display:flex}
 .mwfavs{flex:1;min-height:0;overflow:hidden;display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;align-content:start}
 .mw-tall .mwart{width:100%;max-height:45cqh;aspect-ratio:auto;flex:0 1 45cqh}
-.mw-big .mwtop{display:grid;grid-template-columns:auto minmax(0,1fr);gap:20px;flex:0 0 58%;min-height:0}
-.mw-big .mwtop .mwart{height:100%;width:auto}
+.mw-big .mwtop{display:grid;grid-template-columns:auto minmax(0,1fr);gap:20px;flex:none;min-height:0;align-items:center}
+.mw-big .mwtop .mwart{width:min(56cqh,46cqw);height:auto}
 .mw-big .mwinfo b{font-size:clamp(18px,6cqmin,34px)}
 .mw-big .mwfavs{grid-auto-rows:minmax(56px,1fr);flex:1}
+.mw-big .mwfavs.mlogos,.mw-tall .mwfavs.mlogos{grid-auto-rows:auto}
 .mw-big .mwside{display:flex;flex-direction:column;justify-content:center;gap:12px;min-width:0}
 /* DR TV */
 .tvw{flex:1;min-height:0;display:grid;grid-template-columns:repeat(var(--c),minmax(0,1fr));grid-template-rows:repeat(var(--r),minmax(0,1fr));gap:8px}
