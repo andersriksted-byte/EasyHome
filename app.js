@@ -412,6 +412,15 @@ function wNyheder(size, h = 1, wd = 1) {
   return head + `<div class="nbody nb-${kind}${heroItem ? ' has-hero' : ''}">${hero}${list}</div>`;
 }
 const FAVK = { radio: ['📻', 'Radio'], playlist: ['🎵', 'Playlister'], other: ['💿', 'Andet'] };
+// Favoritter som logoer: radiostationens logo eller playlistens cover. Uden billede laves et logo med navnet i en fast farve.
+const LOGO_COLORS = ['#D0563C', '#4C78D0', '#2E9D5B', '#8E5BD0', '#C98A12', '#C2417A', '#1F8A99', '#5E6B7A'];
+const logoColor = (t) => { let h = 0; for (const c of String(t)) h = (h * 31 + c.charCodeAt(0)) >>> 0; return LOGO_COLORS[h % LOGO_COLORS.length]; };
+const favShowName = (id) => !!((settings.sonos || {}).favName || {})[id];
+function favLogo(act, id, name, img, k, playing) {
+  const nm = img && favShowName(id);
+  return `<button class="mlogo${playing ? ' playing' : ''}${nm ? ' named' : ''}" data-act="${act}" data-id="${esc(id)}" aria-label="${esc(name)}" title="${esc(name)}"${playing ? ' aria-current="true"' : ''}>
+    <i class="gen" style="--c:${logoColor(name)}"><span>${FAVK[k][0]}</span><b>${esc(name)}</b>${img ? `<img src="${esc(img)}" alt="" loading="lazy" onerror="this.remove()">` : ''}</i>${nm ? `<span class="mlogo-n">${esc(name)}</span>` : ''}${playing ? '<em class="eq"><i></i><i></i><i></i></em>' : ''}</button>`;
+}
 const favBadge = (k) => `<em class="mkind k-${k}" aria-label="${FAVK[k][1]}">${FAVK[k][0]}</em>`;
 function wSonos(size, h = 1, wd = 1, x = {}) {
   if (!S.state.connected) return `${cardHead('Musik')}<div class="empty">Sonos er ikke forbundet endnu.</div><button class="btn line" data-act="nav" data-page="musik">Gå til Musik</button>`;
@@ -422,7 +431,7 @@ function wSonos(size, h = 1, wd = 1, x = {}) {
   const vol = np.volume !== null ? `<label class="vol mwvol"><span class="small">Lyd</span><input type="range" min="0" max="100" value="${np.volume}" data-vol aria-label="Lydstyrke"></label>` : '';
   const info = `<div class="mwinfo"><span class="mwgrp">${esc(np.group)}</span><b>${esc(np.title || 'Intet spiller')}</b><span>${esc(np.artist || '')}</span></div>`;
   const fl = S.favorites().filter((f) => !x.fav || S.favKind(f) === x.fav);
-  const favs = fl.length ? `<div class="mwfavs" data-trim>${fl.map((f) => `<button class="mtile${f.id === S.playingFavId() ? ' playing' : ''}" data-act="sFav" data-id="${esc(f.id)}"><i style="${S.art(f) ? `background-image:url('${esc(S.art(f))}')` : ''}">${x.fav ? '' : favBadge(S.favKind(f))}</i><span>${esc(f.name)}</span></button>`).join('')}</div>` : '';
+  const favs = fl.length ? `<div class="mwfavs mlogos" data-trim>${fl.map((f) => favLogo('sFav', f.id, f.name, S.art(f), S.favKind(f), f.id === S.playingFavId())).join('')}</div>` : '';
   if (kind === 'tiny') return `<div class="mw mw-tiny" style="${art}"><div class="mwshade">${info}${ctl}</div></div>`;
   if (kind === 'wide') return `<div class="mw mw-wide" style="grid-template-columns:auto minmax(0,1fr)${wd >= 3 ? ` minmax(0,${wd - 2}fr)` : ''}"><div class="mwart" style="${art}"></div><div class="mwside">${info}${ctl}${vol}</div>${wd >= 3 ? `<div class="mwfavcol">${favs}</div>` : ''}</div>`;
   if (kind === 'tall') return `<div class="mw mw-tall"><div class="mwart" style="${art}"></div>${info}${ctl}${vol}${favs}</div>`;
@@ -1604,10 +1613,10 @@ function pageMusik() {
   const tile = (act, id, name, img, k) => `<button class="mtile${act === 'sFav' && id === nowFav ? ' playing' : ''}" data-act="${act}" data-id="${esc(id)}" ${act === 'sFav' && id === nowFav ? 'aria-current="true"' : ''}><i style="${img ? `background-image:url('${esc(img)}')` : ''}">${favBadge(k)}</i><span>${esc(name)}</span></button>`;
   // Favoritterne delt op: radiostationer, playlister (også Sonos' egne) og andet
   const grp = { radio: [], playlist: [], other: [] };
-  S.favorites().forEach((f) => { const k = S.favKind(f); grp[k].push(tile('sFav', f.id, f.name, S.art(f), k)); });
-  S.state.playlists.forEach((pl) => grp.playlist.push(tile('sPlaylist', pl.id, pl.name, S.art(pl), 'playlist')));
+  S.favorites().forEach((f) => { const k = S.favKind(f); grp[k].push(favLogo('sFav', f.id, f.name, S.art(f), k, f.id === nowFav)); });
+  S.state.playlists.forEach((pl) => grp.playlist.push(favLogo('sPlaylist', pl.id, pl.name, S.art(pl), 'playlist', false)));
   // Hver gruppe (radio, playlister, andet) ruller for sig, når der er flere favoritter, end der er plads til
-  const sec = (k) => (grp[k].length ? `<div class="mgrp-sec"><div class="mgrp-h">${FAVK[k][0]} ${FAVK[k][1]}</div><div class="mtiles mgrp-list">${grp[k].join('')}</div></div>` : '');
+  const sec = (k) => (grp[k].length ? `<div class="mgrp-sec"><div class="mgrp-h">${FAVK[k][0]} ${FAVK[k][1]}</div><div class="mlogos mgrp-list">${grp[k].join('')}</div></div>` : '');
   const favs = sec('radio') + sec('playlist') + sec('other');
   return `<div class="music">
     <section class="player mplayer">
@@ -1795,6 +1804,7 @@ function pageIndstillinger() {
           <button class="fobtn" data-act="favMove" data-id="${esc(f.id)}" data-d="-1" ${i === 0 ? 'disabled' : ''} aria-label="Flyt ${esc(f.name)} op">${svg('up', 18)}</button>
           <button class="fobtn" data-act="favMove" data-id="${esc(f.id)}" data-d="1" ${i === fav.length - 1 ? 'disabled' : ''} aria-label="Flyt ${esc(f.name)} ned">${svg('down', 18)}</button>
           <select class="fokind" data-favkind="${esc(f.id)}" aria-label="Type for ${esc(f.name)}">${Object.entries(FAVK).map(([k, [ico, l]]) => `<option value="${k}"${S.favKind(f) === k ? ' selected' : ''}>${ico} ${k === 'playlist' ? 'Playliste' : k === 'radio' ? 'Radio' : l}</option>`).join('')}</select>
+          <label class="check small"><input type="checkbox" data-favname="${esc(f.id)}" ${favShowName(f.id) ? 'checked' : ''}>Navn</label>
           <label class="check small"><input type="checkbox" data-favshow="${esc(f.id)}" ${hidden.includes(f.id) ? '' : 'checked'}>Vis</label></div>`).join('')}</div>`}
       </section>`;
     },
@@ -2252,6 +2262,7 @@ document.addEventListener('change', (e) => {
     M.saveImage(t.files[0]).then((r) => { const c = settings.countdowns[i]; if (c) { if (c.imageId) M.removeImage(c.imageId); c.imageId = r.id; save(); } ui.cdMsg = { err: false, text: r.shared ? 'Billedet er gemt og deles med jeres andre skærme ✓' : 'Billedet er gemt på denne skærm.' }; renderMain(); })
       .catch((e) => { ui.cdMsg = { err: true, text: e.message }; renderMain(); });
   }
+  else if (t.dataset.favname !== undefined) { settings.sonos.favName = { ...(settings.sonos.favName || {}), [t.dataset.favname]: t.checked }; save(); renderMain(); }
   else if (t.dataset.favshow !== undefined) {
     const h = new Set(settings.sonos.favHidden || []); if (t.checked) h.delete(t.dataset.favshow); else h.add(t.dataset.favshow);
     settings.sonos.favHidden = [...h]; save(); renderMain();

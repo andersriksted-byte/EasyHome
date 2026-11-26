@@ -1741,3 +1741,18 @@ button.w7r.sel{background:color-mix(in srgb,var(--accent) 16%,transparent);box-s
 .mgrp-sec{flex:1 1 0;min-height:94px;display:flex;flex-direction:column}
 .mgrp-sec .mgrp-h{margin:0 0 8px;flex:none}
 .mgrp-list{min-height:66px;overflow-y:auto;overscroll-behavior:contain;align-content:start;padding-bottom:2px}
+/* Favoritter som logoer */
+.mlogos{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:10px;align-content:start}
+.mwfavs.mlogos{grid-template-columns:repeat(auto-fill,minmax(72px,1fr));gap:8px}
+.mlogo{position:relative;border:0;padding:0;background:transparent;display:flex;flex-direction:column;gap:4px;color:var(--text);min-width:0}
+.mlogo>i{display:block;width:100%;aspect-ratio:1;border-radius:14px;background:var(--track) center/cover no-repeat;box-shadow:0 1px 3px rgba(0,0,0,.18)}
+.mlogo>i.gen{background:var(--c);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:8px;text-align:center;overflow:hidden}
+.mlogo>i.gen span{font-size:18px;line-height:1}
+.mlogo>i.gen b{font-size:13px;font-weight:800;line-height:1.15;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:normal;word-break:normal}
+.mlogo-n{font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center}
+.mlogo.playing>i{box-shadow:0 0 0 3px var(--accent)}
+.mlogo>.eq{position:absolute;right:6px;top:6px;background:var(--card);border-radius:8px;padding:4px 5px;height:auto;box-shadow:0 1px 3px rgba(0,0,0,.25)}
+.mlogo:active>i{transform:scale(.96)}
+.forow{grid-template-columns:40px minmax(0,1fr) 40px 40px auto auto auto}
+.mlogo>i{font-style:normal;position:relative}
+.mlogo>i>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:inherit;background:#fff}

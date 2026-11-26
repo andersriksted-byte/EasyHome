@@ -1,5 +1,5 @@
 {
-  "version": "1.76.4",
+  "version": "1.77.0",
   "files": [
     "index.html",
     "app.js",
@@ -27,6 +27,16 @@
     "todo.js"
   ],
   "notes": [
+    {
+      "version": "1.77.0",
+      "date": "26. november 2026",
+      "title": "Favoritter som logoer",
+      "items": [
+        "Musik og Sonos-kortet: radiostationer og playlister vises nu kun med deres logo eller cover.",
+        "Har en favorit intet billede, får den sit eget logo med navnet i en fast farve.",
+        "Skal navnet stå under et cover, så sæt flueben ved \"Navn\" under Indstillinger → Musik."
+      ]
+    },
     {
       "version": "1.76.4",
       "date": "26. november 2026",
