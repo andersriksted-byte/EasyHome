@@ -1,5 +1,5 @@
 {
-  "version": "1.93.4",
+  "version": "1.93.5",
   "files": [
     "index.html",
     "app.js",
@@ -27,6 +27,14 @@
     "todo.js"
   ],
   "notes": [
+    {
+      "version": "1.93.5",
+      "date": "26. november 2026",
+      "title": "Rettelse af holdkort",
+      "items": [
+        "Holdkortene under Favoritter på Sport er bygget om, så dato, logoer og navne ikke længere ligger oven i hinanden"
+      ]
+    },
     {
       "version": "1.93.4",
       "date": "26. november 2026",

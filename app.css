@@ -2262,3 +2262,18 @@ body.navpinned .nav.open{box-shadow:none}
 .nt.has-img:not(:has(>img)) b{text-shadow:none;-webkit-line-clamp:4}
 .nt.has-img:not(:has(>img)){box-shadow:inset 4px 0 0 var(--hot)}
 .nt.hero:not(:has(>img)){grid-column:span 1;grid-row:span 1}.nt.hero:not(:has(>img)) b{font-size:17px}
+/* Holdkort: holdene øverst, tid/stilling for sig nederst – intet kan ligge oven i hinanden */
+.ft{grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-areas:"me op" "mid mid";align-items:center;gap:10px 12px;padding:14px 16px}
+.ft-me{grid-area:me;flex-direction:row;justify-content:flex-start;min-width:0;gap:10px}
+.ft-me img,.ft-me .sp-ab{width:44px;height:44px;flex:none}
+.ft-me b{font-size:15px;max-width:none;min-width:0}
+.ft-op{grid-area:op;min-width:0}
+.ft-op span{max-width:100%;justify-content:flex-end}
+.ft-op b{max-width:none;min-width:0}
+.ft-mid{grid-area:mid;flex-direction:row;justify-content:space-between;align-items:center;gap:10px;min-width:0;padding-top:8px;border-top:1px solid rgba(255,255,255,.18)}
+.ft-next{background:none;padding:0;font-size:15px;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.ft-score{font-size:26px}
+.ft-mid>span:only-child{margin:0 auto 0 0}
+.sp-teams{grid-auto-columns:minmax(280px,1fr)}
+.ft-comp{font-style:normal;font-size:12px;font-weight:700;opacity:.75;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;margin-left:auto}
+.ft-op span{flex-direction:row}

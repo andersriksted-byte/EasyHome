@@ -967,7 +967,7 @@ function spTeamCards() {
     const res = m.state !== 'pre' ? `<span class="ft-score">${esc(me.score)}<i>–</i>${esc(op.score)}</span>` : '';
     const out = m.state === 'post' ? (me.win ? 'Sejr' : op.win ? 'Nederlag' : 'Uafgjort') : '';
     const status = live ? `<span class="ft-live"><i class="lv-dot"></i>${esc(m.clock || 'Live')}</span>` : next && m === next ? `<span class="ft-next">${when} · ${hhmm(d)}</span>` : `<span class="ft-last ${me.win ? 'w' : op.win ? 'l' : 'd'}">${out}</span>`;
-    return `<div class="ft${live ? ' is-live' : ''}" ${spRef({ kind: 'fb', m })}><div class="ft-me">${spLogo(me)}<b>${esc(t.short || me.name)}</b></div><div class="ft-mid">${status}${res}</div><div class="ft-op"><small>${home ? 'mod' : 'ude mod'}</small><span>${spLogo(op)}<b>${esc(op.name)}</b></span><em>${esc(m.comp || '')}</em></div></div>`;
+    return `<div class="ft${live ? ' is-live' : ''}" ${spRef({ kind: 'fb', m })}><div class="ft-me">${spLogo(me)}<b>${esc(t.short || me.name)}</b></div><div class="ft-mid">${status}${res}<em class="ft-comp">${esc(m.comp || '')}</em></div><div class="ft-op"><small>${home ? 'hjemme mod' : 'ude mod'}</small><span><b>${esc(op.name)}</b>${spLogo(op)}</span></div></div>`;
   }).filter(Boolean);
   return cards.length ? `<section class="sp-teams">${cards.join('')}</section>` : '';
 }
