@@ -334,31 +334,32 @@ function wVejr(size, h = 1, wd = 1) {
     <div class="wxsum"><span>↑ ${fmtTemp(t.max)}</span><span>↓ ${fmtTemp(t.min)}</span><span>${num(w.now.wind, 0)} m/s</span>${t.rain > 0 ? `<span class="rn">${num(t.rain)} mm</span>` : ''}</div>`;
   const hourTile = (x) => `<div class="hour"><span>${(+settings.weather.step || 60) < 60 ? hhmm(x.time) : pad(x.time.getHours())}</span>${W.weatherIcon(x.code, x.isDay, 26)}<b>${fmtTemp(x.temp)}</b><span class="r">${x.rain > 0 ? num(x.rain) + ' mm' : '&nbsp;'}</span></div>`;
   const dayRow = (d, i) => `<div class="wxday"><b>${i === 0 ? 'I dag' : cap(DAYS[d.date.getDay()])}</b>${W.weatherIcon(d.code, 1, 26)}<span class="mm">${d.rain > 0 ? num(d.rain) + ' mm' : ''}</span><span class="hl">${fmtTemp(d.min)} / <b>${fmtTemp(d.max)}</b></span></div>`;
-  const hoursN = Math.min(12, { tiny: 3, tall: 4, wide: wd === 2 ? 6 : wd * 3, big: 6 }[kind]);
-  const hcols = kind === 'wide' && wd === 2 ? 3 : kind === 'big' ? 3 : hoursN;
+  const hoursN = Math.min(12, { tiny: 3, tall: 4, wide: wd === 2 ? 4 : wd * 3, big: 6 }[kind]);
+  const hcols = kind === 'big' ? 3 : hoursN;
   const hours = `<div class="wxhours" style="--n:${hcols}">${wxSteps(w, hoursN).map(hourTile).join('')}</div>`;
   const days = `<div class="wxdays" data-trim>${w.days.map(dayRow).join('')}</div>`;
   const body = {
     tiny: `<div class="wx wx-tiny">${now}${hours}</div>`,
-    wide: `<div class="wx wx-wide" style="grid-template-columns:minmax(0,1fr) minmax(0,${wd - 1}fr)"><div class="wxl">${now}</div><div class="wxr">${hours}${wd >= 3 ? `<div class="wxdrow">${w.days.slice(1, 1 + wd + 1).map((d) => `<div class="hour"><span>${cap(DAYS[d.date.getDay()])}</span>${W.weatherIcon(d.code, 1, 26)}<b>${fmtTemp(d.max)}</b><span class="r">${fmtTemp(d.min)}</span></div>`).join('')}</div>` : ''}</div></div>`,
+    wide: `<div class="wx wx-wide${h === 1 ? ' wx-low' : ''}" style="grid-template-columns:minmax(0,1fr) minmax(0,${wd - 1}fr)"><div class="wxl">${now}</div><div class="wxr">${hours}${wd >= 3 ? `<div class="wxdrow">${w.days.slice(1, 1 + wd + 1).map((d) => `<div class="hour"><span>${cap(DAYS[d.date.getDay()])}</span>${W.weatherIcon(d.code, 1, 26)}<b>${fmtTemp(d.max)}</b><span class="r">${fmtTemp(d.min)}</span></div>`).join('')}</div>` : ''}</div></div>`,
     tall: `<div class="wx wx-tall">${now}${hours}${days}</div>`,
     big: `<div class="wx wx-big"><div class="wxl">${now}${hours}</div><div class="wxr">${days}</div></div>`
   }[kind];
   return wxScene(w.now.code, w.now.isDay, w.now.wind) + title + body;
 }
-function wSteder(size) {
+function wSteder(size, h = 1, wd = 1) {
   const others = settings.places.slice(1);
   if (!others.length) return `${cardHead('Vejret andre steder')}<div class="empty">Steder tilføjes under Indstillinger → Vejret.</div>`;
+  const cols = Math.min(others.length, h >= 2 && wd === 1 ? 1 : wd);
+  const showDays = h >= 2; // høje kort: de næste dage under hvert sted
   const row = (p) => {
     const w = D.wx[p.id];
-    if (!w) return `<div class="row"><b>${esc(placeLabel(p))}</b><span class="small muted">${D.wxErr[p.id] ? esc(D.wxErr[p.id]) : 'Henter …'}</span></div>`;
-    const days = size === 'L' ? `<div class="row" style="gap:6px">${w.days.slice(1, 4).map((d) => `<div class="hour" style="flex:1"><span>${cap(DAYS[d.date.getDay()])}</span>${W.weatherIcon(d.code, 1, 22)}<span>${fmtTemp(d.max)}/${fmtTemp(d.min)}</span></div>`).join('')}</div>` : '';
-    return `<button data-act="wPlace" data-id="${esc(p.id)}" style="border:0;background:var(--bg);border-radius:14px;padding:10px 12px;display:flex;flex-direction:column;gap:6px;text-align:left;color:var(--text)">
-      <span class="row" style="flex-wrap:nowrap;width:100%">${W.weatherIcon(w.now.code, w.now.isDay, size === 'S' ? 30 : 38)}<span style="flex:1;min-width:0"><b style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(placeLabel(p))}</b><span class="small muted">${esc(W.codeText(w.now.code))}</span></span>
-      <span style="text-align:right"><b style="font-size:22px">${fmtTemp(w.now.temp)}</b><span class="small muted" style="display:block;white-space:nowrap">${fmtTemp(w.days[0].max)} / ${fmtTemp(w.days[0].min)}${w.days[0].rain > 0 ? ' · ' + num(w.days[0].rain) + ' mm' : ''}</span></span></span>${days}</button>`;
+    if (!w) return `<div class="sted"><b class="sted-n">${esc(placeLabel(p))}</b><span class="small muted">${D.wxErr[p.id] ? esc(D.wxErr[p.id]) : 'Henter …'}</span></div>`;
+    const d0 = w.days[0];
+    const days = showDays ? `<span class="sted-days">${w.days.slice(1, 4).map((d) => `<span class="hour"><span>${cap(DAYS[d.date.getDay()])}</span>${W.weatherIcon(d.code, 1, 22)}<b>${fmtTemp(d.max)}</b><span>${fmtTemp(d.min)}</span></span>`).join('')}</span>` : '';
+    return `<button class="sted" data-act="wPlace" data-id="${esc(p.id)}"><span class="sted-top">${W.weatherIcon(w.now.code, w.now.isDay, 34)}<span class="sted-mid"><b class="sted-n">${esc(placeLabel(p))}</b><span class="sted-d">${esc(W.codeText(w.now.code))}</span></span><b class="sted-t">${fmtTemp(w.now.temp)}</b></span>
+      <span class="sted-hl">↑ ${fmtTemp(d0.max)} ↓ ${fmtTemp(d0.min)}${d0.rain > 0 ? ` · <em>${num(d0.rain)} mm</em>` : ''}</span>${days}</button>`;
   };
-  const cols = size === 'S' ? 1 : Math.min(others.length, size === 'M' ? 2 : 4);
-  return `${cardHead('Vejret andre steder')}<div style="display:grid;grid-template-columns:repeat(${cols},minmax(0,1fr));gap:8px">${others.map(row).join('')}</div>`;
+  return `${cardHead('Vejret andre steder')}<div class="steder" data-trim data-cols="${cols}" style="grid-template-columns:repeat(${cols},minmax(0,1fr))">${others.map(row).join('')}</div>`;
 }
 function newsList(n, big = false) {
   if (!hasProxy() && !settings.news.publicProxyForTest) return needProxyMsg('Nyheder');
@@ -628,8 +629,8 @@ function wTodo(size, h = 1, wd = 1) {
   const head = cardHead(meMember() ? `${meMember().name}s to do` : 'To do', open ? `<span class="small muted">${open}</span>` : '');
   if (!ch.length && !its.length) return head + `<div class="empty">${TD.chores().length || TD.items().length ? 'Alt er klaret ✓' : 'Ingen gøremål.'}</div>`;
   const chHtml = ch.map(tdChoreRow).join(''); const itHtml = its.map((i) => tdItemRow(i)).join('');
-  if (wd >= 2 && ch.length && its.length) return head + `<div class="tdcols"><div class="tdlist" data-trimcard><div class="tdsub">I dag</div>${chHtml}</div><div class="tdlist" data-trimcard><div class="tdsub">Gøremål</div>${itHtml}</div></div>`;
-  return head + `<div class="tdlist" data-trimcard>${ch.length ? `<div class="tdsub">I dag</div>${chHtml}` : ''}${its.length ? `<div class="tdsub">Gøremål</div>${itHtml}` : ''}</div>`;
+  if (wd >= 2 && ch.length && its.length) return head + `<div class="tdcols${h === 1 ? ' tdlow' : ''}"><div class="tdlist" data-trimcard><div class="tdsub">I dag</div>${chHtml}</div><div class="tdlist" data-trimcard><div class="tdsub">Gøremål</div>${itHtml}</div></div>`;
+  return head + `<div class="tdlist${h === 1 ? ' tdlow' : ''}" data-trimcard>${ch.length ? `<div class="tdsub">I dag</div>${chHtml}` : ''}${its.length ? `<div class="tdsub">Gøremål</div>${itHtml}` : ''}</div>`;
 }
 function pageTodo() {
   const who = ui.tdWho === undefined ? settings.me || '' : ui.tdWho;

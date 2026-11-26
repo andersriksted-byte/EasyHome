@@ -124,7 +124,7 @@ export async function workerFetch(path, opts = {}) {
   if (res.status === 401 && String(settings.proxy.key).startsWith('t1.') && authHook) authHook();
   if (!res.ok) {
     // Vis workerens egen forklaring (fx "Energi Data Service svarede 403") i stedet for kun et tal
-    let msg = `HTTP ${res.status}`; try { const j = await res.clone().json(); if (j && j.error) msg = j.error; } catch (e) { /* ikke JSON */ }
+    let msg = `HTTP ${res.status}`; try { const j = await res.clone().json(); if (j && j.error) msg = j.error; else if (j && j.errorCode) msg += ' ' + j.errorCode + (j.reason ? ' (' + j.reason + ')' : ''); } catch (e) { /* ikke JSON */ }
     throw new Error(msg);
   }
   return res;

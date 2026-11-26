@@ -1,5 +1,5 @@
 {
-  "version": "1.78.0",
+  "version": "1.78.1",
   "files": [
     "index.html",
     "app.js",
@@ -27,6 +27,16 @@
     "todo.js"
   ],
   "notes": [
+    {
+      "version": "1.78.1",
+      "date": "26. november 2026",
+      "title": "Podcasts og flere kort",
+      "items": [
+        "Fejler en podcast-favorit, prøver Musik nu selv at sætte hele serien i kø – og viser Sonos' egen fejlbesked, hvis det stadig ikke lykkes",
+        "Vejret og Vejret andre steder udnytter pladsen i alle størrelser – med de næste dage i de høje kort",
+        "To do viser flere opgaver i de lave kort"
+      ]
+    },
     {
       "version": "1.78.0",
       "date": "26. november 2026",

@@ -152,10 +152,17 @@ export const playFavorite = (id) => api(`/groups/${gid()}/favorites`, 'POST', { 
 const isSeries = (f) => favKind(f) === 'podcast' && !/EPISODE|TRACK/.test(String((f.resource && f.resource.type) || '').toUpperCase());
 export async function playFav(id) {
   const f = state.favorites.find((x) => x.id === id);
-  if (!f || !isSeries(f)) return playFavorite(id);
-  let pod = null;
-  try { pod = await (await workerFetch('/podcast/resolve', { method: 'POST', body: JSON.stringify({ name: f.name }) })).json(); } catch (e) { pod = null; }
-  if (!pod || !pod.id) return playFavorite(id); // fandt ikke serien – prøv som almindelig favorit
+  if (!f) return playFavorite(id);
+  if (!isSeries(f)) {
+    // Almindelig favorit – men fejler den, og kan det være en podcast, så prøv som serie
+    try { return await playFavorite(id); } catch (e) { if (favKind(f) === 'radio' || favKind(f) === 'playlist') throw e; return playSeries(f, e); }
+  }
+  return playSeries(f, null);
+}
+async function playSeries(f, firstErr) {
+  let pod = null; let why = '';
+  try { pod = await (await workerFetch('/podcast/resolve', { method: 'POST', body: JSON.stringify({ name: f.name }) })).json(); } catch (e) { why = e.message; }
+  if (!pod || !pod.id) { if (firstErr) throw new Error(firstErr.message + (why ? ' · podcast: ' + why : '')); try { return await playFavorite(f.id); } catch (e) { throw new Error(e.message + (why ? ' · podcast: ' + why : '')); } }
   const s = await api(`/groups/${gid()}/playbackSession/joinOrCreate`, 'POST', { appId: 'dk.easyhome.dashboard', appContext: 'easyhome' });
   if (!s.sessionId) throw new Error('Sonos gav ingen afspilning');
   await rawApi(`/playbackSessions/${s.sessionId}/playbackSession/loadCloudQueue`, 'POST', { queueBaseUrl: pod.queueBaseUrl, itemId: pod.firstId, playOnCompletion: true,

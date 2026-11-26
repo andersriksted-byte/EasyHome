@@ -1825,3 +1825,36 @@ button.w7r.sel{background:color-mix(in srgb,var(--accent) 16%,transparent);box-s
 .st-wrap.low .st-row{padding-top:3px;padding-bottom:3px}
 .st-wrap.low .st-h{padding-top:0;padding-bottom:0}
 .st-wrap{overflow:hidden}
+/* Vejret andre steder */
+.steder{flex:1;min-height:0;overflow:hidden;display:grid;gap:8px;grid-auto-rows:min-content;align-content:start}
+.sted{border:0;background:var(--bg);border-radius:14px;padding:9px 12px;display:flex;flex-direction:column;gap:4px;text-align:left;color:var(--text);font:inherit;min-width:0}
+.sted-top{display:flex;align-items:center;gap:10px;min-width:0}
+.sted-top svg{flex:none}
+.sted-mid{flex:1;min-width:0;display:flex;flex-direction:column}
+.sted-n{font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sted-d{font-size:12px;color:var(--muted);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sted-t{font-size:24px;font-weight:800;flex:none}
+.sted-hl{font-size:12px;font-weight:700;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sted-hl em{font-style:normal;color:var(--rain,#2E8B57)}
+.sted-days{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:4px}
+.sted-days .hour{padding:6px 2px}
+/* Vejret i brede, lave kort: timer og dage i kompakte fliser */
+.wx-low .hour .r{display:none}
+.wx-low .hour{padding:4px 2px;gap:1px}
+.wx-low .hour svg{width:22px;height:22px}
+.wx-low .wxr{gap:6px}
+.wx-low .wxhours{min-height:0;flex:1 1 0}
+.wx-low .wxdrow{flex:none}
+.wx-low .wxdrow .hour{flex-direction:row;gap:6px;padding:4px 6px;white-space:nowrap;overflow:hidden}
+.wx-low .wxdrow .hour svg{width:20px;height:20px;flex:none}
+/* To do i lave kort: tætte rækker på én linje, og flere ved siden af hinanden i brede kort */
+.tdlow .tdrow,.tdlow.tdlist .tdrow{min-height:34px;padding:3px 8px;gap:8px;border-radius:10px}
+.tdlow .tdchk{width:24px;height:24px;border-radius:8px;font-size:14px;border-width:2px}
+.tdlow .tdico{font-size:16px;width:20px}
+.tdlow .tdtx{flex-direction:row;align-items:baseline;gap:6px}
+.tdlow .tdtx b{font-size:14px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.tdlow .tdtx small,.tdlow .tddue{flex:none;font-size:11px}
+.tdlow .tdav{width:22px;height:22px;font-size:11px}
+.tdlow .tdlist,.tdlist.tdlow{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,210px),1fr));gap:4px 8px;align-content:start}
+.tdlow .tdsub,.tdlist.tdlow .tdsub{grid-column:1/-1;padding-top:0}
+.tdlow .tdtx b{flex:0 1 auto}.tdlow .tdtx small{flex:0 100 auto;min-width:0;overflow:hidden;text-overflow:ellipsis}
