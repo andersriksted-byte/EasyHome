@@ -1,5 +1,5 @@
 {
-  "version": "1.93.3",
+  "version": "1.93.4",
   "files": [
     "index.html",
     "app.js",
@@ -27,6 +27,15 @@
     "todo.js"
   ],
   "notes": [
+    {
+      "version": "1.93.4",
+      "date": "26. november 2026",
+      "title": "Ryddeligt nyhedsoverblik",
+      "items": [
+        "Overblik under Nyheder er nu lige store fliser i faste rækker – uden huller og tomme grå felter",
+        "Nyheder med billede får billedet som baggrund med teksten ovenpå; den nyeste med billede står stort"
+      ]
+    },
     {
       "version": "1.93.3",
       "date": "26. november 2026",
