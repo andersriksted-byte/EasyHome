@@ -278,7 +278,7 @@ function renderFooter() {
   const showNews = true;
   $('#ftr').hidden = !music && !showNews;
   $('#ftr').innerHTML = `${music}${music && showNews ? '<div class="sep"></div>' : ''}
-    ${!showNews ? '' : top ? `<a class="ticker" href="${esc(top.link)}" data-read="${esc(top.source)}" target="_blank" rel="noopener"><b>${esc(top.source)}</b><span>${esc(top.title)}</span></a>`
+    ${!showNews ? '' : top ? `<a class="ticker" href="${esc(top.link)}" data-read="${esc(top.source)}" target="_blank" rel="noopener"><b>${esc(top.source)}</b>${top.date ? `<time class="tk-time">${esc(relTime(top.date))}</time>` : ''}<span>${esc(top.title)}</span></a>`
       : `<button class="ticker" style="border:0;background:none;text-align:left" data-act="nav" data-page="nyheder"><b>Nyheder</b><span>${hasProxy() || settings.news.publicProxyForTest ? 'Henter …' : 'Vælg kilder og opsæt forbindelse'}</span></button>`}`;
 }
 

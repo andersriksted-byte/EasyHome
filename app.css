@@ -2347,3 +2347,4 @@ body.navpinned .nav.open{box-shadow:none}
 .sp-cnav .sp-today{height:36px;padding:0 12px;font-size:13px}
 .sp-cnav .sp-today.at{background:var(--bg)}
 .sp-title .sp-ref{margin-left:8px}
+.ticker .tk-time{flex:none;font-size:12px;font-weight:700;color:var(--muted);white-space:nowrap}

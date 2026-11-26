@@ -1,5 +1,5 @@
 {
-  "version": "1.98.1",
+  "version": "1.98.2",
   "files": [
     "index.html",
     "app.js",
@@ -27,6 +27,14 @@
     "todo.js"
   ],
   "notes": [
+    {
+      "version": "1.98.2",
+      "date": "26. november 2026",
+      "title": "Tid på nyhederne i bunden",
+      "items": [
+        "Nyhederne i bundlinjen viser nu, hvor gamle de er (fx \"12 min siden\")"
+      ]
+    },
     {
       "version": "1.98.1",
       "date": "26. november 2026",
