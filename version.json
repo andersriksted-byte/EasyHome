@@ -1,5 +1,5 @@
 {
-  "version": "1.97.0",
+  "version": "1.97.1",
   "files": [
     "index.html",
     "app.js",
@@ -27,6 +27,14 @@
     "todo.js"
   ],
   "notes": [
+    {
+      "version": "1.97.1",
+      "date": "26. november 2026",
+      "title": "Ens bokse på Live",
+      "items": [
+        "Favoritterne øverst på Live står nu i de samme bokse som kampene nedenunder"
+      ]
+    },
     {
       "version": "1.97.0",
       "date": "26. november 2026",

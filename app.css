@@ -2316,3 +2316,7 @@ body.navpinned .nav.open{box-shadow:none}
 .ft-me.mine b,.ft-op.mine b{text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:3px}
 .ft.goal{animation:bxGoal 1.2s ease-in-out infinite}
 .ft .bx-goalt{margin-left:6px}
+/* Favoritter: samme bokse som kampene nedenunder */
+.sp-page>.sp-favrow{flex:none;margin-bottom:12px;max-height:45%;display:flex;flex-direction:column}
+.sp-favrow .sp-sec{margin:12px 14px 0;color:var(--accent)}
+.sp-favrow .sp-boxes{overflow-y:auto}

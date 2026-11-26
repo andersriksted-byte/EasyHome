@@ -1005,7 +1005,7 @@ function spBox(x) {
     const goal = spGoalCheck(m); const pre = m.state === 'pre' || (it.kind === 'fb' && FB.pending(m));
     const favs = spFavIds(); const side = (t) => `<div class="bx-t${!pre && t.win ? ' win' : ''}${favs.has(t.id) ? ' mine' : ''}">${spLogo(t)}<b>${esc(t.name)}</b>${pre ? '' : `<span class="bx-s">${esc(t.score)}</span>`}</div>`;
     const st = m.state === 'in' ? `<span class="bx-live"><i class="lv-dot"></i>${esc(it.kind === 'fb' ? m.clock || 'Live' : liveDa(m.detail) || m.clock || 'Live')}</span>` : m.state === 'post' ? '<span class="bx-end">Slut</span>' : `<span class="bx-time">${hhmm(m.date)}</span>`;
-    return `<div class="bx${m.state === 'in' ? ' in' : ''}${x.fav ? ' is-fav' : ''}${goal ? ' goal' : ''}" style="--sc:${col}" ${spRef(it)}><div class="bx-h">${tag}${goal ? '<span class="bx-goalt">MÅL!</span>' : ''}${st}${spStarBtn(it, spStarred(spItemId(it)))}</div>${side(m.home)}${side(m.away)}</div>`;
+    return `<div class="bx${m.state === 'in' ? ' in' : ''}${x.fav ? ' is-fav' : ''}${goal ? ' goal' : ''}" style="--sc:${col}" ${spRef(it)}><div class="bx-h">${tag}${goal ? '<span class="bx-goalt">MÅL!</span>' : ''}${st}${x.fav ? '' : spStarBtn(it, spStarred(spItemId(it)))}</div>${side(m.home)}${side(m.away)}</div>`;
   }
   return `<div class="bx${x.live ? ' in' : ''}" style="--sc:${col}"><div class="bx-h">${tag}${spStarBtn(it, spStarred(spItemId(it)))}</div><div class="bx-body">${x.html.replace(/^<div class="sp-ent"[^>]*><span class="sp-tag">[^<]*<\/span>/, '').replace(/<\/div>$/, '')}</div></div>`;
 }
@@ -1097,7 +1097,7 @@ function pageSport() {
   const isTop = (x) => x.fav || spStarred(spItemId(x.it));
   const top = ents.filter(isTop).sort((a, b) => (b.live ? 1 : 0) - (a.live ? 1 : 0) || a.t - b.t);
   const rest = ents.filter((x) => !isTop(x)).sort((a, b) => a.t - b.t);
-  const favRow = top.length ? `<section class="sp-teams">${top.map(spFavCard).join('')}</section>` : '';
+  const favRow = top.length ? `<section class="sp-cgw sp-favrow"><div class="sp-sec">★ Favoritter</div><div class="sp-boxes">${top.map(spBox).join('')}</div></section>` : '';
   return `<div class="sp-page">${head(chips, alt)}${err}${favRow}<div class="sp-cgw sp-allw">${dnav}<div class="sp-boxes">${rest.map(spBox).join('') || '<div class="empty">Ingen andre kampe denne dag</div>'}</div></div></div>`;
 }
 
