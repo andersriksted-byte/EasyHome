@@ -1,5 +1,5 @@
 {
-  "version": "1.89.0",
+  "version": "1.90.0",
   "files": [
     "index.html",
     "app.js",
@@ -27,6 +27,15 @@
     "todo.js"
   ],
   "notes": [
+    {
+      "version": "1.90.0",
+      "date": "26. november 2026",
+      "title": "Pligter, der ikke er klaret",
+      "items": [
+        "En fast pligt kan nu flyttes med til næste dag, hvis den ikke er klaret – og igen og igen, indtil den er sat flueben ved",
+        "Slå det til pr. pligt under Indstillinger → To do. Pligten står med rødt \"Fra mandag – ikke klaret\""
+      ]
+    },
     {
       "version": "1.89.0",
       "date": "26. november 2026",

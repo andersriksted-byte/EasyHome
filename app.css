@@ -2185,3 +2185,4 @@ html,body{overscroll-behavior:none}
 .sp-fsec .sp-list>*:first-child{border-top:0}
 .sp-fsec .sp-tag{color:var(--muted)}
 .sp-teams{padding-bottom:10px}.sp-fsec .sp-row.in{background:color-mix(in srgb,#E5484D 7%,transparent)!important;border-radius:10px}
+.tdrow.carried .tdtx small{color:#DC2626;font-weight:800}.tdcarry{margin-top:6px}

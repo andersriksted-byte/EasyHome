@@ -62,7 +62,20 @@ const doneOf = (c, occ) => T().log[c.id + '|' + occ.key] || null;
 export function choresOn(d) {
   // Ugentlige pligter "på" en dag vises kun den dag; "senest" en dag vises hele ugen
   const onDay = (c, occ) => c.every !== 'day' && c.every !== 'month' && c.at === 'on' && iso(occ.due) !== iso(d);
-  return chores().map((c) => { const occ = occurrence(c, d); return occ && !onDay(c, occ) ? { c, occ, who: whoFor(c, occ), done: doneOf(c, occ) } : null; }).filter(Boolean);
+  const out = chores().map((c) => { const occ = occurrence(c, d); return occ && !onDay(c, occ) ? { c, occ, who: whoFor(c, occ), done: doneOf(c, occ) } : null; }).filter(Boolean);
+  // "Flyttes til næste dag": ikke-udførte pligter fra tidligere dage står med, indtil de er klaret (kun i dag)
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  if (iso(d) === iso(today)) chores().filter((c) => c.carry).forEach((c) => {
+    const since = fromIso(c.carryFrom || iso(today)); const seen = new Set(out.filter((x) => x.c === c).map((x) => x.occ.key));
+    for (let i = 1; i <= 21; i++) {
+      const dd = new Date(today); dd.setDate(dd.getDate() - i); if (dd < since) break;
+      const occ = occurrence(c, dd); if (!occ || seen.has(occ.key)) continue;
+      const due = new Date(occ.due); due.setHours(0, 0, 0, 0);
+      if (due >= today || due < since || doneOf(c, occ)) { seen.add(occ.key); continue; }
+      seen.add(occ.key); out.push({ c, occ, who: whoFor(c, occ), done: null, late: true });
+    }
+  });
+  return out;
 }
 export function toggleChore(id, key, by = '') {
   const t = T(); const k = id + '|' + key;
