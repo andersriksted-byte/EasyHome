@@ -2277,3 +2277,8 @@ body.navpinned .nav.open{box-shadow:none}
 .sp-teams{grid-auto-columns:minmax(280px,1fr)}
 .ft-comp{font-style:normal;font-size:12px;font-weight:700;opacity:.75;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;margin-left:auto}
 .ft-op span{flex-direction:row}
+.navord{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.navord-r{display:grid;grid-template-columns:28px minmax(0,1fr) 40px 40px;align-items:center;gap:8px;padding:4px 8px;border-radius:12px;background:var(--bg);min-height:48px}
+.navord-i{display:grid;place-items:center;color:var(--muted)}
+.navord-r b{font-size:15px}
+.navord-r .fobtn:disabled{opacity:.25}

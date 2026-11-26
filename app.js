@@ -195,6 +195,9 @@ const num = (v, d = 1) => (v === null || v === undefined ? '–' : v.toFixed(d).
 const needProxyMsg = (what) => `<div class="empty">${esc(what)} kræver forbindelsen til jeres lille server (Cloudflare Worker). <button class="btn line" data-act="openSet" data-tab="forbindelse">Opsæt i Indstillinger</button></div>`;
 
 /* ---------- Navigation ---------- */
+// Sidemenuens rækkefølge (Indstillinger → Tjenester); sider uden plads i listen kommer bagest i standardrækkefølgen
+const navPos = (id) => { const o = settings.navOrder || []; const i = o.indexOf(id); return i < 0 ? 1000 + PAGES.findIndex((p) => p.id === id) : i; };
+const navPages = () => PAGES.filter((p) => pageOn(p.id)).sort((a, b) => navPos(a.id) - navPos(b.id));
 function renderNav() {
   const nav = $('#nav');
   if (settings.navPin) settings.navOpen = true; // fastlåst menu er altid åben
@@ -208,7 +211,7 @@ function renderNav() {
   shade.classList.toggle('show', settings.navOpen && !settings.navPin);
   const item = (p) => `<button data-act="nav" data-page="${p.id}" aria-label="${esc(p.label)}" ${ui.page === p.id ? 'aria-current="page"' : ''}>${svg(p.id)}<span class="lbl">${esc(p.label)}</span></button>`;
   nav.innerHTML = `<button class="toggle" data-act="toggleNav" aria-expanded="${settings.navOpen}" aria-label="${settings.navOpen ? 'Luk menu' : 'Åbn menu'}">${svg(settings.navOpen ? 'back' : 'menu', 22)}<span class="lbl">Luk menu</span></button>${settings.navOpen ? `<button class="pin" data-act="pinNav" aria-pressed="${!!settings.navPin}" aria-label="${settings.navPin ? 'Lås menuen op' : 'Lås menuen åben'}">${svg('pin', 20)}</button>` : ''}
-    ${PAGES.filter((p) => pageOn(p.id)).map(item).join('')}<div class="sp"></div>
+    ${navPages().map(item).join('')}<div class="sp"></div>
     <button class="awake" data-act="awake" aria-pressed="${!!settings.keepAwake}" aria-label="${settings.keepAwake ? 'Skærmen holdes tændt – tryk for at slå fra' : 'Hold skærmen tændt'}">${svg(settings.keepAwake ? 'sunon' : 'sunoff')}<span class="lbl">${settings.keepAwake ? 'Skærmen er altid tændt' : 'Hold skærmen tændt'}</span></button>
     ${item({ id: 'indstillinger', label: 'Indstillinger' })}`;
 }
@@ -2077,7 +2080,8 @@ function pageIndstillinger() {
   const needsConn = ['nyheder', 'kalender', 'musik'].includes(tab) && !hasProxy();
   const T = {
     tjenester: () => `<section class="card wide"><div class="store">${SERVICES.filter((x) => x.pages.length).map((x) => { const on = svcOn(x.id); return `<button class="svc ${on ? 'on' : ''}" data-act="svcToggle" data-id="${x.id}" role="switch" aria-checked="${on}">
-      <span class="appico">${svg(x.icon, 30)}</span><span class="appmain"><b>${esc(x.name)}</b><span>${esc(x.desc)}</span></span><span class="tgl" aria-hidden="true"><i></i></span></button>`; }).join('')}</div></section>`,
+      <span class="appico">${svg(x.icon, 30)}</span><span class="appmain"><b>${esc(x.name)}</b><span>${esc(x.desc)}</span></span><span class="tgl" aria-hidden="true"><i></i></span></button>`; }).join('')}</div></section>
+    <section class="card"><b>Rækkefølge i sidemenuen</b><div class="navord">${navPages().map((p, i, all) => `<div class="navord-r"><span class="navord-i">${svg(p.id, 20)}</span><b>${esc(p.label)}</b><button class="fobtn" data-act="navMove" data-id="${p.id}" data-d="-1" ${i === 0 ? 'disabled' : ''} aria-label="Flyt ${esc(p.label)} op">${svg('up', 18)}</button><button class="fobtn" data-act="navMove" data-id="${p.id}" data-d="1" ${i === all.length - 1 ? 'disabled' : ''} aria-label="Flyt ${esc(p.label)} ned">${svg('down', 18)}</button></div>`).join('')}</div></section>`,
     vejr: () => vejrSettings(),
     fodbold: () => fodboldSettings(),
     todo: () => todoSettings(),
@@ -2480,6 +2484,7 @@ const act = {
   sonosSkin: (b) => { settings.sonos.skin = b.dataset.v; ui.ipMode = 'now'; save(); renderMain(); },
   choreAt: (b) => { const c = TD.chores().find((x) => x.id === b.dataset.id); if (c) { c.at = b.dataset.v; save(); renderMain(); } },
   tdsOpen: (b) => { ui.tdOpen = b.dataset.id || null; renderMain(); },
+  navMove: (b) => { const ids = navPages().map((p) => p.id); const i = ids.indexOf(b.dataset.id); const j = i + +b.dataset.d; if (i < 0 || j < 0 || j >= ids.length) return; [ids[i], ids[j]] = [ids[j], ids[i]]; settings.navOrder = ids; save(); renderNav(); renderMain(); },
   sFav: (b) => { S.markFav(b.dataset.id); sonosDo(async () => { const pod = await S.playFav(b.dataset.id); if (pod && pod.count) toast(`${pod.count} afsnit af ${pod.name} er sat i kø`); }); },
   sGroup: (b) => { const cg = S.currentGroup(); if (cg) { const np = S.nowPlaying(); S.state.groupMeta[cg.id] = { title: np.title, image: np.image }; } S.controlGroup(b.dataset.id); S.state.playerVol = {}; S.state.meta = null; renderMain(false); loadSonos(); },
   sGroupPlay: (b) => { sonosDo(() => S.toggleGroupPlay(b.dataset.id)); renderMain(false); },

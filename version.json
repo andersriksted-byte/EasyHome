@@ -1,5 +1,5 @@
 {
-  "version": "1.93.5",
+  "version": "1.94.0",
   "files": [
     "index.html",
     "app.js",
@@ -27,6 +27,14 @@
     "todo.js"
   ],
   "notes": [
+    {
+      "version": "1.94.0",
+      "date": "26. november 2026",
+      "title": "Egen rækkefølge i sidemenuen",
+      "items": [
+        "Under Indstillinger → Tjenester kan I nu flytte siderne op og ned med pilene, så sidemenuen står i den rækkefølge, I vil have"
+      ]
+    },
     {
       "version": "1.93.5",
       "date": "26. november 2026",
