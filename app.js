@@ -426,7 +426,7 @@ function favLogo(act, id, name, img, k, playing) {
 const fmtMs = (ms) => { const t = Math.floor(ms / 1000); const h = Math.floor(t / 3600); const m = Math.floor((t % 3600) / 60); const x = t % 60; return h ? `${h}:${pad(m)}:${pad(x)}` : `${m}:${pad(x)}`; };
 function seekBar(btns = true) {
   const p = S.position(); if (!p) return '';
-  return `<div class="mseek">${btns ? `<button class="mskip" data-act="sSeekBy" data-d="-15000" aria-label="15 sekunder tilbage">−15</button>` : ''}<span class="mst" data-seekpos>${fmtMs(p.pos)}</span><input type="range" min="0" max="${p.dur}" step="1000" value="${Math.round(p.pos)}" data-seekbar aria-label="Spol i afspilningen"><span class="mst" data-seekleft>−${fmtMs(p.dur - p.pos)}</span>${btns ? `<button class="mskip" data-act="sSeekBy" data-d="30000" aria-label="30 sekunder frem">+30</button>` : ''}</div>`;
+  return `<div class="mseek">${btns ? `<button class="mskip" data-act="sSeekBy" data-d="-15000" aria-label="15 sekunder tilbage">−15</button>` : ''}<span class="mst" data-seekpos></span><input type="range" min="0" max="${p.dur}" step="1000" value="0" data-seekbar aria-label="Spol i afspilningen"><span class="mst" data-seekleft></span>${btns ? `<button class="mskip" data-act="sSeekBy" data-d="30000" aria-label="30 sekunder frem">+30</button>` : ''}</div>`;
 }
 function seekTick() {
   const p = S.position();
@@ -714,7 +714,10 @@ function spFitNames() {
 }
 // ---------- Sport-siden: dagens kampe i alle fulgte sportsgrene, og detaljer om den enkelte kamp ----------
 let spRefs = [];
-const spRef = (it) => { if (spRefs.length > 3000) spRefs = []; spRefs.push(it); return `data-act="spOpen" data-i="${spRefs.length - 1}" role="button" tabindex="0"`; };
+// Faste numre pr. kamp/aftale (samme kamp får samme nummer ved hver tegning, så uændrede kort ikke tegnes om)
+const refIdx = (arr, map, key, it) => { let i = map.get(key); if (i === undefined) { i = arr.length; arr.push(it); map.set(key, i); } else arr[i] = it; return i; };
+const spMap = new Map();
+const spRef = (it) => { const k = [it.id, it.lg, it.sp, it.title, it.name, it.date && +new Date(it.date)].join('|'); const key = k.replace(/\|/g, '') ? k : JSON.stringify(it).slice(0, 300); return `data-act="spOpen" data-i="${refIdx(spRefs, spMap, key, it)}" role="button" tabindex="0"`; };
 const spDay = () => addDays(startOfDay(new Date()), ui.spOff || 0);
 const dayWord = (day) => { const t = startOfDay(new Date()); return sameDay(day, t) ? 'I dag' : sameDay(day, addDays(t, 1)) ? 'I morgen' : sameDay(day, addDays(t, -1)) ? 'I går' : cap(DAYS_LONG[day.getDay()]); };
 function spLoad(day = spDay(), force = false) {
@@ -953,8 +956,10 @@ function elApps() {
   return APPLIANCES.map((a) => { const o = own[a.id] || {}; const x = { ...a, on: o.on !== false, win: [o.from ?? a.win[0], o.to ?? a.win[1]].map(Number), n: +(o.n ?? a.n), kwh: +String(o.kwh ?? a.kwh).replace(',', '.') || a.kwh };
     // Brusebad: forbruget angives pr. 10 min og ganges med det valgte antal minutter
     if (a.id === 'bad') { x.min = Math.max(0, Math.min(60, +(o.min ?? 10))); x.kwh10 = x.kwh; x.kwh = (x.kwh10 * x.min) / 10; x.name = `Brusebad ${x.min} min`; x.short = `Bad ${x.min} min`; }
-    return x; });
+    return x; }).sort((p, q) => elPos(p.id) - elPos(q.id));
 }
+// Egen rækkefølge (Indstillinger → Strøm); apparater uden plads kommer bagest i standardrækkefølgen
+const elPos = (id) => { const o = (settings.el && settings.el.order) || []; const i = o.indexOf(id); return i < 0 ? 1000 + APPLIANCES.findIndex((a) => a.id === id) : i; };
 function wVasketid(size, h = 1, wd = 1, x = null) {
   const w = elWait('Billig strøm'); if (w) return w;
   const now = new Date(); const end = new Date(+now + 24 * 3600000); const cur = EL.now();
@@ -1114,7 +1119,7 @@ function elSettings() {
   const e = settings.el || {}; const st = EL.state.status;
   const hrs = (sel, k, id) => `<select data-elapp="${id}" data-k="${k}" aria-label="${k === 'from' ? 'Fra' : 'Til'} kl.">${Array.from({ length: 25 }, (_, i) => `<option value="${i}"${+sel === i ? ' selected' : ''}>${pad(i % 24)}${i === 24 ? ' (midnat)' : ''}</option>`).join('')}</select>`;
   const apps = `<section class="card wide"><b>Billig strøm – hvornår vil I bruge apparaterne?</b>
-    <div class="elapps">${elApps().map((a) => `<div class="elapp${a.on ? '' : ' off'}"><label class="elapp-on"><input type="checkbox" data-elapp="${a.id}" data-k="on"${a.on ? ' checked' : ''}><span class="vt-ico">${a.ico}</span><b>${esc(a.name)}</b></label>
+    <div class="elapps">${elApps().map((a, i, all) => `<div class="elapp${a.on ? '' : ' off'}"><span class="elapp-mv"><button class="fobtn" data-act="elAppMove" data-id="${a.id}" data-d="-1" ${i === 0 ? 'disabled' : ''} aria-label="Flyt ${esc(a.name)} op">${svg('up', 18)}</button><button class="fobtn" data-act="elAppMove" data-id="${a.id}" data-d="1" ${i === all.length - 1 ? 'disabled' : ''} aria-label="Flyt ${esc(a.name)} ned">${svg('down', 18)}</button></span><label class="elapp-on"><input type="checkbox" data-elapp="${a.id}" data-k="on"${a.on ? ' checked' : ''}><span class="vt-ico">${a.ico}</span><b>${esc(a.name)}</b></label>
       <label class="inl">Fra kl. ${hrs(a.win[0], 'from', a.id)}</label><label class="inl">til kl. ${hrs(a.win[1], 'to', a.id)}</label>
       ${a.id === 'bad' ? `<label class="inl">Minutter<select data-elapp="bad" data-k="min">${Array.from({ length: 61 }, (_, v) => `<option value="${v}"${a.min === v ? ' selected' : ''}>${v} min</option>`).join('')}</select></label>
       <label class="inl">kWh pr. 10 min<input type="text" inputmode="decimal" data-elapp="bad" data-k="kwh" value="${esc(String(a.kwh10).replace('.', ','))}" style="width:60px" aria-label="Forbrug i kWh pr. 10 minutter"></label>` : `<label class="inl">Varighed<select data-elapp="${a.id}" data-k="n">${[1, 2, 3, 4, 5, 6, 8].map((v) => `<option value="${v}"${a.n === v ? ' selected' : ''}>${v} t</option>`).join('')}</select></label>
@@ -1375,7 +1380,8 @@ function pageKalender() {
 // Ugen som timegitter: heldagsaftaler øverst, aftaler placeret efter klokkeslæt, dagens menu nederst
 const CAL_HH = 52; // højde pr. time i px
 let calRefs = [];
-const evRef = (e) => { if (calRefs.length > 2000) calRefs = []; calRefs.push(e); return `data-act="calEv" data-i="${calRefs.length - 1}" role="button" tabindex="0"`; };
+const calMap = new Map();
+const evRef = (e) => `data-act="calEv" data-i="${refIdx(calRefs, calMap, [e.uid || e.id || '', e.title, e.start && +e.start, e.end && +e.end, e.calId || e.cal || ''].join('|'), e)}" role="button" tabindex="0"`;
 function calTimeGrid(days, today) {
   const now0 = Date.now(); const evs = days.map((d) => eventsOn(d, true).filter((e) => !sameDay(d, today) || e.allDay || e.end.getTime() > now0)); // i dag: overståede aftaler vises ikke
   const allDay = evs.map((l, i) => l.filter((e) => e.allDay || (e.start <= startOfDay(days[i]) && e.end >= addDays(startOfDay(days[i]), 1))));
@@ -1895,10 +1901,30 @@ function renderMain(keepScroll = true) {
   const m = $('#main'); const y = m.scrollTop;
   if (ui.hdrPage !== ui.page) { ui.hdrPage = ui.page; renderHeader(); }
   showMadroFrame(ui.page === 'madro');
-  m.innerHTML = PAGE_RENDER[ui.page]();
-  if (ui.page === 'forside') { scaleGrid(); fitCards(); trimCards(); }
+  priceGauge.n = 0; // samme id'er ved hver tegning
+  const html = PAGE_RENDER[ui.page]();
+  // Forsiden: tegn kun de kort om, der har ændret sig – ellers blinker billeder og logoer ved hver opdatering
+  if (ui.page === 'forside' && patchGrid(m, html)) { seekTick(); if (keepScroll) m.scrollTop = y; return; }
+  m.innerHTML = html;
+  if (ui.page === 'forside') { const g = document.getElementById('grid'); m._rest = (() => { const c = m.cloneNode(true); const gg = c.querySelector('#grid'); if (gg) gg.innerHTML = ''; return c.innerHTML; })(); if (g) [...g.children].forEach((c) => { c._src = stableSrc(c.outerHTML); }); scaleGrid(); fitCards(); trimCards(); seekTick(); }
   if (ui.page === 'sport') spFitNames();
   if (keepScroll) m.scrollTop = y;
+}
+// Det, der alligevel opdateres hvert sekund (nedtællinger, fremdriftsbjælker), tæller ikke som en ændring
+const stableSrc = (h) => h.replace(/(<b data-tleft="[^"]*">)[^<]*/g, '$1').replace(/(data-tbar="[^"]*" style=")width:[\d.]+%/g, '$1').replace(/(id="(?:newsBar|n1Bar|inspBar)" style=")width:[\d.e-]+%/g, '$1');
+function patchGrid(m, html) {
+  const og = document.getElementById('grid'); if (!og || ui.editing) return false;
+  const tpl = document.createElement('div'); tpl.innerHTML = html;
+  const ng = tpl.querySelector('#grid'); if (!ng) return false;
+  // Resten af siden skal være uændret, og kortene de samme i samme rækkefølge
+  const rest = (root) => { const c = root.cloneNode(true); const g = c.querySelector('#grid'); if (g) g.innerHTML = ''; return c.innerHTML; };
+  if (m._rest === undefined || rest(tpl) !== m._rest) return false;
+  const oc = [...og.children]; const nc = [...ng.children];
+  if (oc.length !== nc.length || oc.some((c, i) => c.dataset.wid !== nc[i].dataset.wid)) return false;
+  let changed = false;
+  nc.forEach((c, i) => { const src = stableSrc(c.outerHTML); if (oc[i]._src === src) return; c._src = src; og.replaceChild(c, oc[i]); changed = true; });
+  if (changed) { scaleGrid(); fitCards(); trimCards(); }
+  return true;
 }
 // Sørg for at kort som kalenderen altid viser alt: først kompakt visning, derefter scroll inde i kortet (størrelsen ændres aldrig)
 function fitCards() {
@@ -1915,7 +1941,7 @@ function fitCards() {
     // Størrelsen er brugerens valg: i stedet for at vokse kan man scrolle inde i kortet
     card.classList.add('scrolly');
     const edge = () => card.classList.toggle('at-end', card.scrollTop + card.clientHeight >= card.scrollHeight - 4);
-    card.addEventListener('scroll', edge, { passive: true }); edge();
+    if (!card._edge) { card._edge = true; card.addEventListener('scroll', edge, { passive: true }); } edge();
   });
 }
 // Lister (nyheder, dage, favoritter) viser kun hele elementer – det sidste, der ikke kan være der, fjernes
@@ -2151,6 +2177,7 @@ const act = {
   newsRefresh: () => { N.clearNewsCache(); D.news = null; renderMain(); loadNews(); },
   sPlay: () => sonosDo(S.togglePlay), sNext: () => sonosDo(S.next), sPrev: () => sonosDo(S.prev),
   sSeekBy: (b) => { sonosDo(() => S.seekBy(+b.dataset.d)).then(seekTick); seekTick(); },
+  elAppMove: (b) => { const ids = elApps().map((a) => a.id); const i = ids.indexOf(b.dataset.id); const j = i + +b.dataset.d; if (i < 0 || j < 0 || j >= ids.length) return; [ids[i], ids[j]] = [ids[j], ids[i]]; settings.el = settings.el || {}; settings.el.order = ids; save(); renderMain(); },
   sFav: (b) => { S.markFav(b.dataset.id); sonosDo(async () => { const pod = await S.playFav(b.dataset.id); if (pod && pod.count) toast(`${pod.count} afsnit af ${pod.name} er sat i kø`); }); },
   sGroup: (b) => { const cg = S.currentGroup(); if (cg) { const np = S.nowPlaying(); S.state.groupMeta[cg.id] = { title: np.title, image: np.image }; } S.controlGroup(b.dataset.id); S.state.playerVol = {}; S.state.meta = null; renderMain(false); loadSonos(); },
   sGroupPlay: (b) => { sonosDo(() => S.toggleGroupPlay(b.dataset.id)); renderMain(false); },

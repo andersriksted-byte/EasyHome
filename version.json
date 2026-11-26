@@ -1,5 +1,5 @@
 {
-  "version": "1.79.0",
+  "version": "1.80.0",
   "files": [
     "index.html",
     "app.js",
@@ -27,6 +27,15 @@
     "todo.js"
   ],
   "notes": [
+    {
+      "version": "1.80.0",
+      "date": "26. november 2026",
+      "title": "Ro på forsiden",
+      "items": [
+        "Kortene på forsiden blinker ikke længere, når der hentes nye data – kun de kort, der faktisk ændrer sig, tegnes om",
+        "Billig strøm: vælg selv apparaternes rækkefølge med pilene under Indstillinger → Strøm"
+      ]
+    },
     {
       "version": "1.79.0",
       "date": "26. november 2026",
