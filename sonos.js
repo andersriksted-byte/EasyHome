@@ -146,18 +146,16 @@ export const togglePlay = () => api(`/groups/${gid()}/playback/togglePlayPause`,
 export const next = () => api(`/groups/${gid()}/playback/skipToNextTrack`, 'POST', {});
 export const prev = () => api(`/groups/${gid()}/playback/skipToPreviousTrack`, 'POST', {});
 export const setVolume = (v) => api(`/groups/${gid()}/groupVolume`, 'POST', { volume: Math.max(0, Math.min(100, Math.round(v))) });
-export const playFavorite = (id) => api(`/groups/${gid()}/favorites`, 'POST', { favoriteId: id, playOnCompletion: true });
+// REPLACE: favoritten erstatter køen (standard hos Sonos er at lægge den bagest, så det gamle i køen bliver ved med at spille)
+export const playFavorite = (id) => api(`/groups/${gid()}/favorites`, 'POST', { favoriteId: id, action: 'REPLACE', playOnCompletion: true });
 // Podcast-serier: Sonos kan ikke starte en hel serie fra en favorit, så workeren finder seriens afsnit
 // og lægger dem i kø (nyeste først) som en "cloud queue", højttalerne selv henter afsnittene fra.
 const isSeries = (f) => favKind(f) === 'podcast' && !/EPISODE|TRACK/.test(String((f.resource && f.resource.type) || '').toUpperCase());
 export async function playFav(id) {
   const f = state.favorites.find((x) => x.id === id);
   if (!f) return playFavorite(id);
-  if (!isSeries(f)) {
-    // Almindelig favorit – men fejler den, og kan det være en podcast, så prøv som serie
-    try { return await playFavorite(id); } catch (e) { if (favKind(f) === 'radio' || favKind(f) === 'playlist') throw e; return playSeries(f, e); }
-  }
-  return playSeries(f, null);
+  // Sonos' egen favorit først (den kender serien, fx fra DR LYD). Kun hvis Sonos afviser den, prøver vi at bygge køen selv
+  try { return await playFavorite(id); } catch (e) { if (!isSeries(f) && favKind(f) !== 'other') throw e; return playSeries(f, e); }
 }
 async function playSeries(f, firstErr) {
   let pod = null; let why = '';

@@ -1,5 +1,5 @@
 {
-  "version": "1.78.4",
+  "version": "1.78.5",
   "files": [
     "index.html",
     "app.js",
@@ -27,6 +27,14 @@
     "todo.js"
   ],
   "notes": [
+    {
+      "version": "1.78.5",
+      "date": "26. november 2026",
+      "title": "Favoritter starter med det samme",
+      "items": [
+        "Når I trykker på en podcast eller playliste, skifter Sonos nu til den – før blev den lagt bagest i køen, så det gamle blev ved med at spille"
+      ]
+    },
     {
       "version": "1.78.4",
       "date": "26. november 2026",
