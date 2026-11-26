@@ -155,7 +155,14 @@ export async function playFav(id) {
   const f = state.favorites.find((x) => x.id === id);
   if (!f) return playFavorite(id);
   // Sonos' egen favorit først (den kender serien, fx fra DR LYD). Kun hvis Sonos afviser den, prøver vi at bygge køen selv
-  try { return await playFavorite(id); } catch (e) { if (!isSeries(f) && favKind(f) !== 'other') throw e; return playSeries(f, e); }
+  try { return await playFavorite(id); } catch (e) {
+    // 502/503/504: Sonos svarede ikke i tide – højttaleren er ofte bare langsom til at hente podcasten. Vent og se, om den spiller
+    if (/HTTP 50[234]/.test(e.message)) {
+      for (let i = 0; i < 4; i++) { await wait(1500); try { const pb = await api(`/groups/${gid()}/playback`); if (/PLAYING|BUFFERING/.test(pb.playbackState || '')) return; } catch (e2) { /* prøv igen */ } }
+      try { return await playFavorite(id); } catch (e3) { if (!/HTTP 50[234]/.test(e3.message)) throw e3; throw new Error('Sonos svarer langsomt – prøv igen om lidt'); }
+    }
+    if (!isSeries(f) && favKind(f) !== 'other') throw e; return playSeries(f, e);
+  }
 }
 async function playSeries(f, firstErr) {
   let pod = null; let why = '';

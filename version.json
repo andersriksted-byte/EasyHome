@@ -1,5 +1,5 @@
 {
-  "version": "1.78.5",
+  "version": "1.78.6",
   "files": [
     "index.html",
     "app.js",
@@ -27,6 +27,14 @@
     "todo.js"
   ],
   "notes": [
+    {
+      "version": "1.78.6",
+      "date": "26. november 2026",
+      "title": "Færre Sonos-fejl",
+      "items": [
+        "Er Sonos langsom til at starte en podcast, venter Musik nu på den i stedet for at vise en fejl"
+      ]
+    },
     {
       "version": "1.78.5",
       "date": "26. november 2026",
