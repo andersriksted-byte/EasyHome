@@ -1606,7 +1606,8 @@ function pageMusik() {
   const grp = { radio: [], playlist: [], other: [] };
   S.favorites().forEach((f) => { const k = S.favKind(f); grp[k].push(tile('sFav', f.id, f.name, S.art(f), k)); });
   S.state.playlists.forEach((pl) => grp.playlist.push(tile('sPlaylist', pl.id, pl.name, S.art(pl), 'playlist')));
-  const sec = (k) => (grp[k].length ? `<div class="mgrp-h">${FAVK[k][0]} ${FAVK[k][1]}</div><div class="mtiles">${grp[k].join('')}</div>` : '');
+  // Hver gruppe (radio, playlister, andet) ruller for sig, når der er flere favoritter, end der er plads til
+  const sec = (k) => (grp[k].length ? `<div class="mgrp-sec"><div class="mgrp-h">${FAVK[k][0]} ${FAVK[k][1]}</div><div class="mtiles mgrp-list">${grp[k].join('')}</div></div>` : '');
   const favs = sec('radio') + sec('playlist') + sec('other');
   return `<div class="music">
     <section class="player mplayer">
@@ -1619,7 +1620,7 @@ function pageMusik() {
     ${sonosRooms()}
     <section class="card mcol">
       <div class="mhead"><span class="lab">Favoritter</span><button class="chipbtn" data-act="sReload" aria-label="Opdater rum og favoritter">${svg('refresh', 16)}</button></div>
-      <div class="mscroll">${favs || '<span class="muted small">Ingen favoritter endnu.</span>'}</div>
+      <div class="mfavsecs">${favs || '<span class="muted small">Ingen favoritter endnu.</span>'}</div>
       
     </section>
     ${S.state.error ? `<div class="err" style="grid-column:1/-1">${esc(S.state.error)}</div>` : ''}

@@ -1,5 +1,5 @@
 {
-  "version": "1.76.2",
+  "version": "1.76.3",
   "files": [
     "index.html",
     "app.js",
@@ -27,6 +27,14 @@
     "todo.js"
   ],
   "notes": [
+    {
+      "version": "1.76.3",
+      "date": "26. november 2026",
+      "title": "Favoritter ruller hver for sig",
+      "items": [
+        "Musik: er der flere favoritter, end der er plads til, ruller radio, playlister og andet hver for sig – så de andre grupper bliver stående."
+      ]
+    },
     {
       "version": "1.76.2",
       "date": "26. november 2026",
