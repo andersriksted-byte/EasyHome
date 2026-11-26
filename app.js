@@ -166,11 +166,12 @@ function eventsOn(day, page = false) {
 }
 // To do i kalenderen (kan slås til nederst i Kalender): gøremål på deres dato og faste pligter på deres dag
 function todoEvents(s, e) {
-  const me = settings.me || ''; const name = (id) => (members().find((m) => m.id === id) || {}).name || '';
-  const items = TD.items().filter((i) => i.due && !i.done && (!me || !i.who || i.who === me) && sameDay(TD.fromIso(i.due), s))
-    .map((i) => ({ allDay: true, start: s, end: e, title: `✅ ${i.title}${i.who && !me ? ' · ' + name(i.who) : ''}`, color: '#2E9D5B', cal: '__todo', todo: true }));
-  const ch = TD.choresOn(s).filter((x) => !x.late && (x.c.every === 'day' || sameDay(x.occ.due, s)) && (!me || !x.who || x.who === me))
-    .map((x) => ({ allDay: true, start: s, end: e, title: `${x.done ? '✓ ' : ''}${x.c.icon || '✅'} ${x.c.title}${x.who && !me ? ' · ' + name(x.who) : ''}`, color: '#8E5BD0', cal: '__todo', todo: true, done: !!x.done }));
+  // Altid alle opgaver – også når kalenderen er filtreret på en person
+  const name = (id) => (members().find((m) => m.id === id) || {}).name || '';
+  const items = TD.items().filter((i) => i.due && !i.done && sameDay(TD.fromIso(i.due), s))
+    .map((i) => ({ allDay: true, start: s, end: e, title: `✅ ${i.title}${i.who ? ' · ' + name(i.who) : ''}`, color: '#2E9D5B', cal: '__todo', todo: true }));
+  const ch = TD.choresOn(s).filter((x) => !x.late && (x.c.every === 'day' || sameDay(x.occ.due, s)))
+    .map((x) => ({ allDay: true, start: s, end: e, title: `${x.done ? '✓ ' : ''}${x.c.icon || '✅'} ${x.c.title}${x.who ? ' · ' + name(x.who) : ''}`, color: '#8E5BD0', cal: '__todo', todo: true, done: !!x.done }));
   return ch.concat(items);
 }
 const evTime = (ev, day) => (ev.allDay ? 'Hele dagen' : (ev.start < startOfDay(day) ? 'Fortsat' : hhmm(ev.start)));
