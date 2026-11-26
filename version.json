@@ -1,5 +1,5 @@
 {
-  "version": "1.81.1",
+  "version": "1.81.2",
   "files": [
     "index.html",
     "app.js",
@@ -27,6 +27,14 @@
     "todo.js"
   ],
   "notes": [
+    {
+      "version": "1.81.2",
+      "date": "26. november 2026",
+      "title": "Stille skærm på afspilleren",
+      "items": [
+        "Afspilningstiden bliver stående, når I sætter på pause – skærmen på afspilleren hopper ikke længere"
+      ]
+    },
     {
       "version": "1.81.1",
       "date": "26. november 2026",

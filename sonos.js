@@ -265,12 +265,18 @@ export function favorites(all = false) {
 }
 
 // Spoling i det, der spiller (podcast-afsnit, sange). Radio har ingen længde og kan ikke spoles.
+// Sonos sender ikke altid længde/position med (fx lige efter pause) – så bruges det sidst kendte for samme afsnit,
+// så afspilningstiden ikke forsvinder og kommer igen
+let lastPos = null;
 export function position() {
-  const m = state.meta || {}; const t = m.currentItem && m.currentItem.track;
-  const dur = t && +t.durationMillis; const pb = state.playback;
-  if (!dur || !pb || pb.positionMillis == null) return null;
-  const playing = /PLAYING/.test(pb.playbackState || '');
-  return { dur, pos: Math.max(0, Math.min(dur, +pb.positionMillis + (playing ? Date.now() - (state.pbAt || Date.now()) : 0))), playing };
+  const m = state.meta || {}; const t = m.currentItem && m.currentItem.track; const pb = state.playback;
+  const key = t ? (t.id && (t.id.objectId || t.id)) || t.name || '' : '';
+  const playing = !!pb && /PLAYING/.test(pb.playbackState || '');
+  let dur = t && +t.durationMillis; let pos = pb && pb.positionMillis != null ? +pb.positionMillis : null; let at = state.pbAt || Date.now();
+  if (lastPos && lastPos.key === key) { if (!dur) dur = lastPos.dur; if (pos === null) { pos = lastPos.pos; at = lastPos.at; } }
+  if (!dur || pos === null || !key) return null;
+  if (!lastPos || lastPos.key !== key || lastPos.raw !== pos || lastPos.dur !== dur) lastPos = { key, dur, pos, at, raw: pos };
+  return { dur, pos: Math.max(0, Math.min(dur, pos + (playing ? Date.now() - at : 0))), playing };
 }
 const movedTo = (ms) => { if (state.playback) { state.playback.positionMillis = Math.max(0, ms); state.pbAt = Date.now(); } };
 export async function seek(ms) { movedTo(ms); await api(`/groups/${gid()}/playback/seek`, 'POST', { positionMillis: Math.max(0, Math.round(ms)) }); }

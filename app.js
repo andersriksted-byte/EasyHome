@@ -445,7 +445,7 @@ function ipodHtml(compact = false) {
   const sel = Math.max(0, Math.min(fl.length - 1, ui.ipSel || 0));
   const head = `<div class="ip-bar"><span>${menu ? 'Favoritter' : esc(np.group || 'Musik')}</span><i class="ip-play-ico">${np.playing ? '▶' : '❚❚'}</i><i class="ip-batt"></i></div>`;
   const now = `<div class="ip-now"><div class="ip-art" style="${np.image ? `background-image:url('${esc(np.image)}')` : ''}"></div><div class="ip-txt"><b>${esc(np.title || 'Intet spiller')}</b><span>${esc(np.artist || '')}</span></div></div>
-    ${p ? `<div class="ip-prog"><i data-ipprog style="width:0%"></i></div><div class="ip-times"><span data-seekpos></span><span data-seekleft></span></div>` : ''}
+    <div class="ip-prog"${p ? '' : ' style="visibility:hidden"'}><i data-ipprog style="width:0%"></i></div><div class="ip-times"${p ? '' : ' style="visibility:hidden"'}><span data-seekpos></span><span data-seekleft></span></div>
     <div class="ip-vol${ui.ipVolShow ? ' on' : ''}"><span>🔈</span><div class="ip-prog"><i data-ipvol style="width:${np.volume || 0}%"></i></div><span>🔊</span></div>`;
   const list = `<div class="ip-list">${fl.map((f, i) => `<div class="ip-li${i === sel ? ' sel' : ''}" data-ipi="${i}">${esc(f.name)}<i>›</i></div>`).join('') || '<div class="ip-li">Ingen favoritter</div>'}</div>`;
   return `<div class="ipod${compact ? ' ip-compact' : ''}"><div class="ip-screen">${head}${menu ? list : now}</div>
@@ -1960,6 +1960,7 @@ function renderMain(keepScroll = true) {
   m._page = ui.page;
   if (ui.page === 'forside') { const g = document.getElementById('grid'); m._rest = (() => { const c = m.cloneNode(true); const gg = c.querySelector('#grid'); if (gg) gg.innerHTML = ''; return c.innerHTML; })(); if (g) [...g.children].forEach((c) => { c._src = stableSrc(c.outerHTML); }); scaleGrid(); fitCards(); trimCards(); seekTick(); }
   if (ui.page === 'sport') spFitNames();
+  seekTick(); ipTick(); // afspilningstid udfyldes med det samme (ellers står den tom et øjeblik)
   if (keepScroll) m.scrollTop = y;
 }
 // Billeder, der ikke kan hentes, huskes, så de ikke prøves (og blinker) ved hver tegning
