@@ -60,7 +60,9 @@ export function whoFor(c, occ) {
 const doneOf = (c, occ) => T().log[c.id + '|' + occ.key] || null;
 // Pligterne på en given dag (ugentlige og månedlige vises hele perioden, til de er gjort)
 export function choresOn(d) {
-  return chores().map((c) => { const occ = occurrence(c, d); return occ ? { c, occ, who: whoFor(c, occ), done: doneOf(c, occ) } : null; }).filter(Boolean);
+  // Ugentlige pligter "på" en dag vises kun den dag; "senest" en dag vises hele ugen
+  const onDay = (c, occ) => c.every !== 'day' && c.every !== 'month' && c.at === 'on' && iso(occ.due) !== iso(d);
+  return chores().map((c) => { const occ = occurrence(c, d); return occ && !onDay(c, occ) ? { c, occ, who: whoFor(c, occ), done: doneOf(c, occ) } : null; }).filter(Boolean);
 }
 export function toggleChore(id, key, by = '') {
   const t = T(); const k = id + '|' + key;

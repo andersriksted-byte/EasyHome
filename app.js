@@ -690,7 +690,7 @@ const tdDue = (s) => { if (!s) return ''; const d = TD.fromIso(s); const t = sta
   const txt = sameDay(d, t) ? 'I dag' : sameDay(d, addDays(t, 1)) ? 'I morgen' : d < t ? `${d.getDate()}. ${MONTHS[d.getMonth()].slice(0, 3)}` : dayDiffTxt(d);
   return `<span class="tddue${d < t ? ' late' : sameDay(d, t) ? ' today' : ''}">${d < t ? '⚠️ ' : ''}${esc(txt)}</span>`; };
 const dayDiffTxt = (d) => { const n = Math.round((d - startOfDay(new Date())) / 86400000); return n < 7 ? cap(DAYS_LONG[d.getDay()]) : `${d.getDate()}. ${MONTHS[d.getMonth()].slice(0, 3)}`; };
-const choreWhen = (x) => { const e = x.c.every; if (e === 'day') return ''; if (e === 'month') return 'Denne måned'; return `Denne uge · senest ${DAYS_LONG[x.occ.due.getDay()]}`; };
+const choreWhen = (x) => { const e = x.c.every; if (e === 'day') return ''; if (e === 'month') return 'Denne måned'; return x.c.at === 'on' ? '' : `Denne uge · senest ${DAYS_LONG[x.occ.due.getDay()]}`; };
 const tdCheck = (done, attrs, label) => `<button class="tdchk${done ? ' on' : ''}" ${attrs} aria-pressed="${!!done}" aria-label="${esc(label)}">${done ? '✓' : ''}</button>`;
 function tdChoreRow(x) {
   return `<div class="tdrow chore${x.done ? ' done' : ''}">${tdCheck(x.done, `data-act="todoChore" data-id="${esc(x.c.id)}" data-key="${esc(x.occ.key)}" data-who="${esc(x.who)}"`, (x.done ? 'Fortryd: ' : 'Udført: ') + x.c.title)}
@@ -731,7 +731,7 @@ function pageTodo() {
   const ws = addDays(TD.monday(today), (ui.tdWeek || 0) * 7); const days = [...Array(7)].map((_, i) => addDays(ws, i));
   const rows = TD.chores().map((c) => `<div class="tdw-n"><span>${esc(c.icon || '✅')}</span><b>${esc(c.title)}</b></div>${days.map((d) => { const occ = TD.occurrence(c, d);
     if (!occ) return '<div class="tdw-c"></div>';
-    const span = c.every !== 'day'; if (span && !sameDay(d, occ.due)) return `<div class="tdw-c span${sameDay(d, today) ? ' today' : ''}"></div>`;
+    const span = c.every !== 'day'; if (span && !sameDay(d, occ.due)) return `<div class="tdw-c${c.at === 'on' ? '' : ' span'}${sameDay(d, today) ? ' today' : ''}"></div>`;
     const done = TD.choresOn(d).find((x) => x.c.id === c.id); const w = TD.whoFor(c, occ);
     return `<div class="tdw-c${sameDay(d, today) ? ' today' : ''}${done && done.done ? ' done' : ''}">${tdAv(w, true)}</div>`; }).join('')}`).join('');
   const weekCard = TD.chores().length ? `<section class="card wide"><div class="sechead2"><b>Turnus · uge ${isoWeek(ws)}</b><span class="parrows"><button class="arr" data-act="todoWeek" data-dir="-1" aria-label="Ugen før">‹</button><button class="arr" data-act="todoWeek" data-dir="1" aria-label="Ugen efter">›</button></span></div>
@@ -762,7 +762,7 @@ function todoSettings() {
     const dayChip = (d) => `<button class="pill sm" data-act="choreDay" data-id="${esc(c.id)}" data-d="${d}" aria-pressed="${!c.days || !c.days.length || c.days.includes(d)}">${DAYS[d]}</button>`;
     const order = [1, 2, 3, 4, 5, 6, 0];
     const when = c.every === 'day' ? `<div class="choices">${order.map(dayChip).join('')}</div>`
-      : c.every === 'month' ? '' : `<label class="inl">Senest<select data-chore="${esc(c.id)}" data-k="day">${order.map((d) => `<option value="${d}"${(c.day ?? 6) === d ? ' selected' : ''}>${DAYS_LONG[d]}</option>`).join('')}</select></label>`;
+      : c.every === 'month' ? '' : `<span class="wseg">${[['on', 'På dagen'], ['by', 'Senest']].map(([v, l]) => `<button data-act="choreAt" data-id="${esc(c.id)}" data-v="${v}" aria-pressed="${(c.at || 'by') === v}"><span>${l}</span></button>`).join('')}</span><label class="inl"><select data-chore="${esc(c.id)}" data-k="day" aria-label="Dag">${order.map((d) => `<option value="${d}"${(c.day ?? 6) === d ? ' selected' : ''}>${DAYS_LONG[d]}</option>`).join('')}</select></label>`;
     const mode = c.every === 'day' ? `<div class="wseg">${[['turnus', 'På skift'], ['fast', 'Fast pr. ugedag']].map(([v, l]) => `<button data-act="choreMode" data-id="${esc(c.id)}" data-v="${v}" aria-pressed="${(c.mode || 'turnus') === v}"><span>${l}</span></button>`).join('')}</div>` : '';
     const fast = c.every === 'day' && c.mode === 'fast';
     const who = fast ? `<div class="tdplan">${order.filter((d) => !c.days || !c.days.length || c.days.includes(d)).map((d) => `<label class="f">${DAYS_LONG[d]}<select data-chore="${esc(c.id)}" data-k="plan" data-wd="${d}"><option value="">–</option>${ms.map((m) => `<option value="${esc(m.id)}"${(c.plan || {})[d] === m.id ? ' selected' : ''}>${esc(m.name)}</option>`).join('')}</select></label>`).join('')}</div>`
@@ -2437,6 +2437,7 @@ const act = {
   ipMenu: () => { ui.ipMode = ui.ipMode === 'menu' ? 'now' : 'menu'; if (ui.ipMode === 'menu') { const i = S.favorites().findIndex((f) => f.id === S.playingFavId()); ui.ipSel = i < 0 ? 0 : i; } renderMain(); },
   ipSelect: () => { if (ui.ipMode === 'menu') { const f = S.favorites()[ui.ipSel || 0]; ui.ipMode = 'now'; renderMain(); if (f) act.sFav({ dataset: { id: f.id } }); } else sonosDo(S.togglePlay); },
   sonosSkin: (b) => { settings.sonos.skin = b.dataset.v; ui.ipMode = 'now'; save(); renderMain(); },
+  choreAt: (b) => { const c = TD.chores().find((x) => x.id === b.dataset.id); if (c) { c.at = b.dataset.v; save(); renderMain(); } },
   sFav: (b) => { S.markFav(b.dataset.id); sonosDo(async () => { const pod = await S.playFav(b.dataset.id); if (pod && pod.count) toast(`${pod.count} afsnit af ${pod.name} er sat i kø`); }); },
   sGroup: (b) => { const cg = S.currentGroup(); if (cg) { const np = S.nowPlaying(); S.state.groupMeta[cg.id] = { title: np.title, image: np.image }; } S.controlGroup(b.dataset.id); S.state.playerVol = {}; S.state.meta = null; renderMain(false); loadSonos(); },
   sGroupPlay: (b) => { sonosDo(() => S.toggleGroupPlay(b.dataset.id)); renderMain(false); },

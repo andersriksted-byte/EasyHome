@@ -1,5 +1,5 @@
 {
-  "version": "1.88.1",
+  "version": "1.89.0",
   "files": [
     "index.html",
     "app.js",
@@ -27,6 +27,15 @@
     "todo.js"
   ],
   "notes": [
+    {
+      "version": "1.89.0",
+      "date": "26. november 2026",
+      "title": "Faste pligter på en bestemt dag",
+      "items": [
+        "Ugentlige pligter kan nu sættes til \"På dagen\" (fx støvsugning om fredagen) eller \"Senest\" en dag",
+        "\"På dagen\" vises kun den dag; \"Senest\" vises hele ugen som før – vælg under Indstillinger → To do"
+      ]
+    },
     {
       "version": "1.88.1",
       "date": "26. november 2026",
