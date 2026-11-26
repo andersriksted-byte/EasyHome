@@ -28,7 +28,9 @@ html{background:${cssVar('card')}}
 body{margin:0 auto;max-width:980px;padding:22px 28px 40px;font:17px/1.55 Manrope,system-ui,sans-serif;color:${cssVar('text')};background:${cssVar('card')}}
 h1{font-size:26px;line-height:1.2;margin:4px 0 10px;font-weight:800}
 p{margin:0 0 .8em}
-h2,h3{line-height:1.3}
+h2,h3{line-height:1.3;font-size:20px;margin:1.1em 0 .4em;clear:right}
+ul,ol{padding-left:22px}li{margin:.2em 0}
+h1+.by,.by{clear:none}
 .meta{font-size:13px;font-weight:800;color:${cssVar('hot')};text-transform:none}
 .by{font-size:14px;color:${cssVar('muted')};margin:-6px 0 16px}
 .lead{font-size:20px;font-weight:600;color:${cssVar('text2')}}
@@ -36,7 +38,7 @@ img,video{max-width:100%;max-height:260px;width:auto;height:auto;border-radius:1
 p:empty,div:empty,figure:empty{display:none}
 *{max-width:100%;box-sizing:border-box}
 body *{min-height:0!important}
-figure{margin:12px 0;float:right;width:38%;margin-left:20px}figure img{width:100%}figcaption{font-size:13px;color:${cssVar('muted')};margin-top:6px}
+figure{margin:16px 0;clear:both}figure img{margin:0 auto;max-height:300px}figcaption{font-size:13px;color:${cssVar('muted')};margin-top:6px}
 a{color:${cssVar('accent')}}
 blockquote{margin:16px 0;padding-left:16px;border-left:4px solid ${cssVar('line')};color:${cssVar('text2')}}
 .hero{float:right;width:40%;max-height:none;aspect-ratio:4/3;object-fit:cover;margin:0 0 12px 22px;border-radius:14px}
@@ -58,6 +60,29 @@ export const isOpen = () => !!document.getElementById('reader');
 const artCache = {};
 // Rydder op i artiklen: billeder der først hentes ved scroll (lazy), tomme reklamepladser, iframes og stribevis af linjeskift
 // giver ellers store huller i teksten (fx Ekstra Bladet)
+// Henter afsnit, mellemrubrikker, citater og billeder fra artiklens hovedområde i rækkefølge
+function collectBlocks(doc) {
+  const roots = [...doc.querySelectorAll('article, main, [itemprop="articleBody"], [class*="article-body"], [class*="ArticleBody"]')];
+  let best = { len: 0, html: '' };
+  roots.forEach((root) => {
+    const parts = []; let len = 0; const seen = new Set();
+    root.querySelectorAll('p, h2, h3, blockquote, figure, li').forEach((el) => {
+      if (el.closest('nav, footer, header, aside, [class*="related"], [class*="share"], [class*="newsletter"], [class*="teaser"], [class*="byline"]')) return;
+      if ([...seen].some((x) => x.contains(el))) return;
+      const t = el.textContent.replace(/\s+/g, ' ').trim();
+      if (el.tagName === 'FIGURE') { const im = el.querySelector('img'); if (im) { seen.add(el); parts.push(el.outerHTML); } return; }
+      if (el.tagName === 'LI' && (t.length < 40 || el.querySelector('a') && el.querySelector('a').textContent.trim().length > t.length * 0.6)) return;
+      if (el.tagName === 'P' && t.length < 25) return;
+      if (!t) return;
+      const linky = [...el.querySelectorAll('a')].reduce((n, a) => n + a.textContent.length, 0);
+      if (linky > t.length * 0.6) return;
+      seen.add(el); len += t.length;
+      parts.push(`<${el.tagName.toLowerCase()}>${el.tagName === 'BLOCKQUOTE' || el.tagName === 'LI' ? esc(t) : el.innerHTML}</${el.tagName.toLowerCase()}>`);
+    });
+    if (len > best.len) best = { len, html: parts.join('') };
+  });
+  return best;
+}
 export function tidy(body, url) {
   const abs = (u) => { try { return new URL(u, url).href; } catch (e) { return ''; } };
   const fromSet = (v) => (v || '').split(',').map((x) => x.trim().split(/\s+/)[0]).filter(Boolean).pop() || '';
@@ -72,6 +97,9 @@ export function tidy(body, url) {
   });
   body.querySelectorAll('picture source').forEach((x) => x.remove());
   body.querySelectorAll('iframe,embed,object,svg,script,style,noscript,form,button,input,aside,[aria-hidden="true"]').forEach((x) => x.remove());
+  body.querySelectorAll('[class*="related"],[class*="share"],[class*="newsletter"],[class*="teaser"],[class*="paywall"],[class*="advert"],[class*="banner"]').forEach((x) => x.remove());
+  // Lister og blokke, der mest består af links ("Læs også …"), fjernes
+  body.querySelectorAll('ul,ol,div,section').forEach((x) => { const t = x.textContent.replace(/\s+/g, ' ').trim(); if (!t || x.querySelector('img')) return; const l = [...x.querySelectorAll('a')].reduce((n, a) => n + a.textContent.trim().length, 0); if (l > t.length * 0.7 && t.length < 600) x.remove(); });
   body.querySelectorAll('[style]').forEach((x) => x.removeAttribute('style'));
   body.querySelectorAll('[width],[height]').forEach((x) => { if (x.tagName !== 'IMG') { x.removeAttribute('width'); x.removeAttribute('height'); } });
   // Tomme blokke (ingen tekst og intet billede/video) fjernes – indefra og ud
@@ -98,6 +126,11 @@ export async function loadArticle(url, source, fallbackImg = '') {
     art = { title: ld.headline || ogTitle || (art && art.title) || '', byline: (art && art.byline) || '', siteName: '', textContent: ldText,
       content: (ld.description ? `<p class="lead">${esc(ld.description)}</p>` : '') + ldText.split(/\n{1,}/).map((x) => x.trim()).filter(Boolean).map((x) => `<p>${esc(x)}</p>`).join('') };
   }
+  // Reserve 2: saml afsnittene direkte fra sidens <article>/<main> (fx DR, hvor teksten er delt op i mange blokke).
+  // Bruges, hvis den giver tydeligt mere tekst end læsevisningen
+  const blocks = collectBlocks(doc);
+  const curLen = ((art && art.textContent) || '').trim().length;
+  if (blocks.len > Math.max(curLen * 1.3, curLen + 300)) art = { title: (art && art.title) || ogTitle, byline: (art && art.byline) || '', siteName: '', textContent: 'x'.repeat(blocks.len), content: blocks.html };
   if ((!art || !art.content) && metaDesc) art = { title: ogTitle, byline: '', siteName: '', textContent: metaDesc, content: `<p class="lead">${esc(metaDesc)}</p>` };
   if (!art || !art.content) throw new Error('Ingen tekst');
   const body = new DOMParser().parseFromString('<div>' + art.content + '</div>', 'text/html').body.firstChild;

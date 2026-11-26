@@ -1,5 +1,5 @@
 {
-  "version": "1.100.5",
+  "version": "1.100.6",
   "files": [
     "index.html",
     "app.js",
@@ -27,6 +27,16 @@
     "todo.js"
   ],
   "notes": [
+    {
+      "version": "1.100.6",
+      "date": "26. november 2026",
+      "title": "Bedre artikler",
+      "items": [
+        "Artikler fra DR Sporten viser nu hele teksten",
+        "Mere ryddelige artikler: \"Læs også\"-lister, delingsknapper o.l. er fjernet",
+        "Billeder inde i artiklen står for sig selv i stedet for at skubbe teksten rundt"
+      ]
+    },
     {
       "version": "1.100.5",
       "date": "26. november 2026",
