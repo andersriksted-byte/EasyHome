@@ -18,6 +18,7 @@ import * as TD from './todo.js';
 import * as EL from './el.js';
 import * as SF from './somfy.js';
 import * as TM from './timer.js';
+import * as TR from './trafik.js';
 import { onAuthLost } from './util.js';
 
 const $ = (s, r = document) => r.querySelector(s);
@@ -54,6 +55,7 @@ const themeLabel = (id) => (id === 'auto' ? 'Automatisk' : THEMES[id].label);
 
 /* ---------- Ikoner ---------- */
 const ICON = {
+  trafik: 'M5 17h14M6 17v2M18 17v2M3 13l2-6a2 2 0 0 1 1.9-1.4h10.2A2 2 0 0 1 19 7l2 6v4H3v-4zM3 13h18M7.5 15h.01M16.5 15h.01',
   people: 'M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 21v-1a6 6 0 0 1 6-6h2a6 6 0 0 1 6 6v1M16 3.1a4 4 0 0 1 0 7.8M22 21v-1a6 6 0 0 0-4-5.6', palette: 'M12 2a10 10 0 1 0 0 20c1.1 0 2-.9 2-2 0-.5-.2-1-.5-1.3-.3-.4-.5-.8-.5-1.3 0-1.1.9-2 2-2h2.3A5.7 5.7 0 0 0 22 9.7C22 5.4 17.5 2 12 2zM6.5 12.5h.01M9.5 7.5h.01M14.5 7.5h.01M17.5 11.5h.01', link: 'M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7',
   sunon: 'M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10zM12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4', sunoff: 'M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z',
   stroem: 'M13 2 4 14h7l-1 8 9-12h-7l1-8z', bolt: 'M13 2 4 14h7l-1 8 9-12h-7l1-8z',
@@ -84,7 +86,7 @@ const GRIP = '<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24"
 
 const PAGES = [
   { id: 'forside', label: 'Forside' }, { id: 'kalender', label: 'Kalender' }, { id: 'todo', label: 'To do' }, { id: 'madro', label: 'Madro' }, { id: 'vejr', label: 'Vejret' },
-  { id: 'nyheder', label: 'Nyheder' }, { id: 'musik', label: 'Musik' }, { id: 'somfy', label: 'Screens' }, { id: 'stroem', label: 'Strøm' }, { id: 'sport', label: 'Sport' }, { id: 'tv', label: 'DR TV' }
+  { id: 'nyheder', label: 'Nyheder' }, { id: 'musik', label: 'Musik' }, { id: 'somfy', label: 'Screens' }, { id: 'stroem', label: 'Strøm' }, { id: 'sport', label: 'Sport' }, { id: 'trafik', label: 'Trafik' }, { id: 'tv', label: 'DR TV' }
 ];
 // Tjenester ("app store"): hver tjeneste kan slås til og fra under Indstillinger → Tjenester.
 // Slås en tjeneste fra, skjules kun dens side i menuen. Kort og indstillinger er der stadig.
@@ -99,6 +101,7 @@ const SERVICES = [
   { id: 'timer', name: 'Timer nedtælling', icon: 'timer', desc: 'Køkkentimer med alarm – fx til madlavning.', pages: [], widgets: ['timer'], tabs: [] },
   { id: 'el', name: 'Strøm', icon: 'bolt', desc: 'Elpriser time for time og jeres elforbrug.', pages: ['stroem'], widgets: ['elpris', 'elforbrug', 'vasketid'], tabs: ['el'] },
   { id: 'fodbold', name: 'Sport', icon: 'ball', desc: 'Fodbold, Formel 1, tennis m.m. – kampe, resultater og stillinger.', pages: ['sport'], widgets: ['fodbold', 'stilling'], tabs: ['fodbold'] },
+  { id: 'trafik', name: 'Trafik', icon: 'trafik', desc: 'Uheld, kø og vejarbejde nær jer fra Vejdirektoratet.', pages: ['trafik'], widgets: ['trafik'], tabs: ['trafik'] },
   { id: 'todo', name: 'To do', icon: 'todo', desc: 'Gøremål og faste pligter på skift.', pages: ['todo'], widgets: ['todo'], tabs: ['todo'] },
   { id: 'nedtaelling', name: 'Nedtællinger', icon: 'cd', desc: 'Dage til juleaften, ferie og fødselsdage.', pages: [], widgets: ['nedtaelling'], tabs: [] }
 ];
@@ -110,10 +113,10 @@ const tabOn = () => true;
 // Bruges tjenesten (side i menuen eller et kort på en forside)? Så hentes dens data.
 const svcUsed = (id) => { const x = SERVICES.find((y) => y.id === id); if (!x || svcOn(id)) return true;
   return [settings.layout || []].concat(Object.values(settings.layouts || {})).some((l) => (l || []).some((w) => x.widgets.includes(w.id))); };
-const WIDGETS = { todo: 'To do', vasketid: 'Billig strøm', elpris: 'Elpris', elforbrug: 'Elforbrug', fodbold: 'Fodbold', stilling: 'Fodbold-stilling', naeste: 'Næste i kalenderen', dagensret: 'Dagens ret', nyhed1: 'Én nyhed ad gangen', timer: 'Timer nedtælling', screens: 'Screens (Somfy)', madplan: 'Madplan', indkob: 'Indkøbsliste', inspiration: 'Opskrift-inspiration', uge: 'Familiens uge', vejr: 'Vejret', steder: 'Vejret andre steder', nyheder: 'Nyheder', sonos: 'Musik (Sonos)', tv: 'DR TV', nedtaelling: 'Nedtælling' };
+const WIDGETS = { todo: 'To do', vasketid: 'Billig strøm', elpris: 'Elpris', elforbrug: 'Elforbrug', fodbold: 'Fodbold', stilling: 'Fodbold-stilling', naeste: 'Næste i kalenderen', dagensret: 'Dagens ret', nyhed1: 'Én nyhed ad gangen', timer: 'Timer nedtælling', screens: 'Screens (Somfy)', madplan: 'Madplan', indkob: 'Indkøbsliste', inspiration: 'Opskrift-inspiration', uge: 'Familiens uge', vejr: 'Vejret', steder: 'Vejret andre steder', nyheder: 'Nyheder', sonos: 'Musik (Sonos)', tv: 'DR TV', nedtaelling: 'Nedtælling', trafik: 'Trafik' };
 // Forsiden er et gitter af ens kvadrater. Et kort fylder w kvadrater i bredden og h i højden.
 const SHAPES = [[1, 1], [2, 1], [3, 1], [4, 1], [1, 2], [1, 3], [1, 4], [2, 2]];
-const DEFAULT_SHAPE = { todo: [1, 2], vasketid: [2, 1], elpris: [2, 1], elforbrug: [2, 1], stilling: [1, 2], fodbold: [2, 1], naeste: [1, 1], dagensret: [2, 1], nyhed1: [2, 1], timer: [1, 1], screens: [2, 1], madplan: [4, 1], indkob: [2, 1], inspiration: [2, 1], uge: [4, 1], vejr: [2, 1], steder: [2, 1], nyheder: [2, 1], sonos: [1, 1], tv: [1, 1], nedtaelling: [1, 1] };
+const DEFAULT_SHAPE = { todo: [1, 2], vasketid: [2, 1], elpris: [2, 1], elforbrug: [2, 1], stilling: [1, 2], fodbold: [2, 1], naeste: [1, 1], dagensret: [2, 1], nyhed1: [2, 1], timer: [1, 1], screens: [2, 1], madplan: [4, 1], indkob: [2, 1], inspiration: [2, 1], uge: [4, 1], vejr: [2, 1], steder: [2, 1], nyheder: [2, 1], sonos: [1, 1], tv: [1, 1], nedtaelling: [1, 1], trafik: [2, 1] };
 const LEGACY = { S: [1, 1], M: [2, 1], L: [4, 1] };
 const shapeOf = (x) => (x.w && x.h ? [x.w, x.h] : LEGACY[x.size] || [1, 1]);
 const FIT = ['uge']; // kort der aldrig må skære indhold af – de bliver kompakte og vokser i højden ved behov
@@ -614,7 +617,10 @@ function wNaeste(size, h = 1, wd = 1, x = null) {
     const lm = Math.round((leave - now) / 60000);
     const cls = lm <= 0 ? 'go' : lm <= 15 ? 'soon' : '';
     const traf = !rt.traffic ? '' : rt.delayMin <= 2 ? 'Trafikken er let' : rt.delayMin <= 9 ? 'Lidt trafik' : 'Tæt trafik';
-    drive = `<div class="nx2-drive ${cls}"><b>${lm <= 0 ? 'Kør nu!' : 'Kør kl. ' + hhmm(leave)}</b><span>${[traf, durTxt(rt.min) + ' i bil'].filter(Boolean).join(' · ')}</span></div>`;
+    // Trafikmeldinger på vejen (Vejdirektoratet), når Trafik er slået til
+    let warn = '';
+    if (svcOn('trafik') && rt.lat && lm <= 180) { trafikLoad(); const on = TR.along(home(), rt).filter((y) => y.kind !== 'vejarbejde'); if (on.length) warn = `⚠ ${on.length} ${on.length === 1 ? 'melding' : 'meldinger'} på vejen`; }
+    drive = `<div class="nx2-drive ${cls}"><b>${lm <= 0 ? 'Kør nu!' : 'Kør kl. ' + hhmm(leave)}</b><span>${[warn, traf, durTxt(rt.min) + ' i bil'].filter(Boolean).join(' · ')}</span></div>`;
   }
   const until = running ? `I gang – til ${hhmm(e.end)}` : mins < 60 ? `om ${Math.max(1, mins)} min` : sameDay(e.start, new Date()) ? `om ${durTxt(mins)}` : day.toLowerCase();
   return cardHead('Næste aftale', `<span class="small muted">${day}</span>`) + `<button class="nx2" data-act="nav" data-page="kalender" style="--c:${esc(e.color || 'var(--accent)')}">
@@ -1651,7 +1657,7 @@ function wNed(size, h = 1, wd = 1) {
     <div class="cdw"><div class="cdn">${c.days < 0 ? '✓' : c.days}</div><div class="cdl">${label}</div><div class="cdd">${cap(DAYS_LONG[d.getDay()])} ${d.getDate()}. ${MONTHS[d.getMonth()]} ${d.getFullYear()}</div></div></div></div>`;
 }
 
-const WRENDER = { todo: wTodo, vasketid: wVasketid, elpris: wElpris, elforbrug: wElforbrug, stilling: wStilling, fodbold: wFodbold, naeste: wNaeste, dagensret: wDagensRet, nyhed1: wNyhed1, timer: wTimer, screens: wScreens, madplan: wMadplan, indkob: wIndkob, inspiration: wInspiration, uge: wUge, vejr: wVejr, steder: wSteder, nyheder: wNyheder, sonos: wSonos, tv: wTv, nedtaelling: wNed };
+const WRENDER = { trafik: wTrafik, todo: wTodo, vasketid: wVasketid, elpris: wElpris, elforbrug: wElforbrug, stilling: wStilling, fodbold: wFodbold, naeste: wNaeste, dagensret: wDagensRet, nyhed1: wNyhed1, timer: wTimer, screens: wScreens, madplan: wMadplan, indkob: wIndkob, inspiration: wInspiration, uge: wUge, vejr: wVejr, steder: wSteder, nyheder: wNyheder, sonos: wSonos, tv: wTv, nedtaelling: wNed };
 
 function pageForside() {
   const inLayout = (id) => curLayout().some((x) => x.id === id);
@@ -2005,6 +2011,59 @@ function pageMusik() {
   </div>`;
 }
 
+/* ---------- Trafik ---------- */
+function trafikLoad() { TR.load().then((ch) => { if (ch) softRender(); }); }
+const trWhen = (x) => { const f = x.from; const t = x.to; const d = (v) => (sameDay(v, new Date()) ? hhmm(v) : `${v.getDate()}/${v.getMonth() + 1}`); return [f ? 'Fra ' + d(f) : '', t ? 'til ' + d(t) : ''].filter(Boolean).join(' '); };
+const trKm = (k) => (k < 1 ? '< 1 km' : k < 10 ? k.toFixed(1).replace('.', ',') + ' km' : Math.round(k) + ' km');
+function trRow(x, full) {
+  const K = TR.KINDS[x.kind] || TR.KINDS.haendelse;
+  return `<div class="tr-r k-${x.kind}" style="--kc:${K.c}"><i class="tr-ic" aria-hidden="true">${K.icon}</i><div class="tr-m"><div class="tr-top"><b>${esc(K.label)}</b><span>${esc(trKm(x.km))}${x.kommune ? ' · ' + esc(x.kommune) : ''}</span></div><div class="tr-t">${esc(x.title)}</div>${full && x.text && x.text !== x.title ? `<div class="tr-d">${esc(x.text)}</div>` : ''}${full && trWhen(x) ? `<div class="tr-w">${esc(trWhen(x))}</div>` : ''}</div></div>`;
+}
+function wTrafik(size, h = 1, wd = 1) {
+  trafikLoad();
+  const c = TR.cfg(); const head = (r) => cardHead('Trafik', r);
+  if (!hasProxy()) return head('') + '<div class="empty">Kræver forbindelsen.</div>';
+  if (!TR.state.items) return head('') + `<div class="empty">${TR.state.err ? 'Kunne ikke hente trafikken.' : 'Henter trafikken …'}</div>`;
+  const all = TR.near(home()); const acute = all.filter((x) => x.kind !== 'vejarbejde');
+  const kind = shapeKind(wd, h);
+  const rad = c.radius ? `${c.radius} km` : 'Hele landet';
+  if (!all.length) return head(esc(rad)) + '<div class="tr-ok"><span>✓</span><b>Ingen trafikmeldinger</b></div>';
+  if (kind === 'tiny') return head(esc(rad)) + `<div class="tr-big"><b class="${acute.length ? 'hot' : ''}">${acute.length}</b><span>${acute.length === 1 ? 'hændelse' : 'hændelser'}</span>${all.length - acute.length ? `<em>🚧 ${all.length - acute.length} vejarbejder</em>` : ''}</div>`;
+  return head(esc(rad)) + `<div class="tr-list" data-trim>${all.slice(0, 30).map((x) => trRow(x, kind === 'big' || kind === 'tall')).join('')}</div>`;
+}
+function pageTrafik() {
+  trafikLoad();
+  if (!hasProxy()) return '<div class="empty">Trafik kræver forbindelsen til jeres server.</div>';
+  if (!TR.state.items) return `<div class="empty">${TR.state.err ? 'Kunne ikke hente trafikken fra Vejdirektoratet.' : 'Henter trafikken …'}</div>`;
+  const f = ui.trFilter || 'alle';
+  // Hvor skal du hen? Omkring hjem, et af jeres steder eller næste aftale i kalenderen (view-valg, ikke indstilling)
+  const dests = [{ id: 'hjem', label: '🏠 Omkring hjem' }];
+  settings.places.slice(1).forEach((p, i) => { if (p.lat) dests.push({ id: 'p:' + (p.id || i), label: '→ ' + placeLabel(p), to: p }); });
+  const nxt = D.cal ? D.cal.events.filter((e) => !e.allDay && e.start.getTime() > Date.now() && e.start.getTime() < Date.now() + 24 * 3600000 && mineEvent(e) && isPlace(e.location)).sort((a, b) => a.start - b.start)[0] : null;
+  const nrt = nxt ? routeFor(nxt) : null;
+  if (nrt && nrt.found && nrt.lat) dests.splice(1, 0, { id: 'cal', label: `📅 ${nxt.title} ${hhmm(nxt.start)}`, to: { lat: nrt.lat, lon: nrt.lon }, rt: nrt, ev: nxt });
+  const dest = dests.find((d) => d.id === ui.trDest) || dests[0];
+  const all = dest.to ? TR.along(home(), dest.to) : TR.near(home());
+  const acute = all.filter((x) => x.kind !== 'vejarbejde');
+  const sum = dest.to ? `<div class="tr-sum ${acute.length ? 'warn' : 'ok'}"><span>${acute.length ? '⚠' : '✓'}</span><div><b>${acute.length ? `${acute.length} ${acute.length === 1 ? 'melding' : 'meldinger'} på vejen` : 'Fri vej'}${dest.rt ? ` · ${durTxt(dest.rt.min)} i bil${dest.rt.traffic && dest.rt.delayMin > 2 ? ` (+${dest.rt.delayMin} min pga. trafik)` : ''}` : ''}</b><small>${esc(dest.label.replace(/^\S+ /, ''))}${all.length - acute.length ? ` · 🚧 ${all.length - acute.length} vejarbejde` : ''}</small></div></div>` : '';
+  const counts = {}; all.forEach((x) => { counts[x.kind] = (counts[x.kind] || 0) + 1; });
+  const chips = [['alle', 'Alle', all.length]].concat(Object.keys(TR.KINDS).filter((k) => counts[k]).map((k) => [k, TR.KINDS[k].icon + ' ' + TR.KINDS[k].label, counts[k]]));
+  const list = f === 'alle' ? all : all.filter((x) => x.kind === f);
+  return `<div class="tr-page">
+    ${dests.length > 1 ? `<div class="tr-chips tr-dests">${dests.map((d) => `<button class="chip${d.id === dest.id ? ' accent' : ''}" data-act="trDest" data-k="${esc(d.id)}">${esc(d.label)}</button>`).join('')}</div>` : ''}
+    ${sum}
+    <div class="tr-bar"><div class="tr-chips">${chips.map(([k, l, n]) => `<button class="chip${f === k ? ' accent' : ''}" data-act="trFilter" data-k="${k}">${esc(l)} <span class="tr-n">${n}</span></button>`).join('')}</div>
+</div>
+    ${list.length ? `<div class="tr-grid">${list.map((x) => `<section class="card tr-card">${trRow(x, true)}</section>`).join('')}</div>` : '<div class="tr-ok big"><span>✓</span><b>Ingen trafikmeldinger</b></div>'}
+    <div class="tr-src">Data: Vejdirektoratet · opdateret ${esc(hhmm(new Date(TR.state.at)))}</div>
+  </div>`;
+}
+function trafikSettings() {
+  const c = TR.cfg();
+  return `<section class="card"><div class="sechead2"><b>Område</b></div><div class="row">${[10, 30, 60, 0].map((r) => `<button class="pill" data-act="trRadius" data-v="${r}" aria-pressed="${c.radius === r}">${r ? r + ' km fra hjem' : 'Hele landet'}</button>`).join('')}</div></section>
+    <section class="card"><div class="sechead2"><b>Meldinger</b></div><button class="svc2-r${c.roadworks ? ' on' : ''}" data-act="trRoadworks" role="switch" aria-checked="${c.roadworks}" style="--tc:#F97316"><i class="tab-ic">🚧</i><b>Vis vejarbejde</b><span class="tgl" aria-hidden="true"><i></i></span></button></section>`;
+}
+
 /* ---------- DR TV ---------- */
 function pageTv() {
   return `<div class="ptitle"><h1>DR TV</h1></div>
@@ -2141,7 +2200,7 @@ const SET_TABS = [
   { id: 'familie', label: 'Familie', ic: 'people', c: '#E5484D' },
   { id: 'tjenester', label: 'Tjenester', ic: 'store', c: '#6E56CF' },
   { id: 'vejr', label: 'Vejret', ic: 'vejr', c: '#0EA5E9' }, { id: 'nyheder', label: 'Nyheder', ic: 'nyheder', c: '#F97316' }, { id: 'kalender', label: 'Kalender', ic: 'kalender', c: '#EF4444' }, { id: 'nedtaelling', label: 'Nedtælling', ic: 'timer', c: '#D946EF' }, { id: 'todo', label: 'To do', ic: 'todo', c: '#22A35A' },
-  { id: 'musik', label: 'Musik', ic: 'musik', c: '#EC4899' }, { id: 'tv', label: 'DR TV', ic: 'tv', c: '#3B82F6' }, { id: 'somfy', label: 'Somfy', ic: 'blinds', c: '#14B8A6' }, { id: 'fodbold', label: 'Sport', ic: 'sport', c: '#16A34A' }, { id: 'el', label: 'Strøm', ic: 'bolt', c: '#EAB308' }, { id: 'udseende', label: 'Udseende', ic: 'palette', c: '#8B5CF6' }, { id: 'forbindelse', label: 'Forbindelse', ic: 'link', c: '#64748B' }
+  { id: 'musik', label: 'Musik', ic: 'musik', c: '#EC4899' }, { id: 'tv', label: 'DR TV', ic: 'tv', c: '#3B82F6' }, { id: 'somfy', label: 'Somfy', ic: 'blinds', c: '#14B8A6' }, { id: 'fodbold', label: 'Sport', ic: 'sport', c: '#16A34A' }, { id: 'trafik', label: 'Trafik', ic: 'trafik', c: '#F43F5E' }, { id: 'el', label: 'Strøm', ic: 'bolt', c: '#EAB308' }, { id: 'udseende', label: 'Udseende', ic: 'palette', c: '#8B5CF6' }, { id: 'forbindelse', label: 'Forbindelse', ic: 'link', c: '#64748B' }
 ];
 function pageIndstillinger() {
   const s = settings;
@@ -2152,11 +2211,12 @@ function pageIndstillinger() {
   const needsConn = ['nyheder', 'kalender', 'musik'].includes(tab) && !hasProxy();
   const T = {
     tjenester: () => { const col = (id) => (SET_TABS.find((t) => t.id === id || (id === 'madro' && t.id === 'todo')) || {}).c || '#64748B';
-      const SC = { madro: '#F59E0B', kalender: '#EF4444', vejr: '#0EA5E9', nyheder: '#F97316', musik: '#EC4899', tv: '#3B82F6', somfy: '#14B8A6', el: '#EAB308', fodbold: '#16A34A', todo: '#22A35A', stroem: '#EAB308', sport: '#16A34A', forside: '#6E56CF', indstillinger: '#64748B' };
+      const SC = { madro: '#F59E0B', kalender: '#EF4444', vejr: '#0EA5E9', nyheder: '#F97316', musik: '#EC4899', tv: '#3B82F6', somfy: '#14B8A6', el: '#EAB308', fodbold: '#16A34A', trafik: '#F43F5E', todo: '#22A35A', stroem: '#EAB308', sport: '#16A34A', forside: '#6E56CF', indstillinger: '#64748B' };
       const svcs = SERVICES.filter((x) => x.pages.length); const nav = navPages(); const rows = Math.ceil(nav.length / (innerWidth > 900 ? 4 : 2));
       return `<section class="card wide"><div class="sechead2"><b>Tjenester</b></div><div class="svc2">${svcs.map((x) => { const on = svcOn(x.id); return `<button class="svc2-r${on ? ' on' : ''}" data-act="svcToggle" data-id="${x.id}" role="switch" aria-checked="${on}" style="--tc:${SC[x.id] || col(x.id)}"><i class="tab-ic">${svg(x.icon, 20)}</i><b>${esc(x.name.replace(/ \(.*\)$/, ''))}</b><span class="tgl" aria-hidden="true"><i></i></span></button>`; }).join('')}</div></section>
     <section class="card wide"><div class="sechead2"><b>Rækkefølge i sidemenuen</b></div><div class="navord2" style="grid-template-rows:repeat(${rows},auto)">${nav.map((p, i, all) => `<div class="navord-r" style="--tc:${SC[p.id] || '#64748B'}"><span class="navord-n">${i + 1}</span><i class="tab-ic sm">${svg(p.id, 16)}</i><b>${esc(p.label)}</b><button class="fobtn" data-act="navMove" data-id="${p.id}" data-d="-1" ${i === 0 ? 'disabled' : ''} aria-label="Flyt ${esc(p.label)} op">${svg('up', 16)}</button><button class="fobtn" data-act="navMove" data-id="${p.id}" data-d="1" ${i === all.length - 1 ? 'disabled' : ''} aria-label="Flyt ${esc(p.label)} ned">${svg('down', 16)}</button></div>`).join('')}</div></section>`; },
     vejr: () => vejrSettings(),
+    trafik: () => trafikSettings(),
     fodbold: () => fodboldSettings(),
     todo: () => todoSettings(),
     el: () => elSettings(),
@@ -2231,7 +2291,7 @@ function pageIndstillinger() {
   <div class="form" role="tabpanel">${T[tab]()}</div>`;
 }
 
-const PAGE_RENDER = { todo: pageTodo, sport: pageSport, stroem: pageStroem, somfy: pageSomfy, madro: () => '', forside: pageForside, kalender: pageKalender, vejr: pageVejr, nyheder: pageNyheder, musik: pageMusik, tv: pageTv, indstillinger: pageIndstillinger };
+const PAGE_RENDER = { trafik: pageTrafik, todo: pageTodo, sport: pageSport, stroem: pageStroem, somfy: pageSomfy, madro: () => '', forside: pageForside, kalender: pageKalender, vejr: pageVejr, nyheder: pageNyheder, musik: pageMusik, tv: pageTv, indstillinger: pageIndstillinger };
 
 // Madro vises som hele appen i en ramme, der bliver liggende (så den ikke genindlæses ved hver opdatering)
 let madroSub = '';
@@ -2625,6 +2685,10 @@ const act = {
     }
     renderMain();
   },
+  trDest: (b) => { ui.trDest = b.dataset.k; ui.trFilter = 'alle'; renderMain(false); },
+  trFilter: (b) => { ui.trFilter = b.dataset.k; renderMain(false); },
+  trRadius: (b) => { settings.trafik = { ...TR.cfg(), radius: +b.dataset.v }; save(); renderMain(false); },
+  trRoadworks: () => { const c = TR.cfg(); settings.trafik = { ...c, roadworks: !c.roadworks }; save(); renderMain(false); },
   customRm: (b) => { settings.news.custom = settings.news.custom.filter((c) => c.id !== b.dataset.id); settings.news.sources = settings.news.sources.filter((x) => x !== b.dataset.id); save(); N.clearNewsCache(); renderMain(); loadNews(); },
   calAdd: () => { const colors = ['#D0563C', '#4C78D0', '#D9A400', '#2E9D5B', '#7A5AC8']; const c = { id: uid(), name: 'Ny kalender', color: colors[settings.calendars.length % colors.length], url: '' }; settings.calendars.push(c); ui.calEdit = c.id; save(); renderMain(); setTimeout(() => { const el = document.querySelectorAll('.calname'); if (el.length) { el[el.length - 1].focus(); el[el.length - 1].select(); } }, 50); },
   calEdit: (b) => { ui.calEdit = ui.calEdit === b.dataset.id ? null : b.dataset.id; renderMain(); },
@@ -2908,6 +2972,7 @@ function boot() {
   setInterval(() => { const c = $('#clk'); const n = new Date(); if (c) c.textContent = hhmm(n); if (n.getSeconds() === 0) { renderHeader(); applyTheme(); } }, 1000);
   setInterval(() => { ui.tick++; renderFooter(); }, 8000);
   setInterval(loadWeather, 15 * 60000);
+  setInterval(() => { if (!document.hidden && (ui.page === 'trafik' || (ui.page === 'forside' && curLayout().some((x) => x.id === 'trafik')))) TR.load().then((ch) => { if (ch) softRender(); }); }, 3 * 60000);
   // Nyhedskortet: tæl ned og skift til næste medie efter 20 sekunder
   setInterval(() => {
     const bar = document.getElementById('newsBar');

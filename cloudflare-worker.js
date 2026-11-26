@@ -191,6 +191,44 @@ async function proxy(req, env, ctx) {
   return out;
 }
 
+/* ---------- Trafik: Vejdirektoratets offentlige trafikmeldinger (samme data som trafikinfo.dk) ---------- */
+const TRAFIK_SRC = 'https://storage.googleapis.com/trafikkort-data/geojson/';
+const tStrip = (h) => String(h || '').replace(/<br\s*\/?>/gi, ' · ').replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/\s+/g, ' ').trim();
+// "13-06-2026 kl. 00:12" → ISO
+const tTime = (x) => { const m = /(\d{1,2})-(\d{1,2})-(\d{4})(?:\s*kl\.?\s*(\d{1,2})[:.](\d{2}))?/.exec(String(x || '')); if (!m) return ''; return `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}T${(m[4] || '00').padStart(2, '0')}:${m[5] || '00'}:00`; };
+function tKind(layer, type, text) {
+  const s = `${layer} ${type} ${text}`.toLowerCase();
+  if (/accident|uheld|ulykke|færdselsuheld/.test(s)) return 'uheld';
+  if (/queue|kø\b|køkørsel|congestion/.test(s)) return 'koe';
+  if (/roadblock|spærr|closure|lukket|closed/.test(s)) return 'spaerring';
+  if (/roadwork|maintenance|vejarbejde|construction/.test(s)) return 'vejarbejde';
+  if (/weather|glat|slippery|ice|sne|snow|wind|vind|fog|tåge|flood|oversvøm/.test(s)) return 'vejr';
+  return 'haendelse';
+}
+async function trafik(env, ctx) {
+  const ck = new Request('https://cache.easyhome/trafik/v1');
+  const hit = await caches.default.match(ck);
+  if (hit) { const o = new Response(hit.body, hit); for (const [k, v] of Object.entries(cors(env))) o.headers.set(k, v); return o; }
+  const get = async (f) => { try { const r = await fetch(TRAFIK_SRC + f + '?t=' + Math.floor(Date.now() / 60000), { signal: AbortSignal.timeout(10000) }); return r.ok ? await r.json() : null; } catch (e) { return null; } };
+  const [ev, ann] = await Promise.all([get('big-screen-events.json'), get('critical-announcements.json')]);
+  if (!ev && !ann) return json(env, { error: 'Vejdirektoratet svarede ikke' }, 502);
+  const items = [];
+  const add = (f, layer) => {
+    const p = f.properties || {}; const g = f.geometry || {};
+    let c = g.coordinates; while (Array.isArray(c) && Array.isArray(c[0])) c = c[0];
+    if (!Array.isArray(c) || c.length < 2) return;
+    if (String(p.visible) === 'false' || String(p.suspended) === 'true') return;
+    const title = tStrip(p.header || p.title); const text = tStrip(p.description);
+    items.push({ id: String(p.featureId || p.id || items.length), kind: tKind(layer, p.TrafficMan2_Type || p.category || '', title + ' ' + text), title, text: text.slice(0, 600),
+      lon: +c[0], lat: +c[1], from: tTime(p.beginPeriod) || p.validFrom || '', to: tTime(p.endPeriod) || '', kommune: p.kommune || '', future: String(p.future) === 'true', big: layer === 'announce' });
+  };
+  (Array.isArray(ev) ? ev : ev && ev.features ? [ev] : []).forEach((fc) => (fc.features || []).forEach((f) => add(f, fc.layerName || '')));
+  ((ann && ann.features) || []).forEach((f) => add(f, 'announce'));
+  const res = new Response(JSON.stringify({ at: new Date().toISOString(), items }), { headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'max-age=120' } });
+  ctx.waitUntil(caches.default.put(ck, res.clone()));
+  const o = new Response(res.body, res); for (const [k, v] of Object.entries(cors(env))) o.headers.set(k, v); return o;
+}
+
 /* ---------- Somfy (Connexoon/TaHoma via Somfys sky, samme login som TaHoma-appen) ---------- */
 const SOMFY_AUTH = 'https://accounts.somfy.com/oauth/oauth/v2/token/jwt';
 const SOMFY_CID = '0d8e920c-1478-11e7-a377-02dd59bd3041_1ewvaqmclfogo4kcsoo0c8k4kso884owg08sg8c40sk4go4ksg';
@@ -285,11 +323,11 @@ async function route(req, env, ctx) {
       const arrive = at && new Date(at) > new Date(Date.now() + 10 * 60000) ? `&arriveAt=${encodeURIComponent(new Date(at).toISOString())}` : '';
       const r = await fetch(`https://api.tomtom.com/routing/1/calculateRoute/${flat},${flon}:${dest.lat},${dest.lon}/json?key=${env.TOMTOM_KEY}&traffic=true&travelMode=car${arrive}`).then((x) => x.json()).catch(() => null);
       const s = r && r.routes && r.routes[0] && r.routes[0].summary;
-      if (s) out = { found: true, place: dest.name, min: Math.round(s.travelTimeInSeconds / 60), km: Math.round(s.lengthInMeters / 100) / 10, delayMin: Math.round((s.trafficDelayInSeconds || 0) / 60), departAt: s.departureTime || null, traffic: true };
+      if (s) out = { found: true, place: dest.name, lat: dest.lat, lon: dest.lon, min: Math.round(s.travelTimeInSeconds / 60), km: Math.round(s.lengthInMeters / 100) / 10, delayMin: Math.round((s.trafficDelayInSeconds || 0) / 60), departAt: s.departureTime || null, traffic: true };
     } else {
       const r = await fetch(`https://router.project-osrm.org/route/v1/driving/${flon},${flat};${dest.lon},${dest.lat}?overview=false`, { headers: UA }).then((x) => x.json()).catch(() => null);
       const rt = r && r.routes && r.routes[0];
-      if (rt) out = { found: true, place: dest.name, min: Math.round(rt.duration / 60), km: Math.round(rt.distance / 100) / 10, traffic: false };
+      if (rt) out = { found: true, place: dest.name, lat: dest.lat, lon: dest.lon, min: Math.round(rt.duration / 60), km: Math.round(rt.distance / 100) / 10, traffic: false };
     }
   }
   const res = new Response(JSON.stringify(out), { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'max-age=' + (out.traffic ? 600 : 3600) } });
@@ -632,6 +670,7 @@ export default {
         }
         return new Response(up.body, { headers: hdr });
       }
+      if (path === '/trafik') return await trafik(env, ctx);
       if (path.startsWith('/f1/')) {
         // Formel 1: løbskalender, resultater og VM-stilling fra Jolpica (den åbne efterfølger til Ergast)
         const sub = path.slice(4);

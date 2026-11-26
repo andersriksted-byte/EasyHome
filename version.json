@@ -1,5 +1,5 @@
 {
-  "version": "1.101.1",
+  "version": "1.102.0",
   "files": [
     "index.html",
     "app.js",
@@ -24,9 +24,21 @@
     "football.js",
     "el.js",
     "sport.js",
-    "todo.js"
+    "todo.js",
+    "trafik.js"
   ],
   "notes": [
+    {
+      "version": "1.102.0",
+      "date": "26. november 2026",
+      "title": "Trafik",
+      "items": [
+        "Ny side Trafik i sidemenuen: uheld, kø, spærringer og vejarbejde fra Vejdirektoratet nær jer",
+        "Vælg hvor du skal hen (et af jeres steder eller næste aftale) og se, om der er fri vej",
+        "\"Næste aftale\" viser nu, hvis der er trafikmeldinger på vejen",
+        "Trafik kan vælges som kort under Tilpas forside, og området indstilles under Indstillinger → Trafik"
+      ]
+    },
     {
       "version": "1.101.1",
       "date": "26. november 2026",
