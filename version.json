@@ -1,5 +1,5 @@
 {
-  "version": "1.82.1",
+  "version": "1.82.2",
   "files": [
     "index.html",
     "app.js",
@@ -27,6 +27,15 @@
     "todo.js"
   ],
   "notes": [
+    {
+      "version": "1.82.2",
+      "date": "26. november 2026",
+      "title": "Sport: fast dagsliste",
+      "items": [
+        "Dagslisten, sportsknapperne og Live nu står fast øverst på Sport",
+        "Hver liga scroller for sig, når der er mange kampe"
+      ]
+    },
     {
       "version": "1.82.1",
       "date": "26. november 2026",

@@ -874,7 +874,7 @@ function pageSport() {
   const shown = cards.filter((c) => !f || c.key === f).sort((a, b) => (b.live ? 1 : 0) - (a.live ? 1 : 0));
   const lv = live.filter((x) => !f || x.key === f);
   const liveRow = lv.length ? `<section class="sp-live"><div class="sp-sec"><span class="lv-dot"></span>Live nu <small>${lv.length}</small></div><div class="sp-lvrow">${lv.map((x) => x.html).join('')}</div></section>` : '';
-  return head(chips) + err + liveRow + `<div class="sp-grid">${shown.map((c) => c.html).join('')}</div>`;
+  return `<div class="sp-page">${head(chips)}${err}${liveRow}<div class="sp-grid">${shown.map((c) => c.html).join('')}</div></div>`;
 }
 
 /* Detaljer om en kamp (vindue, der opdateres hvert halve minut, mens kampen spilles) */

@@ -2032,3 +2032,22 @@ button.w7r.sel{background:color-mix(in srgb,var(--accent) 16%,transparent);box-s
 html,body{overscroll-behavior:none}
 *{overscroll-behavior:contain}
 .forow .foart{display:grid;place-items:center;color:#fff;font-size:12px;font-weight:800;background-size:cover;background-position:center}
+/* Sport: dagslisten står fast; hver liga scroller for sig */
+.sp-page{height:100%;min-height:0;display:flex;flex-direction:column}
+.sp-page>.sp-top,.sp-page>.sp-live,.sp-page>.err{flex:none}
+.sp-page>.sp-grid{flex:1;min-height:0;overflow-y:auto;container-type:size}
+.sp-page .sp-card{max-height:calc(50cqh - 16px);min-height:0}
+.sp-page .sp-card>.sp-h{flex:none}
+.sp-page .sp-card>.sp-list,.sp-page .sp-card>.gf-open{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-mask-image:linear-gradient(180deg,#000 calc(100% - 14px),transparent);mask-image:linear-gradient(180deg,#000 calc(100% - 14px),transparent);padding-bottom:6px}
+.sp-page .sp-card{max-height:calc(100cqh - 16px)}
+.sp-page .sp-top{gap:10px;margin-bottom:12px}
+.sp-page .sp-dchip{height:50px}
+.sp-page .sp-live{margin-bottom:12px}
+.sp-page .sp-sec{margin-bottom:8px}
+.sp-page .lv{padding:10px 14px 12px;gap:6px}
+.sp-page .lv-team img,.sp-page .lv-team .sp-ab{width:32px;height:32px}
+.sp-page .lv-team{gap:4px}
+.sp-page .lv-score{font-size:32px}
+.sp-page .lv-l{font-size:15px}.sp-page .lv-sets{font-size:19px}
+.sp-page>.sp-grid{columns:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,420px),1fr));grid-auto-rows:auto;align-items:start;align-content:start;gap:16px}
+.sp-page>.sp-grid>.sp-card{margin-bottom:0;display:flex}
