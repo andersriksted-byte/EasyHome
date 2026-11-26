@@ -2208,12 +2208,13 @@ function scaleGrid() {
   if (narrow) return;
   const k = cols > 4 ? 4 / cols : 1;
   if (k < 1) { const W = wrap.getBoundingClientRect().width; wrap.style.width = (W / k) + 'px'; wrap.style.zoom = k; }
-  // Rækkehøjden tilpasses skærmen, så der altid er plads til 3 hele kort i højden uden at scrolle
+  // Rækkehøjden tilpasses skærmen: Store viser 2 rækker, Mellem 3 og Små 4 uden at scrolle
   const m = $('#main'); const cs = getComputedStyle(m);
   let above = 0; [...m.children].forEach((el) => { if (el === wrap || el.classList.contains('editpanel') || el.offsetParent === null) return; if (el.compareDocumentPosition(wrap) & Node.DOCUMENT_POSITION_FOLLOWING) above += el.getBoundingClientRect().height + (parseFloat(getComputedStyle(m).rowGap) || 0); });
   const avail = m.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom) - above;
   const gap = (parseFloat(getComputedStyle(grid).rowGap) || 16) * k;
-  const row = (avail - 2 * gap) / 3;
+  const nrows = { 4: 2, 5: 3, 6: 4 }[cols] || 3;
+  const row = (avail - (nrows - 1) * gap) / nrows;
   if (grid && row > 120) grid.style.gridAutoRows = (row / k) + 'px';
 }
 // Logo-gitre (Sonos-favoritter) fylder pladsen: vælg det antal kolonner, der giver de største logoer, så alle kan være der.

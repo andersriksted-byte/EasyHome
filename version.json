@@ -1,5 +1,5 @@
 {
-  "version": "1.87.1",
+  "version": "1.88.0",
   "files": [
     "index.html",
     "app.js",
@@ -27,6 +27,14 @@
     "todo.js"
   ],
   "notes": [
+    {
+      "version": "1.88.0",
+      "date": "26. november 2026",
+      "title": "Store, Mellem og Små",
+      "items": [
+        "Kortstørrelserne på forsiden gælder nu også højden: Store viser 2 rækker, Mellem 3 og Små 4 – uden at scrolle"
+      ]
+    },
     {
       "version": "1.87.1",
       "date": "26. november 2026",
