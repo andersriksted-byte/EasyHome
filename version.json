@@ -1,5 +1,5 @@
 {
-  "version": "1.78.1",
+  "version": "1.78.2",
   "files": [
     "index.html",
     "app.js",
@@ -27,6 +27,16 @@
     "todo.js"
   ],
   "notes": [
+    {
+      "version": "1.78.2",
+      "date": "26. november 2026",
+      "title": "Podcasts og nedtællinger",
+      "items": [
+        "Kan en podcast-serie ikke sættes i kø, står der nu hvorfor – i stedet for at Sonos bare spiller det, der lå i køen",
+        "Nedtælling viser flere nedtællinger ved siden af hinanden i de brede kort",
+        "Elpris, TV og Fodbold-stilling passer bedre i de små og høje kort"
+      ]
+    },
     {
       "version": "1.78.1",
       "date": "26. november 2026",

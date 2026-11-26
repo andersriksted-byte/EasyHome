@@ -1858,3 +1858,14 @@ button.w7r.sel{background:color-mix(in srgb,var(--accent) 16%,transparent);box-s
 .tdlow .tdlist,.tdlist.tdlow{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,210px),1fr));gap:4px 8px;align-content:start}
 .tdlow .tdsub,.tdlist.tdlow .tdsub{grid-column:1/-1;padding-top:0}
 .tdlow .tdtx b{flex:0 1 auto}.tdlow .tdtx small{flex:0 100 auto;min-width:0;overflow:hidden;text-overflow:ellipsis}
+/* Elpris: mindre måler i små og høje kort, så alt kan være der */
+@container (max-height:220px){.elhero .elgauge{max-height:36cqh}.elhero-n b{font-size:clamp(24px,15cqh,44px)}.elhero-n span{font-size:12px}}
+@container (max-aspect-ratio:3/5){.elhero .elgauge{max-height:20cqh}.elhero-n b{font-size:clamp(28px,8cqh,52px)}}
+@container (max-height:220px) and (max-width:320px){.eladv{display:none}}
+/* Nedtælling: flere ved siden af hinanden i brede, lave kort */
+.cdmulti{flex:1;min-height:0;display:grid;grid-template-columns:repeat(var(--k),minmax(0,1fr));gap:10px;align-items:stretch}
+.cdm{display:flex;align-items:center;gap:12px;padding:8px 14px;border-radius:14px;background:var(--dayBg);min-width:0}
+.cdm-n{font-size:clamp(30px,26cqh,48px);font-weight:800;line-height:1;letter-spacing:-1px;flex:none}
+.cdm-t{display:flex;flex-direction:column;min-width:0}
+.cdm-t b{font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cdm-t span{font-size:12px;font-weight:700;color:var(--muted);white-space:nowrap}

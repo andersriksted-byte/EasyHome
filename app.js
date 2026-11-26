@@ -440,7 +440,7 @@ function wSonos(size, h = 1, wd = 1, x = {}) {
 }
 function wTv(size, h = 1, wd = 1) {
   const ch = settings.tv.channels;
-  const cols = Math.max(1, Math.min(ch.length, h >= 2 ? wd : wd * 2)); const rows = Math.max(1, Math.min(Math.ceil(ch.length / cols), h * 2));
+  const cols = Math.max(1, Math.min(ch.length, h >= 2 ? (wd === 1 && ch.length > h * 1.5 ? 2 : wd) : wd * 2)); const rows = Math.max(1, Math.min(Math.ceil(ch.length / cols), h * 2));
   return `${cardHead('DR TV')}<div class="tvw" style="--c:${cols};--r:${rows}">${ch.slice(0, cols * rows).map((c) => `<a class="tvtile" href="${esc(c.url)}" target="_blank" rel="noopener">${fillSvg('play', 28)}<span class="tvname">${esc(c.name)}</span></a>`).join('')}</div>`;
 }
 /* ---------- Madro: madplan og indkøbsliste ---------- */
@@ -1292,6 +1292,13 @@ function wNed(size, h = 1, wd = 1) {
   const list = countdowns();
   if (!list.length) return '<div class="cdcard"><div class="cdinner">' + cardHead('Nedtælling') + '<div class="empty">Vælg nedtællinger til kortet under Indstillinger → Kalender.</div></div></div>';
   const n = list.length; const idx = ((ui.cdIdx % n) + n) % n; const c = list[idx];
+  // Brede, lave kort: flere nedtællinger ved siden af hinanden
+  const k = h === 1 && wd >= 2 ? Math.min(n, wd + (wd >= 3 ? 1 : 0)) : 1;
+  if (k > 1) {
+    const show = Array.from({ length: k }, (_, i) => list[(idx + i) % n]);
+    const it = (x) => { const dx = new Date(x.date + 'T00:00'); return `<div class="cdm"><div class="cdm-n">${x.days < 0 ? '✓' : x.days}</div><div class="cdm-t"><b>${x.emoji ? esc(x.emoji) + ' ' : ''}${esc(x.name)}</b><span>${x.days === 0 ? 'I dag!' : x.days === 1 ? 'dag' : x.days < 0 ? 'overstået' : 'dage'} · ${dx.getDate()}. ${MONTHS[dx.getMonth()].slice(0, 3)}</span></div></div>`; };
+    return `<div class="cdcard"><div class="cdinner">${cardHead('Nedtælling', k < n ? pageArrows('cd', idx, n, 'nedtælling') : '')}<div class="cdmulti" style="--k:${k}">${show.map(it).join('')}</div></div></div>`;
+  }
   const d = new Date(c.date + 'T00:00');
   const img = M.getImage(c.imageId);
   const label = c.days < 0 ? esc(c.name) + ' er overstået' : c.days === 0 ? 'I dag!' : (c.days === 1 ? 'dag til ' : 'dage til ') + esc(c.name.toLowerCase());
