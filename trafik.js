@@ -72,6 +72,7 @@ export function near(place, opts = {}) {
   return state.items
     .filter((x) => !x.future && (!x.from || x.from.getTime() <= now + 3600000) && (!x.to || x.to.getTime() > now))
     .filter((x) => c.roadworks || x.kind !== 'vejarbejde')
+    .filter(isMajor) // omkring hjem: kun større veje – småveje tæller kun, når de ligger på jeres rute
     .map((x) => ({ ...x, km: km(place, x) }))
     .filter((x) => !c.radius || x.km <= c.radius)
     .sort((a, b) => (a.kind === 'vejarbejde') - (b.kind === 'vejarbejde') || a.km - b.km);
@@ -137,4 +138,10 @@ function ids(r) {
   (r.nums || []).forEach((n) => { const m = /^([A-Za-z]*)\s*(\d+)$/.exec(String(n).trim()); if (!m) return; const d = m[2]; if (/^e$/i.test(m[1])) out.push(' e' + d + ' '); else { out.push(' rute' + d + ' ', ' route' + d + ' ', ' primærrute' + d + ' ', ' sekundærrute' + d + ' ', ' vej ' + d + ' '); } });
   if (r.street) { const st = norm(r.street).trim(); if (st.length > 3) out.push(st); }
   return out;
+}
+
+// Større veje: motorveje, motortrafikveje, E-veje og nummererede ruter (fx "Rute 15", "E45", "Motorring 3")
+export function isMajor(x) {
+  const t = ' ' + (x.title + ' ' + (x.text || '')).toLowerCase() + ' ';
+  return /\be\s?\d{1,3}\b|\brute\s?\d{1,3}\b|motorvej|motortrafikvej|motorring|primærrute|\bringvej|\bomfartsvej/.test(t) || (x.src === 'tt' && /^\s*(e?\d{1,3})(\/|\s·|$)/i.test(x.title));
 }

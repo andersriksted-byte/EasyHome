@@ -1,5 +1,5 @@
 {
-  "version": "1.105.1",
+  "version": "1.105.2",
   "files": [
     "index.html",
     "app.js",
@@ -31,6 +31,15 @@
     "leaflet.css"
   ],
   "notes": [
+    {
+      "version": "1.105.2",
+      "date": "26. november 2026",
+      "title": "Trafik: fokus på større veje",
+      "items": [
+        "Omkring hjem vises kun meldinger på motorveje, E-veje og nummererede ruter",
+        "Spærringer på små veje vises kun, hvis de ligger på den rute, du skal køre"
+      ]
+    },
     {
       "version": "1.105.1",
       "date": "26. november 2026",
