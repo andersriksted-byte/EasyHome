@@ -2320,3 +2320,13 @@ body.navpinned .nav.open{box-shadow:none}
 .sp-page>.sp-favrow{flex:none;margin-bottom:12px;max-height:45%;display:flex;flex-direction:column}
 .sp-favrow .sp-sec{margin:12px 14px 0;color:var(--accent)}
 .sp-favrow .sp-boxes{overflow-y:auto}
+/* Live: ingen hvide rammer om kampene – boksene står direkte på baggrunden */
+.sp-page>.sp-favrow,.sp-page>.sp-allw{background:transparent;box-shadow:none;border-radius:0;overflow:visible}
+.sp-page>.sp-favrow::before,.sp-page>.sp-allw::before{display:none}
+.sp-favrow .sp-boxes,.sp-allw .sp-boxes{padding:8px 2px 12px}
+.sp-favrow .sp-sec{margin:0 2px}
+.sp-favrow .bx,.sp-allw .bx{background:var(--card)}
+.sp-favrow .bx.in,.sp-allw .bx.in{background:color-mix(in srgb,#E5484D 8%,var(--card))}
+.sp-favrow .bx.goal,.sp-allw .bx.goal{background:color-mix(in srgb,#F5B301 22%,var(--card))}
+.sp-allw>.sp-rnav{padding:0 2px}
+.sp-allw>.sp-rnav .arr,.sp-allw>.sp-rnav .sp-rlab,.sp-allw>.sp-rnav .sp-today.at{background:var(--card)}
