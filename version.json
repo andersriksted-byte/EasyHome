@@ -1,5 +1,5 @@
 {
-  "version": "1.91.0",
+  "version": "1.91.1",
   "files": [
     "index.html",
     "app.js",
@@ -27,6 +27,14 @@
     "todo.js"
   ],
   "notes": [
+    {
+      "version": "1.91.1",
+      "date": "26. november 2026",
+      "title": "Mindre turnusliste",
+      "items": [
+        "Turnus på To do-siden er nu en kompakt liste med én linje pr. dag – pligtens ikon og hvem der har den"
+      ]
+    },
     {
       "version": "1.91.0",
       "date": "26. november 2026",
