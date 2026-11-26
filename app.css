@@ -2439,3 +2439,14 @@ body.navpinned .nav.open{box-shadow:none}
 .tr-sum.ok>span{background:color-mix(in srgb,#16A34A 16%,transparent);color:#16A34A}
 .tr-sum.warn>span{background:color-mix(in srgb,#F59E0B 18%,transparent);color:#F59E0B}
 .tr-sum b{display:block;font-size:17px}.tr-sum small{font-size:13px;color:var(--muted);font-weight:700}
+.main:has(.tr-page){overflow:hidden}
+.tr-page{flex:1;min-height:0}
+.tr-main{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1.5fr) minmax(300px,1fr);gap:14px}
+.tr-map{padding:0;overflow:hidden;min-height:300px;position:relative}
+.tr-leaf{position:absolute;inset:0;background:var(--bg)}
+.tr-side{min-height:0;overflow-y:auto;overscroll-behavior:contain;display:flex;flex-direction:column;gap:10px;padding-right:2px}
+.tr-side .tr-card{border:0;text-align:left;color:var(--text);width:100%;font:inherit;flex:none}
+.tr-pin span{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:#fff;font-size:16px;box-shadow:0 0 0 3px var(--kc,#6E56CF),0 2px 6px rgba(0,0,0,.35)}
+.tr-pin.home span{box-shadow:0 0 0 3px #111,0 2px 6px rgba(0,0,0,.35)}
+.leaflet-container{font:inherit}
+@media (max-width:900px){.tr-main{grid-template-columns:1fr;grid-template-rows:minmax(280px,1fr) minmax(0,1fr)}}

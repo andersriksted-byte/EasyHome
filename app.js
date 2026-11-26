@@ -19,6 +19,7 @@ import * as EL from './el.js';
 import * as SF from './somfy.js';
 import * as TM from './timer.js';
 import * as TR from './trafik.js';
+import * as TRM from './trmap.js';
 import { onAuthLost } from './util.js';
 
 const $ = (s, r = document) => r.querySelector(s);
@@ -1932,8 +1933,8 @@ function pageSomfy() {
 function pageNyheder() {
   const srcs = newsSources();
   const all = D.news ? D.news.items : [];
-  // Blandet: kilderne skiftes, så ét medie ikke fylder det hele. Én kilde: kun den.
-  const mixed = () => { const by = {}; all.forEach((i) => { (by[i.sourceId] = by[i.sourceId] || []).push(i); }); const ls = Object.values(by); const out = []; for (let r = 0; out.length < all.length; r++) { let any = false; ls.forEach((l) => { if (l[r]) { out.push(l[r]); any = true; } }); if (!any) break; } return out; };
+  // Blandet: alle kilder sammen, nyeste først. Én kilde: kun den.
+  const mixed = () => all.slice().sort((x, y) => (y.date ? y.date.getTime() : 0) - (x.date ? x.date.getTime() : 0));
   const items = (ui.newsFilter ? all.filter((i) => i.sourceId === ui.newsFilter) : mixed()).slice(0, 60);
   const view = settings.newsView || 'read';
   if (!items.find((i) => i.link === ui.newsSel)) ui.newsSel = items[0] ? items[0].link : null;
@@ -2049,13 +2050,16 @@ function pageTrafik() {
   const counts = {}; all.forEach((x) => { counts[x.kind] = (counts[x.kind] || 0) + 1; });
   const chips = [['alle', 'Alle', all.length]].concat(Object.keys(TR.KINDS).filter((k) => counts[k]).map((k) => [k, TR.KINDS[k].icon + ' ' + TR.KINDS[k].label, counts[k]]));
   const list = f === 'alle' ? all : all.filter((x) => x.kind === f);
+  ui.trMapArgs = { home: home(), dest: dest.to || null, items: list, flow: TR.state.flow, radius: TR.cfg().radius };
+  setTimeout(() => { const el = document.getElementById('trMap'); if (el && ui.trMapArgs) TRM.sync(el, { ...ui.trMapArgs, dark: document.documentElement.style.colorScheme === 'dark' }); }, 0);
   return `<div class="tr-page">
     ${dests.length > 1 ? `<div class="tr-chips tr-dests">${dests.map((d) => `<button class="chip${d.id === dest.id ? ' accent' : ''}" data-act="trDest" data-k="${esc(d.id)}">${esc(d.label)}</button>`).join('')}</div>` : ''}
     ${sum}
     <div class="tr-bar"><div class="tr-chips">${chips.map(([k, l, n]) => `<button class="chip${f === k ? ' accent' : ''}" data-act="trFilter" data-k="${k}">${esc(l)} <span class="tr-n">${n}</span></button>`).join('')}</div>
 </div>
-    ${list.length ? `<div class="tr-grid">${list.map((x) => `<section class="card tr-card">${trRow(x, true)}</section>`).join('')}</div>` : '<div class="tr-ok big"><span>✓</span><b>Ingen trafikmeldinger</b></div>'}
-    <div class="tr-src">Data: Vejdirektoratet · opdateret ${esc(hhmm(new Date(TR.state.at)))}</div>
+    <div class="tr-main"><div class="tr-map card" id="trMap" data-keep></div>
+      <div class="tr-side">${list.length ? list.map((x) => `<button class="card tr-card" data-act="trFocus" data-lat="${x.lat}" data-lon="${x.lon}">${trRow(x, true)}</button>`).join('') : '<div class="tr-ok big"><span>✓</span><b>Ingen trafikmeldinger</b></div>'}
+      <div class="tr-src">Data: Vejdirektoratet · opdateret ${esc(hhmm(new Date(TR.state.at)))}</div></div></div>
   </div>`;
 }
 function trafikSettings() {
@@ -2324,6 +2328,7 @@ window.__badImg = (el) => { BAD_IMG.add(el.getAttribute('src')); el.remove(); };
 // Opdater siden ved kun at rette det, der er ændret: elementer (og billeder), der allerede står der, bliver stående
 function morph(a, b) {
   if (a.nodeType === 3 || a.nodeType === 8) { if (a.data !== b.data) a.data = b.data; return; }
+  if (a.hasAttribute && a.hasAttribute('data-keep') && b.hasAttribute('data-keep')) return; // fx trafikkortet: tegnes af Leaflet, ikke af appen
   for (const at of b.attributes) if (a.getAttribute(at.name) !== at.value) a.setAttribute(at.name, at.value);
   for (const at of [...a.attributes]) if (!b.hasAttribute(at.name)) a.removeAttribute(at.name);
   const focused = a === document.activeElement;
@@ -2685,6 +2690,7 @@ const act = {
     }
     renderMain();
   },
+  trFocus: (b) => { TRM.focus(+b.dataset.lat, +b.dataset.lon); },
   trDest: (b) => { ui.trDest = b.dataset.k; ui.trFilter = 'alle'; renderMain(false); },
   trFilter: (b) => { ui.trFilter = b.dataset.k; renderMain(false); },
   trRadius: (b) => { settings.trafik = { ...TR.cfg(), radius: +b.dataset.v }; save(); renderMain(false); },

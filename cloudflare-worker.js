@@ -224,9 +224,19 @@ async function trafik(env, ctx) {
   };
   (Array.isArray(ev) ? ev : ev && ev.features ? [ev] : []).forEach((fc) => (fc.features || []).forEach((f) => add(f, fc.layerName || '')));
   ((ann && ann.features) || []).forEach((f) => add(f, 'announce'));
-  const res = new Response(JSON.stringify({ at: new Date().toISOString(), items }), { headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'max-age=120' } });
+  const res = new Response(JSON.stringify({ at: new Date().toISOString(), flow: !!env.TOMTOM_KEY, items }), { headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'max-age=120' } });
   ctx.waitUntil(caches.default.put(ck, res.clone()));
   const o = new Response(res.body, res); for (const [k, v] of Object.entries(cors(env))) o.headers.set(k, v); return o;
+}
+
+// Trafiklag (vejene farvet efter hvor flydende trafikken kører) fra TomTom – kun når TOMTOM_KEY er sat, kun Danmark og omegn
+async function trafikFlow(env, z, x, y) {
+  if (!env.TOMTOM_KEY) return json(env, { error: 'TOMTOM_KEY mangler' }, 501);
+  const n = 2 ** z; const lon = (x / n) * 360 - 180; const lat = (Math.atan(Math.sinh(Math.PI * (1 - (2 * y) / n))) * 180) / Math.PI;
+  if (z < 6 || z > 17 || lon < 5 || lon > 17 || lat < 53.5 || lat > 59) return new Response(null, { status: 204, headers: cors(env) });
+  const up = await fetch(`https://api.tomtom.com/traffic/map/4/tile/flow/relative0/${z}/${x}/${y}.png?key=${env.TOMTOM_KEY}&tileSize=256`, { cf: { cacheTtl: 120, cacheEverything: true } });
+  if (!up.ok) return json(env, { error: 'TomTom svarede ' + up.status }, 502);
+  return new Response(up.body, { headers: { 'Content-Type': 'image/png', 'Cache-Control': 'max-age=120', ...cors(env) } });
 }
 
 /* ---------- Somfy (Connexoon/TaHoma via Somfys sky, samme login som TaHoma-appen) ---------- */
@@ -671,6 +681,7 @@ export default {
         return new Response(up.body, { headers: hdr });
       }
       if (path === '/trafik') return await trafik(env, ctx);
+      { const fm = /^\/trafik\/flow\/(\d{1,2})\/(\d{1,6})\/(\d{1,6})$/.exec(path); if (fm) return await trafikFlow(env, +fm[1], +fm[2], +fm[3]); }
       if (path.startsWith('/f1/')) {
         // Formel 1: løbskalender, resultater og VM-stilling fra Jolpica (den åbne efterfølger til Ergast)
         const sub = path.slice(4);

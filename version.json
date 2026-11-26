@@ -1,5 +1,5 @@
 {
-  "version": "1.102.0",
+  "version": "1.103.0",
   "files": [
     "index.html",
     "app.js",
@@ -25,9 +25,22 @@
     "el.js",
     "sport.js",
     "todo.js",
-    "trafik.js"
+    "trafik.js",
+    "trmap.js",
+    "leaflet.js",
+    "leaflet.css"
   ],
   "notes": [
+    {
+      "version": "1.103.0",
+      "date": "26. november 2026",
+      "title": "Trafikkort og nyheder efter tid",
+      "items": [
+        "Trafik har fået et kort med meldingerne som prikker – tryk på en melding for at se den på kortet",
+        "Ved valg af mål vises turen på kortet",
+        "Blandet visning i Nyheder står nu efter tid, nyeste først"
+      ]
+    },
     {
       "version": "1.102.0",
       "date": "26. november 2026",

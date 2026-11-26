@@ -2,7 +2,7 @@
 // Meldingerne sorteres efter afstand fra jeres hjem og filtreres efter den valgte radius.
 import { workerFetch, hasProxy, settings } from './util.js';
 
-export const state = { items: null, at: 0, err: '', loading: false };
+export const state = { items: null, at: 0, err: '', loading: false, flow: false };
 
 export const KINDS = {
   uheld: { label: 'Uheld', icon: '💥', c: '#E5484D' },
@@ -23,7 +23,7 @@ export async function load(force = false) {
     const j = await (await workerFetch('/trafik')).json();
     if (j.error) throw new Error(j.error);
     state.items = (j.items || []).map((x) => ({ ...x, from: x.from ? new Date(x.from) : null, to: x.to ? new Date(x.to) : null }));
-    state.at = Date.now(); state.err = '';
+    state.at = Date.now(); state.err = ''; state.flow = !!j.flow;
     return true;
   } catch (e) { state.err = e.message || 'Fejl'; return true; } finally { state.loading = false; }
 }
