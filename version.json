@@ -1,5 +1,5 @@
 {
-  "version": "1.105.3",
+  "version": "1.105.4",
   "files": [
     "index.html",
     "app.js",
@@ -31,6 +31,15 @@
     "leaflet.css"
   ],
   "notes": [
+    {
+      "version": "1.105.4",
+      "date": "26. november 2026",
+      "title": "Trafik: hvor er det?",
+      "items": [
+        "Trafik-kortet siger nu, hvor problemet er – fx \"Spærring på E20 mellem Odense S og Odense SV\"",
+        "Kendes stedet ikke, står afstand og retning, fx \"35 km syd for jer\""
+      ]
+    },
     {
       "version": "1.105.3",
       "date": "26. november 2026",

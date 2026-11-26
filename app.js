@@ -2036,14 +2036,21 @@ function trRow(x, full) {
   return `<div class="tr-r k-${x.kind}" style="--kc:${K.c}"><i class="tr-ic" aria-hidden="true">${K.icon}</i><div class="tr-m"><div class="tr-top"><b>${esc(K.label)}</b>${x.delay ? `<em class="tr-delay">+${x.delay} min</em>` : ''}<span>${esc(trKm(x.km))}${x.kommune ? ' · ' + esc(x.kommune) : ''}</span></div><div class="tr-t">${esc(x.title)}</div>${full && x.text && x.text !== x.title ? `<div class="tr-d">${esc(x.text)}</div>` : ''}${full && trWhen(x) ? `<div class="tr-w">${esc(trWhen(x))}</div>` : ''}</div></div>`;
 }
 // Kort sætning om en melding: "Uheld på E20 ved Odense S"
-function trShort(x) {
+function trShort(x, from) {
   const K = TR.KINDS[x.kind] || TR.KINDS.haendelse;
-  const t = String(x.title || '').replace(/<\d+>\s*/g, '');
+  const t = (String(x.title || '') + ' · ' + String(x.text || '')).replace(/<\d+>\s*/g, '').replace(/\s+/g, ' ');
   const road = (/\b(E\s?\d+|Rute\s?\d+|Motorring\s?\d|O\d)\b/i.exec(t) || [])[1];
-  const place = (/\b(?:ved|mellem|nær)\s+([A-ZÆØÅ][\wæøåÆØÅ.\-]*(?:\s+[A-ZÆØÅ][\wæøåÆØÅ.\-]*){0,2})/.exec(t) || [])[1];
+  const P = '([A-ZÆØÅ][\\wæøåÆØÅ.\\-]*(?:\\s+(?:[A-ZÆØÅ][\\wæøåÆØÅ.\\-]*|[NSØV]))?)';
+  const m1 = new RegExp('mellem\\s+(?:afkørsel\\s+\\d+\\s+)?' + P + '\\s+og\\s+(?:afkørsel\\s+\\d+\\s+)?' + P).exec(t);
+  const m2 = new RegExp('\\bfra\\s+' + P + '\\s+mod\\s+' + P).exec(t);
+  const m3 = new RegExp('\\b(?:ved|nær|i)\\s+' + P).exec(t);
+  const where = m1 ? `mellem ${m1[1]} og ${m1[2]}` : m2 ? `ved ${m2[1]} mod ${m2[2]}` : m3 ? `ved ${m3[1]}` : x.title && x.src === 'tt' && /→/.test(x.title) ? x.title.split('·').pop().trim() : '';
   const r = road ? (/^e/i.test(road) ? road.replace(/\s+/, '').toUpperCase() : road.replace(/^(\D+?)\s*(\d)/, (m, a, d) => a.charAt(0).toUpperCase() + a.slice(1).toLowerCase() + ' ' + d)) : '';
-  if (r || place) return `${K.label}${r ? ' på ' + r : ''}${place ? ' ved ' + place : ''}`;
-  return new RegExp('^' + K.label, 'i').test(t) ? t : `${K.label}: ${t}`;
+  // Ukendt sted: afstand og retning fra jer ("35 km sydvest for jer")
+  let rel = '';
+  if (!where && from) { const d = TR.km(from, x); const dy = x.lat - from.lat; const dx = (x.lon - from.lon) * Math.cos((from.lat * Math.PI) / 180); const a2 = (Math.atan2(dy, dx) * 180) / Math.PI; const dirs = ['øst', 'nordøst', 'nord', 'nordvest', 'vest', 'sydvest', 'syd', 'sydøst']; rel = `${Math.round(d)} km ${dirs[((Math.round(a2 / 45) % 8) + 8) % 8]} for jer`; }
+  if (r || where) return `${K.label}${r ? ' på ' + r : ''}${where ? ' ' + where : ''}${rel ? ', ' + rel : ''}`;
+  return `${K.label}${rel ? ' ' + rel : ''}`;
 }
 // Trafik-kortet: én klar status ("Fri bane" / "Uheld på E20 ved Odense S") + køretider med trafik til næste aftale og jeres steder
 function wTrafik(size, h = 1, wd = 1) {
@@ -2066,7 +2073,7 @@ function wTrafik(size, h = 1, wd = 1) {
   const top = pool[0]; const worst = trips.reduce((m, t) => Math.max(m, t.extra), 0);
   const extra = Math.max(worst, top && top.delay ? top.delay : 0);
   const st = !top && extra < 5 ? 'ok' : (top && (top.kind === 'spaerring' || top.kind === 'uheld')) || extra >= 15 ? 'bad' : 'warn';
-  const title = st === 'ok' ? 'Fri bane' : top ? trShort(top) : 'Tæt trafik';
+  const title = st === 'ok' ? 'Fri bane' : top ? trShort(top, H) : 'Tæt trafik';
   const sub = st === 'ok' ? 'Ingen uheld eller kø på de store veje' : extra >= 3 ? `Forvent ca. ${extra >= 15 ? Math.round(extra / 5) * 5 : extra} min ekstra` : top && top.from ? 'Meldt ' + ago(top.from) : '';
   const tripRow = (t) => { const s2 = t.ev.length || t.extra >= 15 ? 'bad' : t.extra >= 5 ? 'warn' : 'ok';
     return `<div class="trw-t ${s2}"><span class="trw-n">${t.at ? `<small>${hhmm(t.at)}</small>` : ''}${esc(t.name)}</span><b>${durTxt(t.rt.min)}</b><i>${t.extra >= 3 ? '+' + t.extra + ' min' : t.ev.length ? '⚠' : '✓'}</i></div>`; };
