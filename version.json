@@ -1,5 +1,5 @@
 {
-  "version": "1.82.2",
+  "version": "1.83.0",
   "files": [
     "index.html",
     "app.js",
@@ -27,6 +27,16 @@
     "todo.js"
   ],
   "notes": [
+    {
+      "version": "1.83.0",
+      "date": "26. november 2026",
+      "title": "Turneringer på Sport",
+      "items": [
+        "Vælg en af jeres turneringer øverst på Sport for at se dens kampprogram og stilling side om side",
+        "Skift dag i dagslisten for at se kampene en anden dag – stillingen står ved siden af",
+        "Stilling findes for fodboldligaerne, NBA/NFL/NHL, Formel 1 (kørere) og golf (leaderboard)"
+      ]
+    },
     {
       "version": "1.82.2",
       "date": "26. november 2026",

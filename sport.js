@@ -197,3 +197,22 @@ export async function loadDetail(m, force = false) {
   }
   return details[m.id];
 }
+
+// Stilling for amerikanske ligaer (NBA, NFL, NHL): konferencer/divisioner med sejre, nederlag og procent
+const stand = {};
+export const standingsOf = (id) => stand[id];
+export async function loadStandings(sp) {
+  const c = stand[sp.id]; if (c && (c.loading || Date.now() - c.at < 10 * 60000)) return c;
+  stand[sp.id] = { ...(c || { groups: [] }), loading: true };
+  try {
+    const j = await getJson(`/espn/${sp.path}/standings`);
+    const kids = (j.children || []).length ? j.children : [{ name: '', standings: j.standings }];
+    const st = (e, n) => { const x = (e.stats || []).find((y) => y.name === n || y.type === n); return x ? { v: x.value, d: x.displayValue } : { v: null, d: '' }; };
+    const groups = kids.filter((k) => k.standings).map((k) => ({ name: k.name || k.abbreviation || '', rows: (k.standings.entries || []).map((e) => { const t = e.team || {};
+      return { id: String(t.id || ''), name: t.shortDisplayName || t.displayName || '', abbr: t.abbreviation || '', logo: (t.logos && t.logos[0] && t.logos[0].href) || '',
+        w: st(e, 'wins').d, l: st(e, 'losses').d, pct: st(e, 'winPercent').d, pts: st(e, 'points').d, gb: st(e, 'gamesBehind').d, seed: st(e, 'playoffSeed').v, wp: st(e, 'winPercent').v ?? 0 }; })
+      .sort((a, b) => (a.seed || 99) - (b.seed || 99) || b.wp - a.wp) }));
+    stand[sp.id] = { at: Date.now(), groups };
+  } catch (e) { stand[sp.id] = { at: Date.now(), groups: (c && c.groups) || [], error: e.message }; }
+  return stand[sp.id];
+}

@@ -2051,3 +2051,21 @@ html,body{overscroll-behavior:none}
 .sp-page .lv-l{font-size:15px}.sp-page .lv-sets{font-size:19px}
 .sp-page>.sp-grid{columns:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,420px),1fr));grid-auto-rows:auto;align-items:start;align-content:start;gap:16px}
 .sp-page>.sp-grid>.sp-card{margin-bottom:0;display:flex}
+/* Sport: én turnering – kampe til venstre, stilling til højre; hver side scroller for sig */
+.sp-page>.sp-comp{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:16px}
+.sp-comp.one{grid-template-columns:minmax(0,1fr)}
+.sp-cg,.sp-cs{min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:16px;container-type:size}
+.sp-cg>.sp-card,.sp-cs>.sp-card{flex:none;max-height:100cqh;display:flex;flex-direction:column}
+.sp-cs>.sp-card{flex:1 1 auto}
+.sp-cg .sp-list,.sp-cs .sp-list{flex:1 1 auto;min-height:0;overflow-y:auto}
+.sp-dayhd{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);padding:12px 4px 4px;border-top:0!important}
+.sp-stand .st-row{border-top:0!important;padding:6px 6px!important}
+.sp-stand .st-row:nth-child(even):not(.st-h){background:var(--dayBg)!important;border-radius:8px!important}
+.sp-stand .st-row.noted{background:color-mix(in srgb,var(--nc) 14%,transparent)!important}
+.sp-stand .st-h{position:sticky;top:0}
+.st-row.us{grid-template-columns:26px minmax(0,1fr) 40px 40px 52px}
+.st-row.f1s{grid-template-columns:26px minmax(0,1fr) 52px}
+.st-row.f1s .st-tm{display:flex;flex-direction:column;align-items:flex-start;gap:0}
+.st-row.f1s .st-tm small{font-size:11px;color:var(--muted);font-weight:600}
+.sp-stand .st-legend{border-top:0!important}
+@media (max-width:900px){.sp-page>.sp-comp{grid-template-columns:1fr}}

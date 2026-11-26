@@ -819,8 +819,61 @@ function spF1Row(it) {
 const SP_COL = { fb: '#2E9D5B', tennis: '#B79B00', golf: '#1F7A45', f1: '#E10600', nba: '#E46A1C', nfl: '#3D63C9', nhl: '#5E6B7A' };
 const SP_NAME = { fb: 'Fodbold', tennis: 'Tennis', golf: 'Golf', f1: 'Formel 1', nba: 'NBA', nfl: 'NFL', nhl: 'NHL' };
 const SP_ICO = { fb: '⚽', tennis: '🎾', golf: '⛳', f1: '🏎️', nba: '🏀', nfl: '🏈', nhl: '🏒' };
+const spColKey = (k) => (/^fb/.test(k) ? 'fb' : /^(atp|wta)$/.test(k) ? 'tennis' : k);
 function spCard(ico, title, sub, body, live, key = '') {
-  return `<section class="card sp-card k-${key}${live ? ' has-live' : ''}" style="--sc:${SP_COL[key] || 'var(--accent)'}"><div class="sp-h"><span class="sp-ico">${ico}</span><b>${esc(title)}</b>${live ? '<span class="sp-livetag">Live</span>' : ''}${sub ? `<small>${esc(sub)}</small>` : ''}</div>${body}</section>`;
+  return `<section class="card sp-card k-${key}${live ? ' has-live' : ''}" style="--sc:${SP_COL[spColKey(key)] || 'var(--accent)'}"><div class="sp-h"><span class="sp-ico">${ico}</span><b>${esc(title)}</b>${live ? '<span class="sp-livetag">Live</span>' : ''}${sub ? `<small>${esc(sub)}</small>` : ''}</div>${body}</section>`;
+}
+function spComps() {
+  const fb = settings.football || {}; const out = [];
+  (fb.follow || []).forEach((lg) => out.push({ key: 'fb:' + lg, kind: 'fb', lg, name: (FB.LEAGUES.find((L) => L.id === lg) || {}).name || lg, ico: '⚽', col: 'fb' }));
+  SP.followed().forEach((sp) => out.push({ key: sp.id, kind: sp.kind, sp, name: sp.kind === 'tennis' ? (sp.id === 'wta' ? 'Tennis damer' : 'Tennis herrer') : sp.kind === 'golf' ? 'Golf' : sp.kind === 'f1' ? 'Formel 1' : sp.id.toUpperCase(), ico: sp.ico, col: sp.kind === 'tennis' ? 'tennis' : sp.kind === 'golf' ? 'golf' : sp.id }));
+  return out;
+}
+// Én turnering: dagens kampe (eller de næste) til venstre, stillingen til højre
+function spCompView(c, day, cards, live) {
+  const col = SP_COL[c.col] || 'var(--accent)';
+  let games = cards.map((x) => x.html).join('');
+  if (!games && c.kind === 'fb') {
+    const ms = ((FB.state.leagues || {})[c.lg] || []).filter((m) => m.date >= day).slice(0, 10);
+    const byDay = new Map(); ms.forEach((m) => { const k = ymd(m.date); if (!byDay.has(k)) byDay.set(k, []); byDay.get(k).push(m); });
+    games = ms.length ? spCard('⚽', 'Næste kampe', '', `<div class="sp-list">${[...byDay.values()].map((xs) => `<div class="sp-dayhd">${cap(DAYS_LONG[xs[0].date.getDay()])} ${xs[0].date.getDate()}. ${MONTHS[xs[0].date.getMonth()]}</div>${xs.map((m) => spTeamRow({ kind: 'fb', m })).join('')}`).join('')}</div>`, false, c.col) : '';
+  }
+  if (!games) games = `<section class="card sp-card" style="--sc:${col}"><div class="empty">Ingen kampe denne dag</div></section>`;
+  return `${live.length ? `<section class="sp-live"><div class="sp-lvrow">${live.map((x) => x.html).join('')}</div></section>` : ''}<div class="sp-comp${c.kind === 'tennis' ? ' one' : ''}"><div class="sp-cg">${games}</div>${c.kind === 'tennis' ? '' : `<div class="sp-cs">${spStandings(c)}</div>`}</div>`;
+}
+function spStandings(c) {
+  const col = SP_COL[c.col] || 'var(--accent)';
+  const card = (title, body) => `<section class="card sp-card sp-stand" style="--sc:${col}"><div class="sp-h"><span class="sp-ico">${c.ico}</span><b>${esc(title)}</b></div><div class="sp-list st-scroll">${body}</div></section>`;
+  const wait = (t) => card('Stilling', `<div class="empty">${t}</div>`);
+  if (c.kind === 'fb') {
+    const T = FB.tables[c.lg];
+    if (!T || !T.at) { FB.loadTable(c.lg).then(() => { if (ui.page === 'sport') softRender(); }); return wait('Henter stillingen …'); }
+    if (!T.groups.length) return wait('Ingen stilling for turneringen.');
+    const favIds = ((settings.football || {}).teams || []).filter((t) => t.lg === c.lg).map((t) => t.id);
+    const n = (v) => (v === null || v === undefined ? '' : v);
+    const hdr = '<div class="st-row st-h wide"><span>#</span><span></span><span>K</span><span>V</span><span>U</span><span>T</span><span>+/-</span><span>P</span></div>';
+    const row = (t) => `<div class="st-row wide${favIds.includes(t.id) ? ' st-fav' : ''}${t.note ? ' noted' : ''}"${t.note ? ` style="--nc:${esc(t.note.color)}"` : ''}><span class="st-rk">${n(t.rank)}</span><span class="st-tm">${t.logo ? `<img src="${esc(t.logo)}" alt="" loading="lazy">` : ''}<b>${esc(t.name)}</b></span><span>${n(t.gp)}</span><span>${n(t.w)}</span><span>${n(t.d)}</span><span>${n(t.l)}</span><span>${t.gd > 0 ? '+' : ''}${n(t.gd)}</span><span class="st-p">${n(t.pts)}</span></div>`;
+    const notes = new Map(); T.groups.forEach((g) => g.rows.forEach((t) => { if (t.note && !notes.has(t.note.text)) notes.set(t.note.text, t.note.color); }));
+    return card('Stilling', T.groups.map((g) => `${T.groups.length > 1 && g.name ? `<div class="sp-dayhd">${esc(g.name)}</div>` : ''}${hdr}${g.rows.map(row).join('')}`).join('') + (notes.size ? `<div class="st-legend">${[...notes].map(([t, k]) => `<span style="--nc:${esc(k)}"><i></i>${esc(t)}</span>`).join('')}</div>` : ''));
+  }
+  if (c.kind === 'team') {
+    const S2 = SP.standingsOf(c.sp.id);
+    if (!S2 || !S2.at) { SP.loadStandings(c.sp).then(() => { if (ui.page === 'sport') softRender(); }); return wait('Henter stillingen …'); }
+    if (!S2.groups.length) return wait('Ingen stilling lige nu.');
+    const pts = S2.groups.some((g) => g.rows.some((r) => r.pts));
+    const hdr = `<div class="st-row st-h us"><span>#</span><span></span><span>V</span><span>T</span><span>${pts ? 'P' : '%'}</span></div>`;
+    return card('Stilling', S2.groups.map((g) => `${g.name ? `<div class="sp-dayhd">${esc(g.name.replace(/Conference/, 'konference'))}</div>` : ''}${hdr}${g.rows.map((r, i) => `<div class="st-row us"><span class="st-rk">${i + 1}</span><span class="st-tm">${r.logo ? `<img src="${esc(r.logo)}" alt="" loading="lazy">` : ''}<b>${esc(r.name)}</b></span><span>${esc(r.w)}</span><span>${esc(r.l)}</span><span class="st-p">${esc(pts ? r.pts : r.pct)}</span></div>`).join('')}`).join(''));
+  }
+  if (c.kind === 'f1') {
+    if (!SP.f1Standings.cache) { SP.f1Standings().then((x) => { SP.f1Standings.cache = x; if (ui.page === 'sport') softRender(); }).catch(() => { SP.f1Standings.cache = []; }); return wait('Henter stillingen …'); }
+    const rows = SP.f1Standings.cache;
+    return card('Kørere', rows.length ? `<div class="st-row st-h f1s"><span>#</span><span>Kører</span><span>P</span></div>${rows.map((r) => `<div class="st-row f1s"><span class="st-rk">${esc(r.pos)}</span><span class="st-tm"><b>${esc(r.name)}</b><small>${esc(r.team)}</small></span><span class="st-p">${esc(r.pts)}</span></div>`).join('')}` : '<div class="empty">Ingen stilling endnu.</div>');
+  }
+  if (c.kind === 'golf') {
+    const d = SP.dayData(c.sp.id, spDay()); const ev = d && d.items && d.items[0];
+    return card(ev ? ev.name : 'Leaderboard', ev ? spGolfRows(ev, 60) : '<div class="empty">Ingen turnering denne dag.</div>');
+  }
+  return '';
 }
 function pageSport() {
   const day = spDay(); const off = ui.spOff || 0; const today = startOfDay(new Date());
@@ -844,12 +897,12 @@ function pageSport() {
     const groups = new Map(); all.filter((m) => sameDay(m.date, day)).sort((a, b) => a.date - b.date).forEach((m) => { const k = m.comp || 'Andre kampe'; if (!groups.has(k)) groups.set(k, []); groups.get(k).push(m); });
     [...groups.keys()].sort((a, b) => { const ia = order.indexOf(a), ib = order.indexOf(b); return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib); }).forEach((k) => {
       const ms = groups.get(k);
-      ms.filter((m) => m.state === 'in').forEach((m) => live.push({ key: 'fb', html: spLiveTile({ kind: 'fb', m }, 'fb') }));
-      add('fb', '⚽', k, '', `<div class="sp-list">${ms.map((m) => spTeamRow({ kind: 'fb', m }, favIn(m.home.id, m.comp) ? m.home.id : favIn(m.away.id, m.comp) ? m.away.id : '')).join('')}</div>`, ms.some((m) => m.state === 'in'));
+      ms.filter((m) => m.state === 'in').forEach((m) => live.push({ key: 'fb:' + (m.lg || 'x'), html: spLiveTile({ kind: 'fb', m }, 'fb') }));
+      add('fb:' + ((ms[0] && ms[0].lg) || 'x'), '⚽', k, '', `<div class="sp-list">${ms.map((m) => spTeamRow({ kind: 'fb', m }, favIn(m.home.id, m.comp) ? m.home.id : favIn(m.away.id, m.comp) ? m.away.id : '')).join('')}</div>`, ms.some((m) => m.state === 'in'));
     });
   }
   sps.forEach((sp) => {
-    const key = sp.kind === 'tennis' ? 'tennis' : sp.id;
+    const key = sp.id;
     const c = SP.dayData(sp.id, day);
     if (!c) { waiting = true; SP.loadDay(sp, day).then(() => { if (ui.page === 'sport') softRender(); }); return; }
     if (!c.at) { waiting = true; return; }
@@ -864,15 +917,16 @@ function pageSport() {
     if (sp.kind === 'f1') { const by = new Map(); items.forEach((x) => { if (!by.has(x.round)) by.set(x.round, []); by.get(x.round).push(x); });
       by.forEach((xs) => add(key, sp.ico, xs[0].race, xs[0].place, `<div class="sp-list">${xs.map(spF1Row).join('')}</div>`, xs.some((x) => x.state === 'in'))); }
   });
-  // Filter pr. sportsgren (kun dem, der er noget i denne dag)
-  const keys = [...new Set(cards.map((c) => c.key))];
-  if (ui.spFilter && !keys.includes(ui.spFilter)) ui.spFilter = '';
+  // Turneringer, man følger: vælg én for at se dens kampprogram og stilling
+  const comps = spComps();
+  if (ui.spFilter && !comps.some((c) => c.key === ui.spFilter)) ui.spFilter = '';
   const f = ui.spFilter || '';
-  const chips = keys.length > 1 ? `<div class="sp-filter"><button class="sp-fchip${f ? '' : ' on'}" data-act="spFilter" data-k="">Alle</button>${keys.map((k) => `<button class="sp-fchip${f === k ? ' on' : ''}" data-act="spFilter" data-k="${k}" style="--sc:${SP_COL[k] || 'var(--accent)'}">${SP_ICO[k] || ''} ${SP_NAME[k] || k}${cards.some((c) => c.key === k && c.live) ? '<i class="lv-dot"></i>' : ''}</button>`).join('')}</div>` : '';
+  const chips = comps.length ? `<div class="sp-filter"><button class="sp-fchip${f ? '' : ' on'}" data-act="spFilter" data-k="">Alle</button>${comps.map((c) => `<button class="sp-fchip${f === c.key ? ' on' : ''}" data-act="spFilter" data-k="${c.key}" style="--sc:${SP_COL[c.col] || 'var(--accent)'}">${c.ico} ${esc(c.name)}${cards.some((x) => x.key === c.key && x.live) ? '<i class="lv-dot"></i>' : ''}</button>`).join('')}</div>` : '';
+  if (f) return `<div class="sp-page">${head(chips)}${spCompView(comps.find((c) => c.key === f), day, cards.filter((c) => c.key === f), live.filter((x) => x.key === f))}</div>`;
   const err = errs.length ? `<div class="small err">Kunne ikke hente: ${esc(errs.join(', '))}</div>` : '';
   if (!cards.length) return head() + err + `<section class="card"><div class="empty">${waiting ? 'Henter …' : `Ingen kampe ${sameDay(day, today) ? 'i dag' : 'denne dag'}.`}</div></section>`;
-  const shown = cards.filter((c) => !f || c.key === f).sort((a, b) => (b.live ? 1 : 0) - (a.live ? 1 : 0));
-  const lv = live.filter((x) => !f || x.key === f);
+  const shown = cards.slice().sort((a, b) => (b.live ? 1 : 0) - (a.live ? 1 : 0));
+  const lv = live;
   const liveRow = lv.length ? `<section class="sp-live"><div class="sp-sec"><span class="lv-dot"></span>Live nu <small>${lv.length}</small></div><div class="sp-lvrow">${lv.map((x) => x.html).join('')}</div></section>` : '';
   return `<div class="sp-page">${head(chips)}${err}${liveRow}<div class="sp-grid">${shown.map((c) => c.html).join('')}</div></div>`;
 }
