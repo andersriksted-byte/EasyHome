@@ -205,38 +205,90 @@ function tKind(layer, type, text) {
   if (/weather|glat|slippery|ice|sne|snow|wind|vind|fog|tåge|flood|oversvøm/.test(s)) return 'vejr';
   return 'haendelse';
 }
-async function trafik(env, ctx) {
-  const ck = new Request('https://cache.easyhome/trafik/v1');
+// Vejdirektoratets meldinger (fælles for hele landet, gemmes 2 min)
+async function trafikVD(ctx) {
+  const ck = new Request('https://cache.easyhome/trafik/vd2');
   const hit = await caches.default.match(ck);
-  if (hit) { const o = new Response(hit.body, hit); for (const [k, v] of Object.entries(cors(env))) o.headers.set(k, v); return o; }
+  if (hit) return hit.json();
   const get = async (f) => { try { const r = await fetch(TRAFIK_SRC + f + '?t=' + Math.floor(Date.now() / 60000), { signal: AbortSignal.timeout(10000) }); return r.ok ? await r.json() : null; } catch (e) { return null; } };
   const [ev, ann] = await Promise.all([get('big-screen-events.json'), get('critical-announcements.json')]);
-  if (!ev && !ann) return json(env, { error: 'Vejdirektoratet svarede ikke' }, 502);
+  if (!ev && !ann) return null;
   const items = [];
   const add = (f, layer) => {
     const p = f.properties || {}; const g = f.geometry || {};
-    let c = g.coordinates; while (Array.isArray(c) && Array.isArray(c[0])) c = c[0];
+    let c = g.coordinates; while (Array.isArray(c) && Array.isArray(c[0])) c = c[Math.floor(c.length / 2)];
     if (!Array.isArray(c) || c.length < 2) return;
     if (String(p.visible) === 'false' || String(p.suspended) === 'true') return;
     const title = tStrip(p.header || p.title); const text = tStrip(p.description);
-    items.push({ id: String(p.featureId || p.id || items.length), kind: tKind(layer, p.TrafficMan2_Type || p.category || '', title + ' ' + text), title, text: text.slice(0, 600),
-      lon: +c[0], lat: +c[1], from: tTime(p.beginPeriod) || p.validFrom || '', to: tTime(p.endPeriod) || '', kommune: p.kommune || '', future: String(p.future) === 'true', big: layer === 'announce' });
+    items.push({ id: 'vd' + String(p.featureId || p.id || items.length), src: 'vd', kind: tKind(layer, p.TrafficMan2_Type || p.category || '', title + ' ' + text), title, text: text.slice(0, 600),
+      lon: +c[0], lat: +c[1], from: tTime(p.beginPeriod) || p.validFrom || '', to: tTime(p.endPeriod) || '', kommune: p.kommune || '', future: String(p.future) === 'true' });
   };
   (Array.isArray(ev) ? ev : ev && ev.features ? [ev] : []).forEach((fc) => (fc.features || []).forEach((f) => add(f, fc.layerName || '')));
   ((ann && ann.features) || []).forEach((f) => add(f, 'announce'));
-  const res = new Response(JSON.stringify({ at: new Date().toISOString(), flow: !!env.TOMTOM_KEY, items }), { headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'max-age=120' } });
-  ctx.waitUntil(caches.default.put(ck, res.clone()));
-  const o = new Response(res.body, res); for (const [k, v] of Object.entries(cors(env))) o.headers.set(k, v); return o;
+  // Samme melding ligger ofte flere gange (fx én pr. kørselsretning eller strækning) – slå dem sammen
+  const out = []; const seen = new Map();
+  items.forEach((x) => { const k = x.kind + '|' + x.title; const o = seen.get(k); if (o && Math.abs(o.lat - x.lat) < 0.05 && Math.abs(o.lon - x.lon) < 0.08) return; seen.set(k, x); out.push(x); });
+  ctx.waitUntil(caches.default.put(ck, new Response(JSON.stringify(out), { headers: { 'Cache-Control': 'max-age=120' } })));
+  return out;
 }
-
-// Trafiklag (vejene farvet efter hvor flydende trafikken kører) fra TomTom – kun når TOMTOM_KEY er sat, kun Danmark og omegn
-async function trafikFlow(env, z, x, y) {
-  if (!env.TOMTOM_KEY) return json(env, { error: 'TOMTOM_KEY mangler' }, 501);
-  const n = 2 ** z; const lon = (x / n) * 360 - 180; const lat = (Math.atan(Math.sinh(Math.PI * (1 - (2 * y) / n))) * 180) / Math.PI;
-  if (z < 6 || z > 17 || lon < 5 || lon > 17 || lat < 53.5 || lat > 59) return new Response(null, { status: 204, headers: cors(env) });
-  const up = await fetch(`https://api.tomtom.com/traffic/map/4/tile/flow/relative0/${z}/${x}/${y}.png?key=${env.TOMTOM_KEY}&tileSize=256`, { cf: { cacheTtl: 120, cacheEverything: true } });
-  if (!up.ok) return json(env, { error: 'TomTom svarede ' + up.status }, 502);
-  return new Response(up.body, { headers: { 'Content-Type': 'image/png', 'Cache-Control': 'max-age=120', ...cors(env) } });
+// TomTom: aktuelle hændelser med forsinkelse (kun når TOMTOM_KEY er sat). Området deles i felter på højst ~90×90 km (TomToms grænse)
+const TT_KIND = { 1: 'uheld', 2: 'vejr', 3: 'haendelse', 4: 'vejr', 5: 'vejr', 6: 'koe', 7: 'spaerring', 8: 'spaerring', 9: 'vejarbejde', 10: 'vejr', 11: 'vejr', 14: 'haendelse' };
+async function trafikTT(env, ctx, bb) {
+  if (!env.TOMTOM_KEY || !bb) return null;
+  const [x1, y1, x2, y2] = bb;
+  const kmX = (x2 - x1) * 111 * Math.cos(((y1 + y2) / 2) * Math.PI / 180); const kmY = (y2 - y1) * 111;
+  const nx = Math.max(1, Math.ceil(kmX / 90)); const ny = Math.max(1, Math.ceil(kmY / 90));
+  if (nx * ny > 6) return null; // for stort område – kun Vejdirektoratet
+  const fields = '{incidents{type,geometry{type,coordinates},properties{id,iconCategory,magnitudeOfDelay,events{description},startTime,endTime,from,to,length,delay,roadNumbers,lastReportTime}}}';
+  const cells = [];
+  for (let i = 0; i < nx; i++) for (let j = 0; j < ny; j++) cells.push([x1 + ((x2 - x1) * i) / nx, y1 + ((y2 - y1) * j) / ny, x1 + ((x2 - x1) * (i + 1)) / nx, y1 + ((y2 - y1) * (j + 1)) / ny].map((v) => v.toFixed(4)).join(','));
+  const res = await Promise.all(cells.map(async (c) => {
+    const ck = new Request('https://cache.easyhome/trafik/tt/' + c);
+    const hit = await caches.default.match(ck); if (hit) return hit.json();
+    try {
+      const r = await fetch(`https://api.tomtom.com/traffic/services/5/incidentDetails?key=${env.TOMTOM_KEY}&bbox=${c}&fields=${encodeURIComponent(fields)}&language=da-DK&timeValidityFilter=present`, { signal: AbortSignal.timeout(10000) });
+      const j = r.ok ? await r.json() : { incidents: [] };
+      ctx.waitUntil(caches.default.put(ck, new Response(JSON.stringify(j), { headers: { 'Cache-Control': 'max-age=180' } })));
+      return j;
+    } catch (e) { return { incidents: [] }; }
+  }));
+  const seen = new Set(); const out = [];
+  res.forEach((j) => (j.incidents || []).forEach((f) => {
+    const p = f.properties || {}; if (seen.has(p.id)) return; seen.add(p.id);
+    let c = (f.geometry || {}).coordinates; if (Array.isArray(c) && Array.isArray(c[0])) c = c[Math.floor(c.length / 2)];
+    if (!Array.isArray(c)) return;
+    const kind = TT_KIND[p.iconCategory] || 'haendelse';
+    if (kind === 'koe' && (p.magnitudeOfDelay || 0) < 2 && (p.delay || 0) < 120) return; // kun mærkbar kø
+    const road = (p.roadNumbers || []).join('/');
+    const desc = (p.events || []).map((e) => e.description).filter(Boolean).join(', ');
+    out.push({ id: 'tt' + p.id, src: 'tt', kind, title: [road, p.from && p.to ? `${p.from} → ${p.to}` : p.from || p.to].filter(Boolean).join(' · ') || desc, text: desc,
+      lon: +c[0], lat: +c[1], from: p.startTime || '', to: p.endTime || '', seen: p.lastReportTime || '', delay: Math.round((p.delay || 0) / 60), lengthKm: Math.round((p.length || 0) / 100) / 10, kommune: '', future: false });
+  }));
+  return out;
+}
+async function trafik(env, ctx, req) {
+  const q = new URL(req.url).searchParams;
+  const bb = (q.get('bbox') || '').split(',').map(Number);
+  const bbox = bb.length === 4 && bb.every(isFinite) && bb[0] < bb[2] && bb[1] < bb[3] ? bb : null;
+  const [vd, tt] = await Promise.all([trafikVD(ctx), trafikTT(env, ctx, bbox)]);
+  if (!vd && !tt) return json(env, { error: 'Vejdirektoratet svarede ikke' }, 502);
+  return new Response(JSON.stringify({ at: new Date().toISOString(), flow: !!env.TOMTOM_KEY, tt: !!tt, items: (vd || []).concat(tt || []) }), { headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', ...cors(env) } });
+}
+// Kortfliser: TomTom (baggrundskort dag/nat og trafiklag) – uden nøgle OpenStreetMap som baggrund
+async function trafikTile(env, kind, z, x, y) {
+  if (z < 3 || z > 18) return new Response(null, { status: 204, headers: cors(env) });
+  let url; let ttl = 7 * 86400; const opts = {};
+  if (kind === 'flow') {
+    if (!env.TOMTOM_KEY) return json(env, { error: 'TOMTOM_KEY mangler' }, 501);
+    url = `https://api.tomtom.com/traffic/map/4/tile/flow/relative0/${z}/${x}/${y}.png?key=${env.TOMTOM_KEY}&tileSize=256&thickness=8`; ttl = 120;
+  } else if (env.TOMTOM_KEY) {
+    url = `https://api.tomtom.com/map/1/tile/basic/${kind === 'night' ? 'night' : 'main'}/${z}/${x}/${y}.png?key=${env.TOMTOM_KEY}&tileSize=256&view=Unified&language=da-DK`;
+  } else {
+    url = `https://tile.openstreetmap.org/${z}/${x}/${y}.png`; opts.headers = { 'User-Agent': 'easyHome/1.0 (privat familie-dashboard)' };
+  }
+  const up = await fetch(url, { ...opts, cf: { cacheTtl: ttl, cacheEverything: true } });
+  if (!up.ok) return new Response(null, { status: 204, headers: cors(env) });
+  return new Response(up.body, { headers: { 'Content-Type': up.headers.get('Content-Type') || 'image/png', 'Cache-Control': 'max-age=' + ttl, ...cors(env) } });
 }
 
 /* ---------- Somfy (Connexoon/TaHoma via Somfys sky, samme login som TaHoma-appen) ---------- */
@@ -680,8 +732,8 @@ export default {
         }
         return new Response(up.body, { headers: hdr });
       }
-      if (path === '/trafik') return await trafik(env, ctx);
-      { const fm = /^\/trafik\/flow\/(\d{1,2})\/(\d{1,6})\/(\d{1,6})$/.exec(path); if (fm) return await trafikFlow(env, +fm[1], +fm[2], +fm[3]); }
+      if (path === '/trafik') return await trafik(env, ctx, req);
+      { const fm = /^\/trafik\/(flow|base|night)\/(\d{1,2})\/(\d{1,6})\/(\d{1,6})$/.exec(path); if (fm) return await trafikTile(env, fm[1], +fm[2], +fm[3], +fm[4]); }
       if (path.startsWith('/f1/')) {
         // Formel 1: løbskalender, resultater og VM-stilling fra Jolpica (den åbne efterfølger til Ergast)
         const sub = path.slice(4);

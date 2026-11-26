@@ -1,5 +1,5 @@
 {
-  "version": "1.103.0",
+  "version": "1.103.1",
   "files": [
     "index.html",
     "app.js",
@@ -31,6 +31,17 @@
     "leaflet.css"
   ],
   "notes": [
+    {
+      "version": "1.103.1",
+      "date": "26. november 2026",
+      "title": "Trafikkort rettet",
+      "items": [
+        "Kortet vises nu – med vejene farvet efter trafikken",
+        "Kun aktuelle trafikmeldinger: gamle uheld og kø, der er ryddet, forsvinder",
+        "Samme uheld vises kun én gang, og ved kø står forsinkelsen i minutter",
+        "Hver melding viser, hvor længe siden den blev meldt"
+      ]
+    },
     {
       "version": "1.103.0",
       "date": "26. november 2026",

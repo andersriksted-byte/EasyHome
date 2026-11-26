@@ -19,22 +19,25 @@ function loadLeaflet() {
 
 let M = null; // { map, el, base, dark, flow, layer, viewKey }
 
-// Trafiklaget hentes gennem workeren (med nøglen i en header), så TomTom-nøglen aldrig ligger i browseren
-function flowLayer() {
+// Fliserne hentes gennem workeren (med nøglen i en header): baggrundskort fra TomTom (eller OpenStreetMap) og trafiklaget,
+// der farver vejene efter hvor flydende trafikken kører. TomTom-nøglen ligger kun i workeren.
+const urls = new Set();
+function workerTiles(kind, opts) {
   const Grid = window.L.GridLayer.extend({
     createTile(c, done) {
-      const img = document.createElement('img'); img.alt = ''; img.className = 'tr-flow';
-      workerFetch(`/trafik/flow/${c.z}/${c.x}/${c.y}`).then((r) => (r.ok ? r.blob() : null)).then((b) => { if (b) img.src = URL.createObjectURL(b); done(null, img); }).catch((e) => done(e, img));
+      const img = document.createElement('img'); img.alt = ''; img.setAttribute('role', 'presentation');
+      workerFetch(`/trafik/${kind}/${c.z}/${c.x}/${c.y}`).then((r) => (r.ok && r.status !== 204 ? r.blob() : null)).then((b) => {
+        if (b && b.size) { const u = URL.createObjectURL(b); urls.add(u); img.onload = () => done(null, img); img.onerror = () => done(null, img); img.src = u; } else done(null, img);
+      }).catch((e) => done(e, img));
       return img;
     }
   });
-  return new Grid({ opacity: 0.9, minZoom: 6, maxZoom: 17, zIndex: 5 });
+  const g = new Grid({ maxZoom: 18, ...opts });
+  g.on('tileunload', (e) => { const u = e.tile && e.tile.src; if (u && urls.has(u)) { URL.revokeObjectURL(u); urls.delete(u); } });
+  return g;
 }
-
-function baseLayer(dark) {
-  return window.L.tileLayer(`https://{s}.basemaps.cartocdn.com/${dark ? 'dark_all' : 'rastertiles/voyager'}/{z}/{x}/{y}{r}.png`, {
-    subdomains: 'abcd', maxZoom: 19, attribution: '© OpenStreetMap · © CARTO · Vejdirektoratet' + '' });
-}
+const flowLayer = () => workerTiles('flow', { opacity: 0.95, minZoom: 5, zIndex: 5 });
+const baseLayer = (dark) => workerTiles(dark ? 'night' : 'base', { zIndex: 1, attribution: '© TomTom · © OpenStreetMap · Vejdirektoratet' });
 
 // Tegner kortet i elementet (eller genbruger det, hvis det allerede står der)
 export async function sync(el, { home, dest, items, flow, dark, radius }) {

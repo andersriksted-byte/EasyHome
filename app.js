@@ -620,7 +620,7 @@ function wNaeste(size, h = 1, wd = 1, x = null) {
     const traf = !rt.traffic ? '' : rt.delayMin <= 2 ? 'Trafikken er let' : rt.delayMin <= 9 ? 'Lidt trafik' : 'Tæt trafik';
     // Trafikmeldinger på vejen (Vejdirektoratet), når Trafik er slået til
     let warn = '';
-    if (svcOn('trafik') && rt.lat && lm <= 180) { trafikLoad(); const on = TR.along(home(), rt).filter((y) => y.kind !== 'vejarbejde'); if (on.length) warn = `⚠ ${on.length} ${on.length === 1 ? 'melding' : 'meldinger'} på vejen`; }
+    if (svcOn('trafik') && rt.lat && lm <= 180) { trafikLoad(rt); const on = TR.along(home(), rt).filter((y) => y.kind !== 'vejarbejde'); if (on.length) warn = `⚠ ${on.length} ${on.length === 1 ? 'melding' : 'meldinger'} på vejen`; }
     drive = `<div class="nx2-drive ${cls}"><b>${lm <= 0 ? 'Kør nu!' : 'Kør kl. ' + hhmm(leave)}</b><span>${[warn, traf, durTxt(rt.min) + ' i bil'].filter(Boolean).join(' · ')}</span></div>`;
   }
   const until = running ? `I gang – til ${hhmm(e.end)}` : mins < 60 ? `om ${Math.max(1, mins)} min` : sameDay(e.start, new Date()) ? `om ${durTxt(mins)}` : day.toLowerCase();
@@ -2013,12 +2013,14 @@ function pageMusik() {
 }
 
 /* ---------- Trafik ---------- */
-function trafikLoad() { TR.load().then((ch) => { if (ch) softRender(); }); }
-const trWhen = (x) => { const f = x.from; const t = x.to; const d = (v) => (sameDay(v, new Date()) ? hhmm(v) : `${v.getDate()}/${v.getMonth() + 1}`); return [f ? 'Fra ' + d(f) : '', t ? 'til ' + d(t) : ''].filter(Boolean).join(' '); };
+function trafikLoad(dest) { TR.load(TR.bboxFor(home(), dest || null, TR.cfg().radius)).then((ch) => { if (ch) softRender(); }); }
+const ago = (d) => { const m = Math.round((Date.now() - d.getTime()) / 60000); return m < 1 ? 'lige nu' : m < 60 ? `for ${m} min siden` : m < 24 * 60 ? `for ${Math.floor(m / 60)} t siden` : `for ${Math.floor(m / 1440)} d siden`; };
+const trWhen = (x) => { if (x.kind !== 'vejarbejde' && x.from) return 'Meldt ' + ago(x.from) + (x.seen && Date.now() - x.seen > 5 * 60000 ? ' · sidst set ' + ago(x.seen) : ''); return trWhen2(x); };
+const trWhen2 = (x) => { const f = x.from; const t = x.to; const d = (v) => (sameDay(v, new Date()) ? hhmm(v) : `${v.getDate()}/${v.getMonth() + 1}`); return [f ? 'Fra ' + d(f) : '', t ? 'til ' + d(t) : ''].filter(Boolean).join(' '); };
 const trKm = (k) => (k < 1 ? '< 1 km' : k < 10 ? k.toFixed(1).replace('.', ',') + ' km' : Math.round(k) + ' km');
 function trRow(x, full) {
   const K = TR.KINDS[x.kind] || TR.KINDS.haendelse;
-  return `<div class="tr-r k-${x.kind}" style="--kc:${K.c}"><i class="tr-ic" aria-hidden="true">${K.icon}</i><div class="tr-m"><div class="tr-top"><b>${esc(K.label)}</b><span>${esc(trKm(x.km))}${x.kommune ? ' · ' + esc(x.kommune) : ''}</span></div><div class="tr-t">${esc(x.title)}</div>${full && x.text && x.text !== x.title ? `<div class="tr-d">${esc(x.text)}</div>` : ''}${full && trWhen(x) ? `<div class="tr-w">${esc(trWhen(x))}</div>` : ''}</div></div>`;
+  return `<div class="tr-r k-${x.kind}" style="--kc:${K.c}"><i class="tr-ic" aria-hidden="true">${K.icon}</i><div class="tr-m"><div class="tr-top"><b>${esc(K.label)}</b>${x.delay ? `<em class="tr-delay">+${x.delay} min</em>` : ''}<span>${esc(trKm(x.km))}${x.kommune ? ' · ' + esc(x.kommune) : ''}</span></div><div class="tr-t">${esc(x.title)}</div>${full && x.text && x.text !== x.title ? `<div class="tr-d">${esc(x.text)}</div>` : ''}${full && trWhen(x) ? `<div class="tr-w">${esc(trWhen(x))}</div>` : ''}</div></div>`;
 }
 function wTrafik(size, h = 1, wd = 1) {
   trafikLoad();
@@ -2033,9 +2035,7 @@ function wTrafik(size, h = 1, wd = 1) {
   return head(esc(rad)) + `<div class="tr-list" data-trim>${all.slice(0, 30).map((x) => trRow(x, kind === 'big' || kind === 'tall')).join('')}</div>`;
 }
 function pageTrafik() {
-  trafikLoad();
   if (!hasProxy()) return '<div class="empty">Trafik kræver forbindelsen til jeres server.</div>';
-  if (!TR.state.items) return `<div class="empty">${TR.state.err ? 'Kunne ikke hente trafikken fra Vejdirektoratet.' : 'Henter trafikken …'}</div>`;
   const f = ui.trFilter || 'alle';
   // Hvor skal du hen? Omkring hjem, et af jeres steder eller næste aftale i kalenderen (view-valg, ikke indstilling)
   const dests = [{ id: 'hjem', label: '🏠 Omkring hjem' }];
@@ -2044,6 +2044,8 @@ function pageTrafik() {
   const nrt = nxt ? routeFor(nxt) : null;
   if (nrt && nrt.found && nrt.lat) dests.splice(1, 0, { id: 'cal', label: `📅 ${nxt.title} ${hhmm(nxt.start)}`, to: { lat: nrt.lat, lon: nrt.lon }, rt: nrt, ev: nxt });
   const dest = dests.find((d) => d.id === ui.trDest) || dests[0];
+  trafikLoad(dest.to);
+  if (!TR.state.items) return `<div class="empty">${TR.state.err ? 'Kunne ikke hente trafikken fra Vejdirektoratet.' : 'Henter trafikken …'}</div>`;
   const all = dest.to ? TR.along(home(), dest.to) : TR.near(home());
   const acute = all.filter((x) => x.kind !== 'vejarbejde');
   const sum = dest.to ? `<div class="tr-sum ${acute.length ? 'warn' : 'ok'}"><span>${acute.length ? '⚠' : '✓'}</span><div><b>${acute.length ? `${acute.length} ${acute.length === 1 ? 'melding' : 'meldinger'} på vejen` : 'Fri vej'}${dest.rt ? ` · ${durTxt(dest.rt.min)} i bil${dest.rt.traffic && dest.rt.delayMin > 2 ? ` (+${dest.rt.delayMin} min pga. trafik)` : ''}` : ''}</b><small>${esc(dest.label.replace(/^\S+ /, ''))}${all.length - acute.length ? ` · 🚧 ${all.length - acute.length} vejarbejde` : ''}</small></div></div>` : '';
@@ -2978,7 +2980,7 @@ function boot() {
   setInterval(() => { const c = $('#clk'); const n = new Date(); if (c) c.textContent = hhmm(n); if (n.getSeconds() === 0) { renderHeader(); applyTheme(); } }, 1000);
   setInterval(() => { ui.tick++; renderFooter(); }, 8000);
   setInterval(loadWeather, 15 * 60000);
-  setInterval(() => { if (!document.hidden && (ui.page === 'trafik' || (ui.page === 'forside' && curLayout().some((x) => x.id === 'trafik')))) TR.load().then((ch) => { if (ch) softRender(); }); }, 3 * 60000);
+  setInterval(() => { if (!document.hidden && (ui.page === 'trafik' || (ui.page === 'forside' && curLayout().some((x) => x.id === 'trafik')))) softRender(); }, 2 * 60000); // siden/kortet henter selv igen, når data er over 2 min gamle
   // Nyhedskortet: tæl ned og skift til næste medie efter 20 sekunder
   setInterval(() => {
     const bar = document.getElementById('newsBar');

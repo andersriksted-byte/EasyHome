@@ -2,7 +2,7 @@
 // Meldingerne sorteres efter afstand fra jeres hjem og filtreres efter den valgte radius.
 import { workerFetch, hasProxy, settings } from './util.js';
 
-export const state = { items: null, at: 0, err: '', loading: false, flow: false };
+export const state = { items: null, cache: {}, busy: {}, at: 0, err: '', flow: false, tt: false };
 
 export const KINDS = {
   uheld: { label: 'Uheld', icon: '💥', c: '#E5484D' },
@@ -15,17 +15,46 @@ export const KINDS = {
 
 export const cfg = () => ({ radius: 30, roadworks: true, ...(settings.trafik || {}) });
 
-export async function load(force = false) {
+// Området, der hentes for: en firkant omkring hjemmet (radius) eller omkring turen fra hjem til mål
+export function bboxFor(a, b, radiusKm) {
+  const pad = (km) => [km / 111, km / (111 * Math.cos((a.lat * Math.PI) / 180))];
+  if (b) { const [py, px] = pad(8); return [Math.min(a.lon, b.lon) - px, Math.min(a.lat, b.lat) - py, Math.max(a.lon, b.lon) + px, Math.max(a.lat, b.lat) + py]; }
+  if (!radiusKm) return [8.0, 54.5, 15.2, 57.8];
+  const [py, px] = pad(radiusKm); return [a.lon - px, a.lat - py, a.lon + px, a.lat + py];
+}
+export async function load(bbox, force = false) {
   if (!hasProxy()) { state.err = 'NO_PROXY'; return false; }
-  if (state.loading || (!force && state.items && Date.now() - state.at < 3 * 60000)) return false;
-  state.loading = true;
+  const key = bbox ? bbox.map((v) => v.toFixed(2)).join(',') : '';
+  const c0 = state.cache[key];
+  if (state.busy[key] || (!force && c0 && Date.now() - c0.at < 2 * 60000) || (c0 && Date.now() - c0.at < 20000)) return false;
+  state.busy[key] = true;
   try {
-    const j = await (await workerFetch('/trafik')).json();
+    const j = await (await workerFetch('/trafik' + (key ? '?bbox=' + key : ''))).json();
     if (j.error) throw new Error(j.error);
-    state.items = (j.items || []).map((x) => ({ ...x, from: x.from ? new Date(x.from) : null, to: x.to ? new Date(x.to) : null }));
-    state.at = Date.now(); state.err = ''; state.flow = !!j.flow;
+    const all = (j.items || []).map((x) => ({ ...x, from: x.from ? new Date(x.from) : null, to: x.to ? new Date(x.to) : null, seen: x.seen ? new Date(x.seen) : null }));
+    state.cache[key] = { at: Date.now(), items: all, tt: !!j.tt };
+    // Alle områder, der er hentet for nylig (fx omkring hjem og på vej til næste aftale), lægges sammen – near()/along() vælger selv ud
+    const ids = new Set(); const union = [];
+    Object.values(state.cache).filter((c) => Date.now() - c.at < 10 * 60000).forEach((c) => c.items.forEach((x) => { if (!ids.has(x.id)) { ids.add(x.id); union.push(x); } }));
+    state.items = merge(union, !!j.tt);
+    state.at = Date.now(); state.err = ''; state.flow = !!j.flow; state.tt = !!j.tt;
     return true;
-  } catch (e) { state.err = e.message || 'Fejl'; return true; } finally { state.loading = false; }
+  } catch (e) { state.err = e.message || 'Fejl'; state.cache[key] = { at: Date.now() - 90000, items: [], tt: false }; return true; } finally { state.busy[key] = false; }
+}
+// TomTom (aktuelle, med forsinkelse) og Vejdirektoratet (officielle tekster) slås sammen.
+// Er TomTom med, skjules Vejdirektoratets uheld/kø, der er mere end 3 timer gamle og som TomTom ikke længere ser – de er sandsynligvis ryddet.
+function merge(all, haveTT) {
+  const tt = all.filter((x) => x.src === 'tt'); const vd = all.filter((x) => x.src !== 'tt');
+  const near = (a, b, k) => km(a, b) < k;
+  const acute = (x) => ['uheld', 'koe', 'haendelse'].includes(x.kind);
+  const keepVd = vd.filter((x) => {
+    if (!haveTT || !acute(x)) return true;
+    const old = x.from && Date.now() - x.from.getTime() > 3 * 3600000;
+    return !old || tt.some((t) => acute(t) && near(t, x, 3));
+  });
+  // En TomTom-melding, der dækker det samme som en fra Vejdirektoratet, giver forsinkelsen videre og vises ikke dobbelt
+  const keepTt = tt.filter((t) => { const v = keepVd.find((x) => x.kind === t.kind && near(t, x, 1.5)); if (v) { v.delay = t.delay; v.seen = t.seen; return false; } return true; });
+  return keepVd.concat(keepTt);
 }
 
 const rad = (d) => (d * Math.PI) / 180;
