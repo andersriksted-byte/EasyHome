@@ -420,7 +420,7 @@ const favShowName = (id) => !!((settings.sonos || {}).favName || {})[id];
 function favLogo(act, id, name, img, k, playing) {
   const nm = img && favShowName(id);
   return `<button class="mlogo${playing ? ' playing' : ''}${nm ? ' named' : ''}" data-act="${act}" data-id="${esc(id)}" aria-label="${esc(name)}" title="${esc(name)}"${playing ? ' aria-current="true"' : ''}>
-    <i class="gen" style="--c:${logoColor(name)}"><span>${FAVK[k][0]}</span><b>${esc(name)}</b>${img ? `<img src="${esc(img)}" alt="" loading="lazy" onerror="this.remove()">` : ''}</i>${nm ? `<span class="mlogo-n">${esc(name)}</span>` : ''}${playing ? '<em class="eq"><i></i><i></i><i></i></em>' : ''}</button>`;
+    <i class="gen" style="--c:${logoColor(name)}"><span>${FAVK[k][0]}</span><b>${esc(name)}</b>${img && !BAD_IMG.has(img) ? `<img src="${esc(img)}" alt="" loading="lazy" onerror="window.__badImg(this)">` : ''}</i>${nm ? `<span class="mlogo-n">${esc(name)}</span>` : ''}${playing ? '<em class="eq"><i></i><i></i><i></i></em>' : ''}</button>`;
 }
 // Afspilningsbar: træk for at spole, eller hop 15 sek. tilbage / 30 sek. frem
 const fmtMs = (ms) => { const t = Math.floor(ms / 1000); const h = Math.floor(t / 3600); const m = Math.floor((t % 3600) / 60); const x = t % 60; return h ? `${h}:${pad(m)}:${pad(x)}` : `${m}:${pad(x)}`; };
@@ -1956,10 +1956,35 @@ function renderMain(keepScroll = true) {
   const html = PAGE_RENDER[ui.page]();
   // Forsiden: tegn kun de kort om, der har ændret sig – ellers blinker billeder og logoer ved hver opdatering
   if (ui.page === 'forside' && patchGrid(m, html)) { seekTick(); ipTick(); if (keepScroll) m.scrollTop = y; return; }
-  m.innerHTML = html;
+  if (m._page === ui.page && m.firstChild) { const tpl = document.createElement('div'); tpl.innerHTML = html; morphKids(m, tpl); } else m.innerHTML = html;
+  m._page = ui.page;
   if (ui.page === 'forside') { const g = document.getElementById('grid'); m._rest = (() => { const c = m.cloneNode(true); const gg = c.querySelector('#grid'); if (gg) gg.innerHTML = ''; return c.innerHTML; })(); if (g) [...g.children].forEach((c) => { c._src = stableSrc(c.outerHTML); }); scaleGrid(); fitCards(); trimCards(); seekTick(); }
   if (ui.page === 'sport') spFitNames();
   if (keepScroll) m.scrollTop = y;
+}
+// Billeder, der ikke kan hentes, huskes, så de ikke prøves (og blinker) ved hver tegning
+const BAD_IMG = new Set();
+window.__badImg = (el) => { BAD_IMG.add(el.getAttribute('src')); el.remove(); };
+// Opdater siden ved kun at rette det, der er ændret: elementer (og billeder), der allerede står der, bliver stående
+function morph(a, b) {
+  if (a.nodeType === 3 || a.nodeType === 8) { if (a.data !== b.data) a.data = b.data; return; }
+  for (const at of b.attributes) if (a.getAttribute(at.name) !== at.value) a.setAttribute(at.name, at.value);
+  for (const at of [...a.attributes]) if (!b.hasAttribute(at.name)) a.removeAttribute(at.name);
+  const focused = a === document.activeElement;
+  if (a.tagName === 'INPUT' && !focused) { if (a.type === 'checkbox' || a.type === 'radio') a.checked = b.hasAttribute('checked'); else if (a.value !== (b.getAttribute('value') ?? '')) a.value = b.getAttribute('value') ?? ''; }
+  if (a.tagName === 'TEXTAREA') { if (!focused) a.value = b.value; return; }
+  morphKids(a, b);
+  if (a.tagName === 'SELECT' && !focused) { const v = [...b.options || []].findIndex((op) => op.selected); if (v >= 0) a.selectedIndex = v; }
+}
+function morphKids(a, b) {
+  const ac = [...a.childNodes]; const bc = [...b.childNodes];
+  bc.forEach((n, i) => {
+    const o = ac[i];
+    if (!o) a.appendChild(n);
+    else if (o.nodeType === n.nodeType && o.nodeName === n.nodeName && (o.nodeType !== 1 || ((o.dataset.wid || '') === (n.dataset.wid || '') && o.id === n.id))) morph(o, n);
+    else a.replaceChild(n, o);
+  });
+  for (let i = bc.length; i < ac.length; i++) ac[i].remove();
 }
 // Det, der alligevel opdateres hvert sekund (nedtællinger, fremdriftsbjælker), tæller ikke som en ændring
 const stableSrc = (h) => h.replace(/(<b data-tleft="[^"]*">)[^<]*/g, '$1').replace(/(data-tbar="[^"]*" style=")width:[\d.]+%/g, '$1').replace(/(id="(?:newsBar|n1Bar|inspBar)" style=")width:[\d.e-]+%/g, '$1');
@@ -1973,7 +1998,7 @@ function patchGrid(m, html) {
   const oc = [...og.children]; const nc = [...ng.children];
   if (oc.length !== nc.length || oc.some((c, i) => c.dataset.wid !== nc[i].dataset.wid)) return false;
   let changed = false;
-  nc.forEach((c, i) => { const src = stableSrc(c.outerHTML); if (oc[i]._src === src) return; c._src = src; og.replaceChild(c, oc[i]); changed = true; });
+  nc.forEach((c, i) => { const src = stableSrc(c.outerHTML); if (oc[i]._src === src) return; morph(oc[i], c); oc[i]._src = src; changed = true; });
   if (changed) { scaleGrid(); fitCards(); trimCards(); }
   return true;
 }
