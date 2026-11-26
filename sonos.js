@@ -104,7 +104,7 @@ export async function refresh() {
     const [meta, pb, vol] = await Promise.all([
       api(`/groups/${gid}/playbackMetadata`), api(`/groups/${gid}/playback`), api(`/groups/${gid}/groupVolume`)
     ]);
-    state.meta = meta; state.playback = pb; state.volume = vol; state.error = null;
+    state.meta = meta; state.playback = pb; state.pbAt = Date.now(); state.volume = vol; state.error = null;
     const g = currentGroup();
     if (g) {
       const vols = await Promise.all((g.playerIds || []).map((pid) => api(`/players/${pid}/playerVolume`).then((v) => [pid, v.volume]).catch(() => [pid, null])));
@@ -263,3 +263,15 @@ export function favorites(all = false) {
   const pos = (f) => { const i = order.indexOf(f.id); return i < 0 ? 1000 + state.favorites.indexOf(f) : i; };
   return state.favorites.slice().sort((a, b) => pos(a) - pos(b)).filter((f) => all || !hidden.includes(f.id));
 }
+
+// Spoling i det, der spiller (podcast-afsnit, sange). Radio har ingen længde og kan ikke spoles.
+export function position() {
+  const m = state.meta || {}; const t = m.currentItem && m.currentItem.track;
+  const dur = t && +t.durationMillis; const pb = state.playback;
+  if (!dur || !pb || pb.positionMillis == null) return null;
+  const playing = /PLAYING/.test(pb.playbackState || '');
+  return { dur, pos: Math.max(0, Math.min(dur, +pb.positionMillis + (playing ? Date.now() - (state.pbAt || Date.now()) : 0))), playing };
+}
+const movedTo = (ms) => { if (state.playback) { state.playback.positionMillis = Math.max(0, ms); state.pbAt = Date.now(); } };
+export async function seek(ms) { movedTo(ms); await api(`/groups/${gid()}/playback/seek`, 'POST', { positionMillis: Math.max(0, Math.round(ms)) }); }
+export async function seekBy(delta) { const p = position(); if (p) movedTo(Math.min(p.dur, p.pos + delta)); await api(`/groups/${gid()}/playback/seekRelative`, 'POST', { deltaMillis: Math.round(delta) }); }

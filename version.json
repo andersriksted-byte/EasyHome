@@ -1,5 +1,5 @@
 {
-  "version": "1.78.6",
+  "version": "1.79.0",
   "files": [
     "index.html",
     "app.js",
@@ -27,6 +27,15 @@
     "todo.js"
   ],
   "notes": [
+    {
+      "version": "1.79.0",
+      "date": "26. november 2026",
+      "title": "Spol i podcasts",
+      "items": [
+        "Under Musik er der nu en afspilningsbar: træk for at spole, eller hop 15 sek. tilbage og 30 sek. frem",
+        "Det store Musik-kort på forsiden viser også, hvor langt I er, og man kan spole i det"
+      ]
+    },
     {
       "version": "1.78.6",
       "date": "26. november 2026",

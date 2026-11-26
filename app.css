@@ -1870,3 +1870,13 @@ button.w7r.sel{background:color-mix(in srgb,var(--accent) 16%,transparent);box-s
 .cdm-t b{font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cdm-t span{font-size:12px;font-weight:700;color:var(--muted);white-space:nowrap}
 .forow .fopod{grid-column:1/-1;min-height:40px;font-size:13px}
+/* Afspilningsbar */
+.mseek{display:flex;align-items:center;gap:8px;min-width:0}
+.mseek input[type=range]{flex:1;min-width:0;accent-color:var(--accent);height:28px;margin:0}
+.mst{font-size:12px;font-weight:700;font-variant-numeric:tabular-nums;opacity:.75;flex:none;min-width:38px;text-align:center}
+.mskip{flex:none;min-width:44px;height:36px;border:0;border-radius:99px;background:color-mix(in srgb,currentColor 12%,transparent);color:inherit;font-weight:800;font-size:13px}
+.mwside .mseek .mst{min-width:32px;font-size:11px}
+.mplayer .mseek{display:grid;grid-template-columns:auto auto 1fr auto auto;grid-template-areas:"bar bar bar bar bar" "b1 t1 . t2 b2";row-gap:2px;column-gap:8px}
+.mplayer .mseek input[type=range]{grid-area:bar;width:100%}
+.mplayer .mseek [data-seekpos]{grid-area:t1;text-align:left}.mplayer .mseek [data-seekleft]{grid-area:t2;text-align:right}
+.mplayer .mseek .mskip:first-child{grid-area:b1}.mplayer .mseek .mskip:last-child{grid-area:b2}

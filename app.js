@@ -422,6 +422,20 @@ function favLogo(act, id, name, img, k, playing) {
   return `<button class="mlogo${playing ? ' playing' : ''}${nm ? ' named' : ''}" data-act="${act}" data-id="${esc(id)}" aria-label="${esc(name)}" title="${esc(name)}"${playing ? ' aria-current="true"' : ''}>
     <i class="gen" style="--c:${logoColor(name)}"><span>${FAVK[k][0]}</span><b>${esc(name)}</b>${img ? `<img src="${esc(img)}" alt="" loading="lazy" onerror="this.remove()">` : ''}</i>${nm ? `<span class="mlogo-n">${esc(name)}</span>` : ''}${playing ? '<em class="eq"><i></i><i></i><i></i></em>' : ''}</button>`;
 }
+// Afspilningsbar: træk for at spole, eller hop 15 sek. tilbage / 30 sek. frem
+const fmtMs = (ms) => { const t = Math.floor(ms / 1000); const h = Math.floor(t / 3600); const m = Math.floor((t % 3600) / 60); const x = t % 60; return h ? `${h}:${pad(m)}:${pad(x)}` : `${m}:${pad(x)}`; };
+function seekBar(btns = true) {
+  const p = S.position(); if (!p) return '';
+  return `<div class="mseek">${btns ? `<button class="mskip" data-act="sSeekBy" data-d="-15000" aria-label="15 sekunder tilbage">−15</button>` : ''}<span class="mst" data-seekpos>${fmtMs(p.pos)}</span><input type="range" min="0" max="${p.dur}" step="1000" value="${Math.round(p.pos)}" data-seekbar aria-label="Spol i afspilningen"><span class="mst" data-seekleft>−${fmtMs(p.dur - p.pos)}</span>${btns ? `<button class="mskip" data-act="sSeekBy" data-d="30000" aria-label="30 sekunder frem">+30</button>` : ''}</div>`;
+}
+function seekTick() {
+  const p = S.position();
+  document.querySelectorAll('.mseek').forEach((el) => {
+    const r = el.querySelector('[data-seekbar]'); if (!p || !r || r === document.activeElement && ui.seeking) return;
+    r.max = p.dur; r.value = Math.round(p.pos);
+    el.querySelector('[data-seekpos]').textContent = fmtMs(p.pos); el.querySelector('[data-seekleft]').textContent = '−' + fmtMs(p.dur - p.pos);
+  });
+}
 const favBadge = (k) => `<em class="mkind k-${k}" aria-label="${FAVK[k][1]}">${FAVK[k][0]}</em>`;
 function wSonos(size, h = 1, wd = 1, x = {}) {
   if (!S.state.connected) return `${cardHead('Musik')}<div class="empty">Sonos er ikke forbundet endnu.</div><button class="btn line" data-act="nav" data-page="musik">Gå til Musik</button>`;
@@ -436,7 +450,7 @@ function wSonos(size, h = 1, wd = 1, x = {}) {
   if (kind === 'tiny') return `<div class="mw mw-tiny" style="${art}"><div class="mwshade">${info}${ctl}</div></div>`;
   if (kind === 'wide') return `<div class="mw mw-wide" style="grid-template-columns:auto minmax(0,1fr)${wd >= 3 ? ` minmax(0,${wd - 2}fr)` : ''}"><div class="mwart" style="${art}"></div><div class="mwside">${info}${ctl}${vol}</div>${wd >= 3 ? `<div class="mwfavcol">${favs}</div>` : ''}</div>`;
   if (kind === 'tall') return `<div class="mw mw-tall"><div class="mwart" style="${art}"></div>${info}${ctl}${vol}${favs}</div>`;
-  return `<div class="mw mw-big"><div class="mwtop"><div class="mwart" style="${art}"></div><div class="mwside">${info}${ctl}${vol}</div></div>${favs}</div>`;
+  return `<div class="mw mw-big"><div class="mwtop"><div class="mwart" style="${art}"></div><div class="mwside">${info}${seekBar(false)}${ctl}${vol}</div></div>${favs}</div>`;
 }
 function wTv(size, h = 1, wd = 1) {
   const ch = settings.tv.channels;
@@ -1231,7 +1245,7 @@ function renderTmPicker() {
   </div>`;
 }
 function timerTick() {
-  TM.tick();
+  TM.tick(); seekTick();
   TM.timers().forEach((t) => {
     const el = document.querySelector(`[data-tleft="${t.id}"]`); if (el) el.textContent = t.done ? 'Færdig!' : TM.fmt(TM.left(t));
     const bar = document.querySelector(`[data-tbar="${t.id}"]`); if (bar && t.total) bar.style.width = Math.max(0, Math.min(100, (TM.left(t) / t.total) * 100)) + '%';
@@ -1638,6 +1652,7 @@ function pageMusik() {
     <section class="player mplayer">
       <div class="art" style="${np.image ? `background-image:url('${esc(np.image)}')` : ''}"></div>
       <div class="mnow"><b>${esc(np.title || 'Intet spiller')}</b><span>${esc(np.artist || '')}</span><span class="mgrp">${esc(np.group)}</span></div>
+      ${seekBar()}
       <div class="ctl"><button class="mode" data-act="sShuffle" aria-pressed="${!!np.modes.shuffle}" aria-label="Bland sangene">${svg('shuffle', 20)}</button><button data-act="sPrev" aria-label="Forrige">${fillSvg('prev', 18)}</button><button class="pbig" data-act="sPlay" aria-label="${np.playing ? 'Pause' : 'Afspil'}">${fillSvg(np.playing ? 'pause' : 'play', 22)}</button><button data-act="sNext" aria-label="Næste">${fillSvg('next', 18)}</button><button class="mode" data-act="sRepeat" aria-pressed="${!!(np.modes.repeat || np.modes.repeatOne)}" aria-label="${np.modes.repeatOne ? 'Gentag én sang' : np.modes.repeat ? 'Gentag hele listen' : 'Gentag fra'}">${svg('repeat', 20)}${np.modes.repeatOne ? '<i>1</i>' : ''}</button></div>
       <div class="mqueue">${np.source ? `<div class="mq-src" title="${esc(np.source)}">Fra ${esc(np.source)}</div>` : ''}${np.next ? `<div class="mq-lab">Næste</div><div class="mq-row"><span class="mq-art" style="${np.next.image ? `background-image:url('${esc(np.next.image)}')` : ''}"></span><span class="mq-txt"><b>${esc(np.next.title)}</b><span>${esc(np.next.artist)}</span></span></div>` : ''}</div>
       ${np.volume !== null ? `<label class="vol"><span class="small">Lyd</span><input type="range" min="0" max="100" value="${np.volume}" data-vol aria-label="Lydstyrke for hele gruppen"></label>` : ''}
@@ -2135,6 +2150,7 @@ const act = {
   newsToggle: (b) => { toggleNews(b.dataset.id); renderMain(); },
   newsRefresh: () => { N.clearNewsCache(); D.news = null; renderMain(); loadNews(); },
   sPlay: () => sonosDo(S.togglePlay), sNext: () => sonosDo(S.next), sPrev: () => sonosDo(S.prev),
+  sSeekBy: (b) => { sonosDo(() => S.seekBy(+b.dataset.d)).then(seekTick); seekTick(); },
   sFav: (b) => { S.markFav(b.dataset.id); sonosDo(async () => { const pod = await S.playFav(b.dataset.id); if (pod && pod.count) toast(`${pod.count} afsnit af ${pod.name} er sat i kø`); }); },
   sGroup: (b) => { const cg = S.currentGroup(); if (cg) { const np = S.nowPlaying(); S.state.groupMeta[cg.id] = { title: np.title, image: np.image }; } S.controlGroup(b.dataset.id); S.state.playerVol = {}; S.state.meta = null; renderMain(false); loadSonos(); },
   sGroupPlay: (b) => { sonosDo(() => S.toggleGroupPlay(b.dataset.id)); renderMain(false); },
@@ -2261,6 +2277,7 @@ document.addEventListener('click', (e) => {
 });
 document.addEventListener('input', (e) => {
   const t = e.target;
+  if (t.hasAttribute && t.hasAttribute('data-seekbar')) { ui.seeking = true; const el = t.closest('.mseek'); el.querySelector('[data-seekpos]').textContent = fmtMs(+t.value); el.querySelector('[data-seekleft]').textContent = '−' + fmtMs(+t.max - +t.value); }
   if (t.hasAttribute && t.hasAttribute('data-look-alpha')) { L.setLook({ alpha: +t.value }); const lab = t.previousElementSibling; if (lab) lab.textContent = t.value + ' %'; }
 });
 document.addEventListener('keydown', (e) => { if (e.key !== 'Enter') return; if (e.target.id === 'geoQ') act.geoSearch(); else if (e.target.dataset && e.target.dataset.place !== undefined) e.target.blur(); });
@@ -2327,6 +2344,7 @@ document.addEventListener('change', (e) => {
   else if (t.hasAttribute('data-look-blur')) { L.setLook({ blur: t.checked }); }
   else if (t.dataset.place !== undefined) { settings.places[+t.dataset.place].label = t.value.trim(); save(); renderHeader(); }
   else if (t.dataset.tv !== undefined) { settings.tv.channels[+t.dataset.tv][t.dataset.field] = t.value.trim(); save(); }
+  else if (t.hasAttribute('data-seekbar')) { ui.seeking = false; sonosDo(() => S.seek(+t.value)); }
   else if (t.hasAttribute('data-vol')) { sonosDo(() => S.setVolume(+t.value)); }
   else if (t.dataset.pvol) { sonosDo(() => S.setPlayerVolume(t.dataset.pvol, +t.value)); }
 });
