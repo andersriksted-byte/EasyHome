@@ -1,5 +1,5 @@
 {
-  "version": "1.105.0",
+  "version": "1.105.1",
   "files": [
     "index.html",
     "app.js",
@@ -31,6 +31,16 @@
     "leaflet.css"
   ],
   "notes": [
+    {
+      "version": "1.105.1",
+      "date": "26. november 2026",
+      "title": "Trafik-kortet opsummerer",
+      "items": [
+        "Trafik-kortet på forsiden fortæller kort, hvordan trafikken er: \"Fri bane\" eller fx \"Uheld på E20 ved Odense S – forvent ca. 30 min ekstra\"",
+        "Har I en aftale med adresse inden for 6 timer, gælder opsummeringen turen dertil",
+        "Tryk på kortet for at se det hele under Trafik"
+      ]
+    },
     {
       "version": "1.105.0",
       "date": "26. november 2026",
