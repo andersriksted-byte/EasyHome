@@ -1,5 +1,5 @@
 {
-  "version": "1.87.0",
+  "version": "1.87.1",
   "files": [
     "index.html",
     "app.js",
@@ -27,6 +27,15 @@
     "todo.js"
   ],
   "notes": [
+    {
+      "version": "1.87.1",
+      "date": "26. november 2026",
+      "title": "Flottere Favoritter",
+      "items": [
+        "Favoritter på Sport har fået et kort pr. favorithold øverst: stillingen, hvis de spiller nu – ellers næste kamp eller seneste resultat",
+        "Dagens kampe står samlet pr. sportsgren i hver sin boks"
+      ]
+    },
     {
       "version": "1.87.0",
       "date": "26. november 2026",

@@ -927,6 +927,25 @@ function spStandings(c) {
 // Kampe med et hold, I følger, står altid først
 const spFavIds = () => new Set(((settings.football || {}).teams || []).map((t) => t.id));
 const spIsFav = (m) => { const f = spFavIds(); const x = (m && (m.m || m)) || {}; return !!((x.home && f.has(x.home.id)) || (x.away && f.has(x.away.id))); };
+// Favoritter: et kort pr. favorithold med kampen lige nu, næste kamp eller seneste resultat
+function spTeamCards() {
+  const teams = ((settings.football || {}).teams || []); if (!teams.length) return '';
+  const now = Date.now(); const ms = (FB.state.matches || []);
+  const cards = teams.map((t) => {
+    const mine = ms.filter((m) => m.home.id === t.id || m.away.id === t.id);
+    const live = mine.find((m) => m.state === 'in');
+    const next = mine.find((m) => m.state === 'pre' && !FB.pending(m) && +m.date > now - 3 * 3600000);
+    const last = mine.filter((m) => m.state === 'post').pop();
+    const m = live || next || last; if (!m) return '';
+    const home = m.home.id === t.id; const me = home ? m.home : m.away; const op = home ? m.away : m.home;
+    const d = m.date; const when = sameDay(d, new Date()) ? 'I dag' : sameDay(d, addDays(new Date(), 1)) ? 'I morgen' : `${cap(DAYS[d.getDay()])} ${d.getDate()}. ${MONTHS[d.getMonth()].slice(0, 3)}`;
+    const res = m.state !== 'pre' ? `<span class="ft-score">${esc(me.score)}<i>–</i>${esc(op.score)}</span>` : '';
+    const out = m.state === 'post' ? (me.win ? 'Sejr' : op.win ? 'Nederlag' : 'Uafgjort') : '';
+    const status = live ? `<span class="ft-live"><i class="lv-dot"></i>${esc(m.clock || 'Live')}</span>` : next && m === next ? `<span class="ft-next">${when} · ${hhmm(d)}</span>` : `<span class="ft-last ${me.win ? 'w' : op.win ? 'l' : 'd'}">${out}</span>`;
+    return `<div class="ft${live ? ' is-live' : ''}" ${spRef({ kind: 'fb', m })}><div class="ft-me">${spLogo(me)}<b>${esc(t.short || me.name)}</b></div><div class="ft-mid">${status}${res}</div><div class="ft-op"><small>${home ? 'mod' : 'ude mod'}</small><span>${spLogo(op)}<b>${esc(op.name)}</b></span><em>${esc(m.comp || '')}</em></div></div>`;
+  }).filter(Boolean);
+  return cards.length ? `<section class="sp-teams">${cards.join('')}</section>` : '';
+}
 function spFitRound() {
   document.querySelectorAll('.sp-cgw:not(.sp-allw)').forEach((w) => { w.classList.remove('tight'); const l = w.querySelector('.sp-list'); if (l && l.scrollHeight > l.clientHeight + 1) w.classList.add('tight'); });
 }
@@ -945,7 +964,7 @@ function pageSport() {
   const cards = []; const live = []; let waiting = false; const errs = [];
   const add = (key, ico, title, sub, body, isLive) => cards.push({ key, html: spCard(ico, title, sub, body, isLive, key), live: isLive });
   const ents = []; // alle kampe i én liste (til "Alle")
-  const ent = (key, ico, label, t, html, fav = false) => ents.push({ fav, t: +t || 0, html: `<div class="sp-ent" style="--sc:${SP_COL[spColKey(key)] || 'var(--accent)'}"><span class="sp-tag">${ico} ${esc(label)}</span>${html}</div>` });
+  const ent = (key, ico, label, t, html, fav = false) => ents.push({ key: spColKey(key), ico, fav, t: +t || 0, html: `<div class="sp-ent" style="--sc:${SP_COL[spColKey(key)] || 'var(--accent)'}"><span class="sp-tag">${ico} ${esc(label)}</span>${html}</div>` });
   if (hasFb) {
     if (!FB.state.at) waiting = true;
     const { all, order } = fbDays();
@@ -998,7 +1017,11 @@ function pageSport() {
   const liveRow = lv.length ? `<section class="sp-live"><div class="sp-sec"><span class="lv-dot"></span>Live nu <small>${lv.length}</small></div><div class="sp-lvrow">${lv.map((x) => x.html).join('')}</div></section>` : '';
   // Alle: alle kampe i én liste efter tidspunkt
   ents.sort((a, b) => (b.fav ? 1 : 0) - (a.fav ? 1 : 0) || a.t - b.t);
-  return `<div class="sp-page">${head(chips, alt)}${err}${liveRow}<div class="sp-cgw sp-allw">${dnav}<div class="sp-list sp-all">${ents.map((x) => x.html).join('')}</div></div></div>`;
+  // Grupperet pr. sportsgren (fodbold først), og inden for hver gruppe efter tid
+  const order = ['fb', 'f1', 'tennis', 'golf', 'nba', 'nfl', 'nhl'];
+  const grp = new Map(); ents.forEach((x) => { if (!grp.has(x.key)) grp.set(x.key, []); grp.get(x.key).push(x); });
+  const secs = [...grp.keys()].sort((a, b) => order.indexOf(a) - order.indexOf(b)).map((k) => `<section class="sp-fsec" style="--sc:${SP_COL[k] || 'var(--accent)'}"><div class="sp-fsh"><span class="sp-ico">${SP_ICO[k] || ''}</span><b>${SP_NAME[k] || k}</b><small>${grp.get(k).length}</small></div><div class="sp-list">${grp.get(k).map((x) => x.html).join('')}</div></section>`).join('');
+  return `<div class="sp-page">${head(chips, alt)}${err}${spTeamCards()}<div class="sp-cgw sp-allw">${dnav}<div class="sp-favs">${secs}</div></div></div>`;
 }
 
 /* Detaljer om en kamp (vindue, der opdateres hvert halve minut, mens kampen spilles) */
