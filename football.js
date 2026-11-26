@@ -54,7 +54,7 @@ async function schedule(t, fixture) {
   return own.length ? own : ms;
 }
 
-const follows = () => (settings.football && settings.football.follow) || [];
+const follows = () => []; // "Følg hele ligaen" er fjernet – ligaer ses under Sport, kampe kun for favorithold
 const ymd = (d) => `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
 // En hel liga: kampe fra en uge tilbage til tre uger frem (så næste runde også kommer med efter en landskampspause)
 async function leagueDays(lg) {
@@ -154,12 +154,13 @@ export async function loadTable(lg) {
 // Hele sæsonen for én liga (til Sport → turnering): hentes måned for måned, efterhånden som man bladrer
 const season = {};
 const monthKey = (d) => ymd(d).slice(0, 6);
-export async function loadMonths(lg, dates) {
+export async function loadMonths(lg, dates, maxAge = 0) {
   const S = season[lg] = season[lg] || { months: {}, list: [] };
-  const need = [...new Set(dates.map(monthKey))].filter((m) => !S.months[m]);
+  S.at = S.at || {};
+  const need = [...new Set(dates.map(monthKey))].filter((m) => !S.months[m] || (maxAge && S.months[m] !== 'loading' && Date.now() - (S.at[m] || 0) > maxAge));
   if (!need.length) return false;
   need.forEach((m) => { S.months[m] = 'loading'; });
-  const res = await Promise.all(need.map((m) => workerFetch(`/espn/${lg}/scoreboard?dates=${m}`).then((x) => x.json()).then((j) => { S.months[m] = 'ok'; return j; }).catch(() => { S.months[m] = 'err'; return {}; })));
+  const res = await Promise.all(need.map((m) => workerFetch(`/espn/${lg}/scoreboard?dates=${m}`).then((x) => x.json()).then((j) => { S.months[m] = 'ok'; S.at[m] = Date.now(); return j; }).catch(() => { S.months[m] = 'err'; return {}; })));
   const name = ((res.find((j) => (j.leagues || []).length) || {}).leagues || [{}])[0].name || '';
   const have = new Map(S.list.map((m) => [m.id, m]));
   res.flatMap((j) => j.events || []).forEach((e) => have.set(String(e.id), parse(e, '', name, lg)));

@@ -1,5 +1,5 @@
 {
-  "version": "1.86.4",
+  "version": "1.87.0",
   "files": [
     "index.html",
     "app.js",
@@ -27,6 +27,16 @@
     "todo.js"
   ],
   "notes": [
+    {
+      "version": "1.87.0",
+      "date": "26. november 2026",
+      "title": "Favoritter på Sport",
+      "items": [
+        "\"Alle\" på Sport hedder nu \"★ Favoritter\" og viser kampene med jeres favorithold – plus de sportsgrene, I har valgt",
+        "\"Følg hele ligaen\" er fjernet. Hele ligaen med runder og stilling ses i stedet ved at trykke på ligaen øverst på Sport",
+        "Runderne opdateres løbende, mens der spilles"
+      ]
+    },
     {
       "version": "1.86.4",
       "date": "26. november 2026",

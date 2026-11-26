@@ -868,6 +868,7 @@ function spRoundView(c, live) {
   const rs = FB.roundsOf(c.lg); ui.spRd = ui.spRd || {};
   const now = new Date();
   if (!FB.monthLoaded(c.lg, now)) FB.loadMonths(c.lg, [addDays(now, -35), now, addDays(now, 35)]).then(() => { if (ui.page === 'sport') softRender(); });
+  else { const liveNow = rs.some((rd) => rd.some((m) => m.state === 'in' || (m.state === 'pre' && Math.abs(m.date - now) < 15 * 60000))); FB.loadMonths(c.lg, [now], liveNow ? 60000 : 10 * 60000).then((n) => { if (n && ui.page === 'sport') softRender(); }); }
   if (!rs.length) return { label: c.name, nav: '<div class="sp-rnav"></div>', body: `<div class="sp-comp"><div class="sp-cg"><section class="card sp-card"><div class="empty">Henter kampprogrammet …</div></section></div><div class="sp-cs">${spStandings(c)}</div></div>` };
   const cur = FB.currentRound(rs);
   // Valgt runde huskes ved sin første kamps tidspunkt (så den ikke flytter sig, når flere måneder hentes)
@@ -936,7 +937,7 @@ function pageSport() {
   const days = Array.from({ length: 7 }, (_, i) => first + i).map((o) => { const d = addDays(today, o);
     return `<button class="sp-dchip${o === off ? ' on' : ''}${o === 0 ? ' today' : ''}" data-act="spDayTo" data-off="${o}"><span>${o === 0 ? 'I dag' : o === 1 ? 'I morgen' : o === -1 ? 'I går' : cap(DAYS[d.getDay()])}</span><b>${d.getDate()}.</b></button>`; }).join('');
   const nav = `<div class="sp-days"><button class="arr" data-act="spDay" data-dir="-1" ${off <= -7 ? 'disabled' : ''} aria-label="Dagen før">‹</button>${days}<button class="arr" data-act="spDay" data-dir="1" ${off >= 14 ? 'disabled' : ''} aria-label="Dagen efter">›</button><button class="sp-today${off ? '' : ' at'}" data-act="spDay" data-dir="0">I dag</button></div>`;
-  const fb = settings.football || {}; const hasFb = (fb.teams || []).length || (fb.follow || []).length;
+  const fb = settings.football || {}; const hasFb = (fb.teams || []).length || (fb.leagues || []).filter((x) => x !== 'nat').length;
   const sps = SP.followed();
   const head = (chips = '', alt = null) => `<div class="sp-top"><div class="sp-title"><h1>Sport</h1><span class="muted">${alt ? esc(alt.label) : `${cap(DAYS_LONG[day.getDay()])} ${day.getDate()}. ${MONTHS[day.getMonth()]}`}</span><button class="btn line sp-ref" data-act="spRefresh" aria-label="Opdater">${svg('refresh', 18)}</button></div>${alt ? alt.nav : nav}${chips}</div>`;
   if (!hasFb && !sps.length) return head() + `<section class="card"><div class="empty">Vælg sportsgrene under Indstillinger → Sport.</div></section>`;
@@ -982,7 +983,7 @@ function pageSport() {
   const comps = spComps();
   if (ui.spFilter && !comps.some((c) => c.key === ui.spFilter)) ui.spFilter = '';
   const f = ui.spFilter || '';
-  const chips = comps.length ? `<div class="sp-filter"><button class="sp-fchip${f ? '' : ' on'}" data-act="spFilter" data-k="">Alle</button>${comps.map((c) => `<button class="sp-fchip${f === c.key ? ' on' : ''}" data-act="spFilter" data-k="${c.key}" style="--sc:${SP_COL[c.col] || 'var(--accent)'}">${c.ico} ${esc(c.name)}${cards.some((x) => x.key === c.key && x.live) ? '<i class="lv-dot"></i>' : ''}</button>`).join('')}</div>` : '';
+  const chips = comps.length ? `<div class="sp-filter"><button class="sp-fchip${f ? '' : ' on'}" data-act="spFilter" data-k="">★ Favoritter</button>${comps.map((c) => `<button class="sp-fchip${f === c.key ? ' on' : ''}" data-act="spFilter" data-k="${c.key}" style="--sc:${SP_COL[c.col] || 'var(--accent)'}">${c.ico} ${esc(c.name)}${cards.some((x) => x.key === c.key && x.live) ? '<i class="lv-dot"></i>' : ''}</button>`).join('')}</div>` : '';
   const dnav = `<div class="sp-rnav"><button class="arr" data-act="spDay" data-dir="-1" ${off <= -7 ? 'disabled' : ''} aria-label="Dagen før">‹</button><div class="sp-rlab${off ? '' : ' cur'}"><span>${off === 0 ? 'I dag' : off === 1 ? 'I morgen' : off === -1 ? 'I går' : cap(DAYS[day.getDay()])}</span><b>${cap(DAYS_LONG[day.getDay()])} ${day.getDate()}. ${MONTHS[day.getMonth()]}</b></div><button class="arr" data-act="spDay" data-dir="1" ${off >= 14 ? 'disabled' : ''} aria-label="Dagen efter">›</button><button class="sp-today${off ? '' : ' at'}" data-act="spDay" data-dir="0">I dag</button></div>`;
   live.sort((a, b) => (b.fav ? 1 : 0) - (a.fav ? 1 : 0));
   if (f) { const c = comps.find((x) => x.key === f);
@@ -1367,12 +1368,12 @@ function fodboldSettings() {
   const leagueSec = (L) => { const on = lgs.includes(L.id); const teams = ui.fbTeams && ui.fbTeams[L.id];
     if (on && !teams && hasProxy()) FB.teamsOf(L.id).then((ts) => { ui.fbTeams = { ...(ui.fbTeams || {}), [L.id]: ts }; if (ui.page === 'indstillinger') renderMain(); }).catch(() => { ui.fbTeams = { ...(ui.fbTeams || {}), [L.id]: [] }; if (ui.page === 'indstillinger') renderMain(); });
     const fol = (fb.follow || []).includes(L.id);
-    return on ? `<div class="fblg"><div class="row" style="justify-content:space-between"><b>${esc(L.name)}</b><button class="pill" data-act="fbFollow" data-id="${L.id}" aria-pressed="${fol}">${fol ? '✓' : '+'} Følg hele ligaen</button></div><div class="fbchips">${teams ? (teams.length ? teams.map(chip).join('') : '<span class="small muted">Kunne ikke hente holdene</span>') : '<span class="small muted">Henter hold …</span>'}</div></div>` : ''; };
+    return on ? `<div class="fblg"><b>${esc(L.name)}</b><div class="fbchips">${teams ? (teams.length ? teams.map(chip).join('') : '<span class="small muted">Kunne ikke hente holdene</span>') : '<span class="small muted">Henter hold …</span>'}</div></div>` : ''; };
   const prefOpts = [].concat((fb.follow || []).map((id) => ({ id, name: (FB.LEAGUES.find((L) => L.id === id) || {}).name || id }))).filter(Boolean);
   const prefSel = prefOpts.length > 1 ? `<label class="inl">Står øverst<select data-set="football.pref" aria-label="Foretrukken liga">${prefOpts.map((o) => `<option value="${o.id}"${(fb.pref || prefOpts[0].id) === o.id ? ' selected' : ''}>${esc(o.name)}</option>`).join('')}</select></label>` : '';
   const on = (settings.sport && settings.sport.on) || [];
   const sports = `<section class="card"><b>Sportsgrene</b><div class="choices">${SP.SPORTS.map((x) => `<button class="pill" data-act="spToggle" data-id="${x.id}" aria-pressed="${on.includes(x.id)}">${on.includes(x.id) ? '✓' : '+'} ${x.ico} ${esc(x.name)}</button>`).join('')}</div></section>`;
-  return sports + `<section class="card"><div class="sechead2"><b>Fodbold · ligaer</b>${prefSel}</div><div class="choices">${[{ id: 'nat', name: 'Landsholdet' }].concat(FB.LEAGUES).map((L) => `<button class="pill" data-act="fbLeague" data-id="${L.id}" aria-pressed="${lgs.includes(L.id)}">${lgs.includes(L.id) ? '✓' : '+'} ${esc(L.name)}</button>`).join('')}</div></section>
+  return sports + `<section class="card"><b>Fodbold · ligaer</b><div class="choices">${[{ id: 'nat', name: 'Landsholdet' }].concat(FB.LEAGUES).map((L) => `<button class="pill" data-act="fbLeague" data-id="${L.id}" aria-pressed="${lgs.includes(L.id)}">${lgs.includes(L.id) ? '✓' : '+'} ${esc(L.name)}</button>`).join('')}</div></section>
     <section class="card"><b>Favorithold</b>${!hasProxy() ? needProxyMsg('Fodbold') : ''}
       ${lgs.includes('nat') ? `<div class="fblg"><b>Landsholdet</b><div class="fbchips">${FB.NATIONAL.map(chip).join('')}</div></div>` : ''}
       ${FB.LEAGUES.map(leagueSec).join('') || ''}${!lgs.length ? '<span class="small muted">Vælg en liga først</span>' : ''}</section>`;
