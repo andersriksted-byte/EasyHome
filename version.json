@@ -1,5 +1,5 @@
 {
-  "version": "1.92.0",
+  "version": "1.93.0",
   "files": [
     "index.html",
     "app.js",
@@ -27,6 +27,15 @@
     "todo.js"
   ],
   "notes": [
+    {
+      "version": "1.93.0",
+      "date": "26. november 2026",
+      "title": "To do i kalenderen",
+      "items": [
+        "Tryk på \"✅ To do\" nederst i Kalender for at se gøremål på deres dato og de faste pligter på deres dag – og hvem der har dem",
+        "Tryk på en to do i kalenderen for at gå til To do-siden"
+      ]
+    },
     {
       "version": "1.92.0",
       "date": "26. november 2026",

@@ -160,7 +160,17 @@ const initials = (n) => String(n || '?').trim().slice(0, 1).toUpperCase();
 function eventsOn(day, page = false) {
   if (!D.cal) return [];
   const s = startOfDay(day); const e = addDays(s, 1); const hid = page ? settings.calHidden || [] : [];
-  return D.cal.events.filter((ev) => ev.start < e && ev.end > s && mineEvent(ev) && !hid.includes(ev.cal));
+  const evs = D.cal.events.filter((ev) => ev.start < e && ev.end > s && mineEvent(ev) && !hid.includes(ev.cal));
+  return page && settings.calTodo ? todoEvents(s, e).concat(evs) : evs;
+}
+// To do i kalenderen (kan slås til nederst i Kalender): gøremål på deres dato og faste pligter på deres dag
+function todoEvents(s, e) {
+  const me = settings.me || ''; const name = (id) => (members().find((m) => m.id === id) || {}).name || '';
+  const items = TD.items().filter((i) => i.due && !i.done && (!me || !i.who || i.who === me) && sameDay(TD.fromIso(i.due), s))
+    .map((i) => ({ allDay: true, start: s, end: e, title: `✅ ${i.title}${i.who && !me ? ' · ' + name(i.who) : ''}`, color: '#2E9D5B', cal: '__todo', todo: true }));
+  const ch = TD.choresOn(s).filter((x) => !x.late && (x.c.every === 'day' || sameDay(x.occ.due, s)) && (!me || !x.who || x.who === me))
+    .map((x) => ({ allDay: true, start: s, end: e, title: `${x.done ? '✓ ' : ''}${x.c.icon || '✅'} ${x.c.title}${x.who && !me ? ' · ' + name(x.who) : ''}`, color: '#8E5BD0', cal: '__todo', todo: true }));
+  return ch.concat(items);
 }
 const evTime = (ev, day) => (ev.allDay ? 'Hele dagen' : (ev.start < startOfDay(day) ? 'Fortsat' : hhmm(ev.start)));
 // Dagens menu fra Madro nederst i hver dag i kalenderen
@@ -1615,7 +1625,7 @@ function pageKalender() {
     ${D.cal && D.cal.demo ? '<div class="empty">Viser eksempler. Tilføj jeres kalendere under Indstillinger → Kalendere.</div>' : ''}
     ${D.cal && D.cal.errors.length ? `<div class="err">${esc(D.cal.errors.map((e) => e.cal + ': ' + e.msg).join(' · '))}</div>` : ''}
     ${calTimeGrid(days, today)}
-    ${cals.length ? `<div class="legend">${calGroups(cals).map((g) => { const on = g.ids.some((id) => !(settings.calHidden || []).includes(id)); return `<button class="lchip${on ? '' : ' off'}" data-act="calShow" data-id="${esc(g.ids.join(','))}" aria-pressed="${on}" style="--c:${esc(g.color)};--l:${lighten(g.color)}"><i></i>${esc(g.name)}</button>`; }).join('')}</div>` : ''}`;
+    ${`<div class="legend"><button class="lchip${settings.calTodo ? '' : ' off'}" data-act="calTodo" aria-pressed="${!!settings.calTodo}" style="--c:#2E9D5B;--l:#d9f0e1">✅ To do</button>${cals.length ? calGroups(cals).map((g) => { const on = g.ids.some((id) => !(settings.calHidden || []).includes(id)); return `<button class="lchip${on ? '' : ' off'}" data-act="calShow" data-id="${esc(g.ids.join(','))}" aria-pressed="${on}" style="--c:${esc(g.color)};--l:${lighten(g.color)}"><i></i>${esc(g.name)}</button>`; }).join('') : ''}</div>`}`;
 }
 // Ugen som timegitter: heldagsaftaler øverst, aftaler placeret efter klokkeslæt, dagens menu nederst
 const CAL_HH = 52; // højde pr. time i px
@@ -2530,7 +2540,7 @@ const act = {
   customRm: (b) => { settings.news.custom = settings.news.custom.filter((c) => c.id !== b.dataset.id); settings.news.sources = settings.news.sources.filter((x) => x !== b.dataset.id); save(); N.clearNewsCache(); renderMain(); loadNews(); },
   calAdd: () => { const colors = ['#D0563C', '#4C78D0', '#D9A400', '#2E9D5B', '#7A5AC8']; const c = { id: uid(), name: 'Ny kalender', color: colors[settings.calendars.length % colors.length], url: '' }; settings.calendars.push(c); ui.calEdit = c.id; save(); renderMain(); setTimeout(() => { const el = document.querySelectorAll('.calname'); if (el.length) { el[el.length - 1].focus(); el[el.length - 1].select(); } }, 50); },
   calEdit: (b) => { ui.calEdit = ui.calEdit === b.dataset.id ? null : b.dataset.id; renderMain(); },
-  calEv: (b) => { const e = calRefs[+b.dataset.i]; if (e) showEvent(e); },
+  calEv: (b) => { const e = calRefs[+b.dataset.i]; if (e && e.todo) { act.nav({ dataset: { page: 'todo' } }); return; } if (e) showEvent(e); },
   todoChore: (b) => { const was = !!b.classList.contains('on'); TD.toggleChore(b.dataset.id, b.dataset.key, settings.me || ''); if (!was) toast('Godt klaret ✓'); renderMain(); },
   todoItem: (b) => { const was = b.classList.contains('on'); TD.toggleItem(b.dataset.id, settings.me || ''); if (!was) toast('Godt klaret ✓'); renderMain(); },
   todoRm: (b) => { TD.removeItem(b.dataset.id); renderMain(); },
@@ -2566,6 +2576,7 @@ const act = {
     if (fb.teams.some((t) => t.id === id && t.lg === lg)) fb.teams = fb.teams.filter((t) => !(t.id === id && t.lg === lg)); // samme klub kan følges i én turnering uden de andre
     else { const t = (lg === 'nat' ? FB.NATIONAL : (ui.fbTeams || {})[lg] || []).find((x) => x.id === id); if (t) fb.teams.push({ id: t.id, name: t.name, short: t.short, logo: t.logo, lg }); }
     save(); renderMain(); loadFootball(true); },
+  calTodo: () => { settings.calTodo = !settings.calTodo; save(); renderMain(); },
   calShow: (b) => { const ids = b.dataset.id.split(','); const h = settings.calHidden || []; const show = b.getAttribute('aria-pressed') !== 'true'; settings.calHidden = h.filter((x) => !ids.includes(x)).concat(show ? [] : ids); save(); renderMain(); },
   calRefresh: (b) => { if (b.classList.contains('spin')) return; b.classList.add('spin'); C.clearCalCache(); loadCal().finally(() => { toast('Kalenderen er opdateret'); }); },
   calRm: (b) => { settings.calendars.splice(+b.dataset.i, 1); save(); C.clearCalCache(); renderMain(); loadCal(); },
