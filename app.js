@@ -819,6 +819,7 @@ function spF1Row(it) {
 const SP_COL = { fb: '#2E9D5B', tennis: '#B79B00', golf: '#1F7A45', f1: '#E10600', nba: '#E46A1C', nfl: '#3D63C9', nhl: '#5E6B7A' };
 const SP_NAME = { fb: 'Fodbold', tennis: 'Tennis', golf: 'Golf', f1: 'Formel 1', nba: 'NBA', nfl: 'NFL', nhl: 'NHL' };
 const SP_ICO = { fb: '⚽', tennis: '🎾', golf: '⛳', f1: '🏎️', nba: '🏀', nfl: '🏈', nhl: '🏒' };
+const ymd = (d) => `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
 const spColKey = (k) => (/^fb/.test(k) ? 'fb' : /^(atp|wta)$/.test(k) ? 'tennis' : k);
 function spCard(ico, title, sub, body, live, key = '') {
   return `<section class="card sp-card k-${key}${live ? ' has-live' : ''}" style="--sc:${SP_COL[spColKey(key)] || 'var(--accent)'}"><div class="sp-h"><span class="sp-ico">${ico}</span><b>${esc(title)}</b>${live ? '<span class="sp-livetag">Live</span>' : ''}${sub ? `<small>${esc(sub)}</small>` : ''}</div>${body}</section>`;
@@ -841,13 +842,37 @@ function spCompView(c, day, cards, live) {
   if (!games) games = `<section class="card sp-card" style="--sc:${col}"><div class="empty">Ingen kampe denne dag</div></section>`;
   return `${live.length ? `<section class="sp-live"><div class="sp-lvrow">${live.map((x) => x.html).join('')}</div></section>` : ''}<div class="sp-comp${c.kind === 'tennis' ? ' one' : ''}"><div class="sp-cg">${games}</div>${c.kind === 'tennis' ? '' : `<div class="sp-cs">${spStandings(c)}</div>`}</div>`;
 }
+// Fodboldliga: bladr mellem runderne (den kommende vises først), stillingen ved siden af
+function spRoundView(c, live) {
+  const rs = FB.roundsOf(c.lg); ui.spRd = ui.spRd || {};
+  const now = new Date();
+  if (!FB.monthLoaded(c.lg, now)) FB.loadMonths(c.lg, [addDays(now, -35), now, addDays(now, 35)]).then(() => { if (ui.page === 'sport') softRender(); });
+  if (!rs.length) return { label: c.name, nav: '<div class="sp-rnav"></div>', body: `<div class="sp-comp"><div class="sp-cg"><section class="card sp-card"><div class="empty">Henter kampprogrammet …</div></section></div><div class="sp-cs">${spStandings(c)}</div></div>` };
+  const cur = FB.currentRound(rs);
+  // Valgt runde huskes ved sin første kamps tidspunkt (så den ikke flytter sig, når flere måneder hentes)
+  const key = ui.spRd[c.lg]; let i = cur;
+  if (key) { i = rs.findIndex((rd) => +rd[0].date >= key); if (i < 0) i = rs.length - 1; }
+  const rd = rs[i];
+  // Ved kanten af det hentede: hent måneden før/efter, så man kan bladre videre
+  if (i === 0) { const d = addDays(rd[0].date, -20); if (!FB.monthLoaded(c.lg, d)) FB.loadMonths(c.lg, [d]).then((n) => { if (n && ui.page === 'sport') softRender(); }); }
+  if (i === rs.length - 1) { const d = addDays(rd[rd.length - 1].date, 20); if (!FB.monthLoaded(c.lg, d)) FB.loadMonths(c.lg, [d]).then((n) => { if (n && ui.page === 'sport') softRender(); }); }
+  const a = rd[0].date; const b = rd[rd.length - 1].date;
+  const range = sameDay(a, b) ? `${cap(DAYS_LONG[a.getDay()])} ${a.getDate()}. ${MONTHS[a.getMonth()]}` : a.getMonth() === b.getMonth() ? `${a.getDate()}.–${b.getDate()}. ${MONTHS[a.getMonth()]}` : `${a.getDate()}. ${MONTHS[a.getMonth()].slice(0, 3)} – ${b.getDate()}. ${MONTHS[b.getMonth()].slice(0, 3)}`;
+  const tag = i === cur ? (rd.some((m) => m.state === 'in') ? 'Spilles nu' : rd.every((m) => m.state === 'post') ? 'Seneste runde' : 'Næste runde') : i < cur ? 'Tidligere runde' : 'Kommende runde';
+  const nav = `<div class="sp-rnav"><button class="arr" data-act="spRound" data-dir="-1" ${i <= 0 ? 'disabled' : ''} aria-label="Runden før">‹</button><div class="sp-rlab${i === cur ? ' cur' : ''}"><span>${tag}</span><b>${range}</b></div><button class="arr" data-act="spRound" data-dir="1" ${i >= rs.length - 1 ? 'disabled' : ''} aria-label="Runden efter">›</button><button class="sp-today${i === cur ? ' at' : ''}" data-act="spRound" data-dir="0" data-lg="${esc(c.lg)}">I dag</button></div>`;
+  const favIds = ((settings.football || {}).teams || []).filter((t) => t.lg === c.lg).map((t) => t.id);
+  const byDay = new Map(); rd.forEach((m) => { const k = ymd(m.date); if (!byDay.has(k)) byDay.set(k, []); byDay.get(k).push(m); });
+  const list = [...byDay.values()].map((xs) => `<div class="sp-dayhd">${cap(DAYS_LONG[xs[0].date.getDay()])} ${xs[0].date.getDate()}. ${MONTHS[xs[0].date.getMonth()]}</div>${xs.map((m) => spTeamRow({ kind: 'fb', m }, favIds.includes(m.home.id) ? m.home.id : favIds.includes(m.away.id) ? m.away.id : '')).join('')}`).join('');
+  const games = spCard('⚽', c.name, `${rd.length} kampe`, `<div class="sp-list">${list}</div>`, rd.some((m) => m.state === 'in'), c.key);
+  return { label: c.name, nav, body: `${live.length ? `<section class="sp-live"><div class="sp-lvrow">${live.map((x) => x.html).join('')}</div></section>` : ''}<div class="sp-comp"><div class="sp-cg">${games}</div><div class="sp-cs">${spStandings(c)}</div></div>` };
+}
 function spStandings(c) {
   const col = SP_COL[c.col] || 'var(--accent)';
   const card = (title, body) => `<section class="card sp-card sp-stand" style="--sc:${col}"><div class="sp-h"><span class="sp-ico">${c.ico}</span><b>${esc(title)}</b></div><div class="sp-list st-scroll">${body}</div></section>`;
   const wait = (t) => card('Stilling', `<div class="empty">${t}</div>`);
   if (c.kind === 'fb') {
     const T = FB.tables[c.lg];
-    if (!T || !T.at) { FB.loadTable(c.lg).then(() => { if (ui.page === 'sport') softRender(); }); return wait('Henter stillingen …'); }
+    if (!T || !T.at) { if (!T) FB.loadTable(c.lg).then(() => { if (ui.page === 'sport') softRender(); }); return wait('Henter stillingen …'); }
     if (!T.groups.length) return wait('Ingen stilling for turneringen.');
     const favIds = ((settings.football || {}).teams || []).filter((t) => t.lg === c.lg).map((t) => t.id);
     const n = (v) => (v === null || v === undefined ? '' : v);
@@ -858,14 +883,14 @@ function spStandings(c) {
   }
   if (c.kind === 'team') {
     const S2 = SP.standingsOf(c.sp.id);
-    if (!S2 || !S2.at) { SP.loadStandings(c.sp).then(() => { if (ui.page === 'sport') softRender(); }); return wait('Henter stillingen …'); }
+    if (!S2 || !S2.at) { if (!S2) SP.loadStandings(c.sp).then(() => { if (ui.page === 'sport') softRender(); }); return wait('Henter stillingen …'); }
     if (!S2.groups.length) return wait('Ingen stilling lige nu.');
     const pts = S2.groups.some((g) => g.rows.some((r) => r.pts));
     const hdr = `<div class="st-row st-h us"><span>#</span><span></span><span>V</span><span>T</span><span>${pts ? 'P' : '%'}</span></div>`;
     return card('Stilling', S2.groups.map((g) => `${g.name ? `<div class="sp-dayhd">${esc(g.name.replace(/Conference/, 'konference'))}</div>` : ''}${hdr}${g.rows.map((r, i) => `<div class="st-row us"><span class="st-rk">${i + 1}</span><span class="st-tm">${r.logo ? `<img src="${esc(r.logo)}" alt="" loading="lazy">` : ''}<b>${esc(r.name)}</b></span><span>${esc(r.w)}</span><span>${esc(r.l)}</span><span class="st-p">${esc(pts ? r.pts : r.pct)}</span></div>`).join('')}`).join(''));
   }
   if (c.kind === 'f1') {
-    if (!SP.f1Standings.cache) { SP.f1Standings().then((x) => { SP.f1Standings.cache = x; if (ui.page === 'sport') softRender(); }).catch(() => { SP.f1Standings.cache = []; }); return wait('Henter stillingen …'); }
+    if (!SP.f1Standings.cache) { if (!ui.f1StLoading) { ui.f1StLoading = true; SP.f1Standings().then((x) => { SP.f1Standings.cache = x; if (ui.page === 'sport') softRender(); }).catch(() => { SP.f1Standings.cache = []; }).finally(() => { ui.f1StLoading = false; }); } return wait('Henter stillingen …'); }
     const rows = SP.f1Standings.cache;
     return card('Kørere', rows.length ? `<div class="st-row st-h f1s"><span>#</span><span>Kører</span><span>P</span></div>${rows.map((r) => `<div class="st-row f1s"><span class="st-rk">${esc(r.pos)}</span><span class="st-tm"><b>${esc(r.name)}</b><small>${esc(r.team)}</small></span><span class="st-p">${esc(r.pts)}</span></div>`).join('')}` : '<div class="empty">Ingen stilling endnu.</div>');
   }
@@ -881,10 +906,10 @@ function pageSport() {
   const first = Math.max(-7, Math.min(14 - 6, off - 3));
   const days = Array.from({ length: 7 }, (_, i) => first + i).map((o) => { const d = addDays(today, o);
     return `<button class="sp-dchip${o === off ? ' on' : ''}${o === 0 ? ' today' : ''}" data-act="spDayTo" data-off="${o}"><span>${o === 0 ? 'I dag' : o === 1 ? 'I morgen' : o === -1 ? 'I går' : cap(DAYS[d.getDay()])}</span><b>${d.getDate()}.</b></button>`; }).join('');
-  const nav = `<div class="sp-days"><button class="arr" data-act="spDay" data-dir="-1" ${off <= -7 ? 'disabled' : ''} aria-label="Dagen før">‹</button>${days}<button class="arr" data-act="spDay" data-dir="1" ${off >= 14 ? 'disabled' : ''} aria-label="Dagen efter">›</button></div>`;
+  const nav = `<div class="sp-days"><button class="arr" data-act="spDay" data-dir="-1" ${off <= -7 ? 'disabled' : ''} aria-label="Dagen før">‹</button>${days}<button class="arr" data-act="spDay" data-dir="1" ${off >= 14 ? 'disabled' : ''} aria-label="Dagen efter">›</button><button class="sp-today${off ? '' : ' at'}" data-act="spDay" data-dir="0">I dag</button></div>`;
   const fb = settings.football || {}; const hasFb = (fb.teams || []).length || (fb.follow || []).length;
   const sps = SP.followed();
-  const head = (chips = '') => `<div class="sp-top"><div class="sp-title"><h1>Sport</h1><span class="muted">${cap(DAYS_LONG[day.getDay()])} ${day.getDate()}. ${MONTHS[day.getMonth()]}</span><button class="btn line sp-ref" data-act="spRefresh" aria-label="Opdater">${svg('refresh', 18)}</button></div>${nav}${chips}</div>`;
+  const head = (chips = '', alt = null) => `<div class="sp-top"><div class="sp-title"><h1>Sport</h1><span class="muted">${alt ? esc(alt.label) : `${cap(DAYS_LONG[day.getDay()])} ${day.getDate()}. ${MONTHS[day.getMonth()]}`}</span><button class="btn line sp-ref" data-act="spRefresh" aria-label="Opdater">${svg('refresh', 18)}</button></div>${alt ? alt.nav : nav}${chips}</div>`;
   if (!hasFb && !sps.length) return head() + `<section class="card"><div class="empty">Vælg sportsgrene under Indstillinger → Sport.</div></section>`;
   if (!hasProxy()) return head() + `<section class="card">${needProxyMsg('Sport')}</section>`;
   const cards = []; const live = []; let waiting = false; const errs = [];
@@ -922,7 +947,9 @@ function pageSport() {
   if (ui.spFilter && !comps.some((c) => c.key === ui.spFilter)) ui.spFilter = '';
   const f = ui.spFilter || '';
   const chips = comps.length ? `<div class="sp-filter"><button class="sp-fchip${f ? '' : ' on'}" data-act="spFilter" data-k="">Alle</button>${comps.map((c) => `<button class="sp-fchip${f === c.key ? ' on' : ''}" data-act="spFilter" data-k="${c.key}" style="--sc:${SP_COL[c.col] || 'var(--accent)'}">${c.ico} ${esc(c.name)}${cards.some((x) => x.key === c.key && x.live) ? '<i class="lv-dot"></i>' : ''}</button>`).join('')}</div>` : '';
-  if (f) return `<div class="sp-page">${head(chips)}${spCompView(comps.find((c) => c.key === f), day, cards.filter((c) => c.key === f), live.filter((x) => x.key === f))}</div>`;
+  if (f) { const c = comps.find((x) => x.key === f);
+    if (c.kind === 'fb') { const r = spRoundView(c, live.filter((x) => x.key === f)); return `<div class="sp-page">${head(chips, r)}${r.body}</div>`; }
+    return `<div class="sp-page">${head(chips)}${spCompView(c, day, cards.filter((x) => x.key === f), live.filter((x) => x.key === f))}</div>`; }
   const err = errs.length ? `<div class="small err">Kunne ikke hente: ${esc(errs.join(', '))}</div>` : '';
   if (!cards.length) return head() + err + `<section class="card"><div class="empty">${waiting ? 'Henter …' : `Ingen kampe ${sameDay(day, today) ? 'i dag' : 'denne dag'}.`}</div></section>`;
   const shown = cards.slice().sort((a, b) => (b.live ? 1 : 0) - (a.live ? 1 : 0));
@@ -2423,6 +2450,10 @@ const act = {
   choreNow: (b) => { TD.setChore(b.dataset.id, 'first', b.dataset.m); renderMain(); },
   spOpen: (b) => { const it = spRefs[+b.dataset.i]; if (it) showSport(it); },
   spDayTo: (b) => { ui.spOff = +b.dataset.off; ui.spTouched = Date.now(); spLoad(); renderMain(false); },
+  spRound: (b) => { const lg = (ui.spFilter || '').replace(/^fb:/, ''); ui.spRd = ui.spRd || {}; const d = +b.dataset.dir; const rs = FB.roundsOf(lg);
+    if (!d || !rs.length) ui.spRd[lg] = null;
+    else { const key = ui.spRd[lg]; let i = key ? rs.findIndex((rd) => +rd[0].date >= key) : FB.currentRound(rs); if (i < 0) i = rs.length - 1; const j = Math.max(0, Math.min(rs.length - 1, i + d)); ui.spRd[lg] = +rs[j][0].date; }
+    ui.spTouched = Date.now(); renderMain(false); },
   spFilter: (b) => { ui.spFilter = b.dataset.k; renderMain(false); },
   spDay: (b) => { const d = +b.dataset.dir; ui.spOff = d ? Math.max(-7, Math.min(14, (ui.spOff || 0) + d)) : 0; ui.spTouched = Date.now(); spLoad(); renderMain(false); },
   spRefresh: () => { loadFootball(true); spLoad(spDay(), true); },
@@ -2714,7 +2745,7 @@ function boot() {
   setInterval(() => { if (ui.fbDay && Date.now() - (ui.fbTouched || 0) > 45000) { ui.fbDay = null; softRender(); } }, 15000); // i dag er altid standard: tilbage efter under et minut
   setInterval(loadNews, 5 * 60000);
   setInterval(() => { if (!document.hidden) loadFootball(); }, 60000);
-  setInterval(() => { if (document.hidden || ui.page !== 'sport') return; if (ui.spOff && Date.now() - (ui.spTouched || 0) > 3 * 60000 && !document.getElementById('spModal')) ui.spOff = 0; spLoad(); softRender(); }, 60000); // Sport: i dag er standard, og dagen hentes igen under kampe
+  setInterval(() => { if (document.hidden || ui.page !== 'sport') return; if (Date.now() - (ui.spTouched || 0) > 3 * 60000 && !document.getElementById('spModal')) { ui.spOff = 0; ui.spRd = {}; } spLoad(); softRender(); }, 60000); // Sport: i dag er standard, og dagen hentes igen under kampe
   setInterval(() => { if (!document.hidden && document.getElementById('spModal')) spModalRefresh(true); }, 30000); // åben kamp: nyt hvert halve minut, mens den spilles
   setInterval(() => { if (!document.hidden) loadEl(); }, 5 * 60000); // priserne skifter hvert kvarter; nye priser for i morgen kommer ved 13-tiden // FB.load bestemmer selv: hvert minut under kampe, ellers hvert 10. minut
   setInterval(loadCal, 5 * 60000); // kalenderen hentes hvert 5. minut (og med Opdater-knappen på Kalender-siden)

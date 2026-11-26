@@ -150,3 +150,35 @@ export async function loadTable(lg) {
     tables[lg] = { at: Date.now(), groups: gs, error: '' };
   } catch (e) { tables[lg] = { at: Date.now(), groups: (t && t.groups) || [], error: e.message }; }
 }
+
+// Hele sæsonen for én liga (til Sport → turnering): hentes måned for måned, efterhånden som man bladrer
+const season = {};
+const monthKey = (d) => ymd(d).slice(0, 6);
+export async function loadMonths(lg, dates) {
+  const S = season[lg] = season[lg] || { months: {}, list: [] };
+  const need = [...new Set(dates.map(monthKey))].filter((m) => !S.months[m]);
+  if (!need.length) return false;
+  need.forEach((m) => { S.months[m] = 'loading'; });
+  const res = await Promise.all(need.map((m) => workerFetch(`/espn/${lg}/scoreboard?dates=${m}`).then((x) => x.json()).then((j) => { S.months[m] = 'ok'; return j; }).catch(() => { S.months[m] = 'err'; return {}; })));
+  const name = ((res.find((j) => (j.leagues || []).length) || {}).leagues || [{}])[0].name || '';
+  const have = new Map(S.list.map((m) => [m.id, m]));
+  res.flatMap((j) => j.events || []).forEach((e) => have.set(String(e.id), parse(e, '', name, lg)));
+  S.list = [...have.values()].sort((a, b) => a.date - b.date);
+  return true;
+}
+export const monthLoaded = (lg, d) => !!(season[lg] && season[lg].months[monthKey(d)]);
+// Runder: kampe, der ligger tæt (under 2 døgn imellem). Nyeste data fra den løbende opdatering bruges, hvor de findes
+export function roundsOf(lg) {
+  const live = new Map(((state.leagues || {})[lg] || []).map((m) => [m.id, m]));
+  const ms = ((season[lg] || {}).list || []).map((m) => live.get(m.id) || m);
+  live.forEach((m, id) => { if (!ms.some((x) => x.id === id)) ms.push(m); });
+  ms.sort((a, b) => a.date - b.date);
+  const rounds = []; ms.forEach((m) => { const last = rounds.length && rounds[rounds.length - 1]; if (last && m.date - last[last.length - 1].date < 48 * 3600000) last.push(m); else rounds.push([m]); });
+  return rounds;
+}
+// Den runde, der er "nu": den første, der ikke er slut for mere end et døgn siden
+export function currentRound(rounds) {
+  const now = Date.now();
+  const i = rounds.findIndex((rd) => { const d = new Date(rd[rd.length - 1].date); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() + 2); return now < d.getTime(); });
+  return i < 0 ? rounds.length - 1 : i;
+}

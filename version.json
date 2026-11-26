@@ -1,5 +1,5 @@
 {
-  "version": "1.83.0",
+  "version": "1.84.0",
   "files": [
     "index.html",
     "app.js",
@@ -27,6 +27,16 @@
     "todo.js"
   ],
   "notes": [
+    {
+      "version": "1.84.0",
+      "date": "26. november 2026",
+      "title": "Runder i fodboldligaerne",
+      "items": [
+        "Vælg fx Superligaen på Sport: kampene vises runde for runde, med den kommende runde først – bladr frem og tilbage med pilene",
+        "Ny \"I dag\"-knap ved dagslisten og ved runderne, der fører tilbage til i dag",
+        "Stillingen står ved siden af runden"
+      ]
+    },
     {
       "version": "1.83.0",
       "date": "26. november 2026",
