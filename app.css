@@ -2199,3 +2199,6 @@ html,body{overscroll-behavior:none}
 .tdl-c.done{opacity:.45}
 .tdl-none{color:var(--muted)}
 .tdl-legend{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12px;font-weight:700;color:var(--muted);margin-bottom:6px}
+/* Ingen sideoverskrifter – siden ses i sidemenuen */
+.ptitle h1,.sp-title h1{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.ptitle:not(:has(>:not(h1))){display:none}
