@@ -974,6 +974,27 @@ function spTeamCards() {
   }).filter(Boolean);
   return cards.length ? `<section class="sp-teams">${cards.join('')}</section>` : '';
 }
+// Mål: når stillingen i en kamp stiger, lyser kampens boks op i et minut
+const spScore = {}; const spGoal = {};
+function spGoalCheck(m) {
+  if (!m || !m.id || m.state === 'pre') return false;
+  const tot = (+m.home.score || 0) + (+m.away.score || 0); const prev = spScore[m.id];
+  if (prev !== undefined && tot > prev) spGoal[m.id] = Date.now() + 60000;
+  spScore[m.id] = tot;
+  return (spGoal[m.id] || 0) > Date.now();
+}
+function spBox(x) {
+  const col = SP_COL[x.key] || 'var(--accent)';
+  const tag = `<span class="bx-tag">${x.ico} ${esc(x.label)}</span>`;
+  const it = x.it; const m = it && (it.m || it);
+  if (m && m.home && m.away) {
+    const goal = spGoalCheck(m); const pre = m.state === 'pre' || (it.kind === 'fb' && FB.pending(m));
+    const favs = spFavIds(); const side = (t) => `<div class="bx-t${!pre && t.win ? ' win' : ''}${favs.has(t.id) ? ' mine' : ''}">${spLogo(t)}<b>${esc(t.name)}</b>${pre ? '' : `<span class="bx-s">${esc(t.score)}</span>`}</div>`;
+    const st = m.state === 'in' ? `<span class="bx-live"><i class="lv-dot"></i>${esc(it.kind === 'fb' ? m.clock || 'Live' : liveDa(m.detail) || m.clock || 'Live')}</span>` : m.state === 'post' ? '<span class="bx-end">Slut</span>' : `<span class="bx-time">${hhmm(m.date)}</span>`;
+    return `<div class="bx${m.state === 'in' ? ' in' : ''}${x.fav ? ' is-fav' : ''}${goal ? ' goal' : ''}" style="--sc:${col}" ${spRef(it)}><div class="bx-h">${tag}${goal ? '<span class="bx-goalt">MÅL!</span>' : ''}${st}</div>${side(m.home)}${side(m.away)}</div>`;
+  }
+  return `<div class="bx${x.live ? ' in' : ''}" style="--sc:${col}"><div class="bx-h">${tag}</div><div class="bx-body">${x.html.replace(/^<div class="sp-ent"[^>]*><span class="sp-tag">[^<]*<\/span>/, '').replace(/<\/div>$/, '')}</div></div>`;
+}
 function spFitRound() {
   document.querySelectorAll('.sp-cgw:not(.sp-allw)').forEach((w) => { w.classList.remove('tight'); const l = w.querySelector('.sp-list'); if (l && l.scrollHeight > l.clientHeight + 1) w.classList.add('tight'); });
 }
@@ -992,7 +1013,7 @@ function pageSport() {
   const cards = []; const live = []; let waiting = false; const errs = [];
   const add = (key, ico, title, sub, body, isLive) => cards.push({ key, html: spCard(ico, title, sub, body, isLive, key), live: isLive });
   const ents = []; // alle kampe i én liste (til "Alle")
-  const ent = (key, ico, label, t, html, fav = false) => ents.push({ key: spColKey(key), ico, fav, t: +t || 0, html: `<div class="sp-ent" style="--sc:${SP_COL[spColKey(key)] || 'var(--accent)'}"><span class="sp-tag">${ico} ${esc(label)}</span>${html}</div>` });
+  const ent = (key, ico, label, t, html, fav = false, it = null) => ents.push({ it, label, live: !!(it && (it.m || it).state === 'in'), key: spColKey(key), ico, fav, t: +t || 0, html: `<div class="sp-ent" style="--sc:${SP_COL[spColKey(key)] || 'var(--accent)'}"><span class="sp-tag">${ico} ${esc(label)}</span>${html}</div>` });
   if (hasFb) {
     if (!FB.state.at) waiting = true;
     const { all, order } = fbDays();
@@ -1002,7 +1023,7 @@ function pageSport() {
     [...groups.keys()].sort((a, b) => { const ia = order.indexOf(a), ib = order.indexOf(b); return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib); }).forEach((k) => {
       const ms = groups.get(k).slice().sort((a, b) => (spIsFav(b) ? 1 : 0) - (spIsFav(a) ? 1 : 0) || a.date - b.date);
       ms.filter((m) => m.state === 'in').forEach((m) => live.push({ key: 'fb:' + (m.lg || 'x'), fav: spIsFav(m), html: spLiveTile({ kind: 'fb', m }, 'fb') }));
-      ms.forEach((m) => ent('fb', '⚽', k, m.date, spTeamRow({ kind: 'fb', m }, favIn(m.home.id, m.comp) ? m.home.id : favIn(m.away.id, m.comp) ? m.away.id : ''), favIn(m.home.id, m.comp) || favIn(m.away.id, m.comp)));
+      ms.forEach((m) => ent('fb', '⚽', k, m.date, spTeamRow({ kind: 'fb', m }, favIn(m.home.id, m.comp) ? m.home.id : favIn(m.away.id, m.comp) ? m.away.id : ''), favIn(m.home.id, m.comp) || favIn(m.away.id, m.comp), { kind: 'fb', m }));
       add('fb:' + ((ms[0] && ms[0].lg) || 'x'), '⚽', k, '', `<div class="sp-list">${ms.map((m) => spTeamRow({ kind: 'fb', m }, favIn(m.home.id, m.comp) ? m.home.id : favIn(m.away.id, m.comp) ? m.away.id : '')).join('')}</div>`, ms.some((m) => m.state === 'in'));
     });
   }
@@ -1015,8 +1036,8 @@ function pageSport() {
     const items = c.items.slice().sort((a, b) => (a.state === 'in' ? 0 : 1) - (b.state === 'in' ? 0 : 1) || a.date - b.date);
     if (!items.length) return;
     if (sp.kind === 'team' || sp.kind === 'tennis') items.filter((x) => x.state === 'in').forEach((x) => live.push({ key, html: spLiveTile(x, key) }));
-    if (sp.kind === 'team') items.forEach((x) => ent(key, sp.ico, sp.id.toUpperCase(), x.date, spTeamRow(x)));
-    if (sp.kind === 'tennis') items.forEach((x) => ent(key, sp.ico, x.tour || sp.name, x.date, spTennisRow(x)));
+    if (sp.kind === 'team') items.forEach((x) => ent(key, sp.ico, sp.id.toUpperCase(), x.date, spTeamRow(x), false, x));
+    if (sp.kind === 'tennis') items.forEach((x) => ent(key, sp.ico, x.tour || sp.name, x.date, spTennisRow(x), false, x));
     if (sp.kind === 'f1') items.forEach((x) => ent(key, sp.ico, x.race || 'Formel 1', x.date, spF1Row(x)));
     if (sp.kind === 'golf') items.forEach((x) => ent(key, sp.ico, x.name, 0, `<div ${spRef(x)} class="gf-open gf-mini">${spGolfRows(x, 3)}</div>`));
     if (sp.kind === 'team') add(key, sp.ico, sp.name.replace(/^.*· /, ''), '', `<div class="sp-list">${items.map((x) => spTeamRow(x)).join('')}</div>`, items.some((x) => x.state === 'in'));
@@ -1049,7 +1070,9 @@ function pageSport() {
   const order = ['fb', 'f1', 'tennis', 'golf', 'nba', 'nfl', 'nhl'];
   const grp = new Map(); ents.forEach((x) => { if (!grp.has(x.key)) grp.set(x.key, []); grp.get(x.key).push(x); });
   const secs = [...grp.keys()].sort((a, b) => order.indexOf(a) - order.indexOf(b)).map((k) => `<section class="sp-fsec" style="--sc:${SP_COL[k] || 'var(--accent)'}"><div class="sp-fsh"><span class="sp-ico">${SP_ICO[k] || ''}</span><b>${SP_NAME[k] || k}</b><small>${grp.get(k).length}</small></div><div class="sp-list">${grp.get(k).map((x) => x.html).join('')}</div></section>`).join('');
-  return `<div class="sp-page">${head(chips, alt)}${err}${spTeamCards()}<div class="sp-cgw sp-allw">${dnav}<div class="sp-favs">${secs}</div></div></div>`;
+  // Dagens kampe: én boks pr. kamp – kampe i gang først, så jeres hold, så efter tid
+  const boxes = ents.slice().sort((a, b) => (b.live ? 1 : 0) - (a.live ? 1 : 0) || (b.fav ? 1 : 0) - (a.fav ? 1 : 0) || a.t - b.t).map(spBox).join('');
+  return `<div class="sp-page">${head(chips, alt)}${err}${spTeamCards()}<div class="sp-cgw sp-allw">${dnav}<div class="sp-boxes">${boxes}</div></div></div>`;
 }
 
 /* Detaljer om en kamp (vindue, der opdateres hvert halve minut, mens kampen spilles) */

@@ -2282,3 +2282,30 @@ body.navpinned .nav.open{box-shadow:none}
 .navord-i{display:grid;place-items:center;color:var(--muted)}
 .navord-r b{font-size:15px}
 .navord-r .fobtn:disabled{opacity:.25}
+/* Favoritter: én boks pr. kamp */
+.sp-boxes{flex:1;min-height:0;overflow-y:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));grid-auto-rows:min-content;gap:12px;padding:12px;align-content:start}
+.bx{position:relative;display:flex;flex-direction:column;gap:6px;padding:12px 14px 12px;border-radius:16px;background:var(--bg);cursor:pointer;box-shadow:inset 0 4px 0 var(--sc);min-width:0;overflow:hidden}
+.bx-h{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0;margin-bottom:2px}
+.bx-tag{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.bx-time{font-size:15px;font-weight:800;flex:none}
+.bx-end{font-size:12px;font-weight:800;color:var(--muted);flex:none}
+.bx-live{display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:800;color:#E5484D;flex:none}
+.bx-t{display:flex;align-items:center;gap:10px;min-width:0}
+.bx-t img,.bx-t .sp-ab{width:26px;height:26px;object-fit:contain;flex:none}
+.bx-t .sp-ab{font-size:9px}
+.bx-t b{flex:1;min-width:0;font-size:15px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bx-s{font-size:20px;font-weight:800;font-variant-numeric:tabular-nums;min-width:24px;text-align:right}
+.bx-t.win b,.bx-t.win .bx-s{font-weight:900}
+.bx:not(.in) .bx-t:not(.win) .bx-s{color:var(--muted)}
+.bx-t.mine b{color:var(--accent);font-weight:900}
+.bx.in{background:color-mix(in srgb,#E5484D 8%,var(--bg));box-shadow:inset 0 4px 0 var(--sc),inset 0 0 0 2px color-mix(in srgb,#E5484D 45%,transparent)}
+.bx.is-fav{box-shadow:inset 0 4px 0 var(--sc),inset 0 0 0 2px var(--accent)}
+.bx-body{min-width:0}
+.bx-body>*{padding:0!important;background:transparent!important;border:0!important;min-height:0}
+/* Mål: boksen lyser op i et minut */
+.bx.goal{animation:bxGoal 1.2s ease-in-out infinite;background:color-mix(in srgb,#F5B301 22%,var(--bg))}
+@keyframes bxGoal{0%,100%{box-shadow:inset 0 4px 0 var(--sc),0 0 0 2px #F5B301,0 0 0 0 rgba(245,179,1,.6)}50%{box-shadow:inset 0 4px 0 var(--sc),0 0 0 3px #F5B301,0 0 22px 6px rgba(245,179,1,.55)}}
+.bx-goalt{position:absolute;right:12px;bottom:10px;font-size:12px;font-weight:900;letter-spacing:.08em;color:#7a5600;background:#F5B301;border-radius:99px;padding:2px 8px}
+.bx.goal .bx-s{color:var(--text)}
+.sp-boxes{padding:14px}
+.bx-goalt{position:static;flex:none;margin-left:auto}.bx-goalt+.bx-live{margin-left:0}
