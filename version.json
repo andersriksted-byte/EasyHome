@@ -1,5 +1,5 @@
 {
-  "version": "1.98.2",
+  "version": "1.98.3",
   "files": [
     "index.html",
     "app.js",
@@ -27,6 +27,14 @@
     "todo.js"
   ],
   "notes": [
+    {
+      "version": "1.98.3",
+      "date": "26. november 2026",
+      "title": "Favoritter i guld",
+      "items": [
+        "Favoritter på Sport står nu i guld (ramme, baggrund og holdnavn med ★), så de ikke ligner sportsgrenenes farver"
+      ]
+    },
     {
       "version": "1.98.2",
       "date": "26. november 2026",

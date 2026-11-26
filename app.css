@@ -2348,3 +2348,16 @@ body.navpinned .nav.open{box-shadow:none}
 .sp-cnav .sp-today.at{background:var(--bg)}
 .sp-title .sp-ref{margin-left:8px}
 .ticker .tk-time{flex:none;font-size:12px;font-weight:700;color:var(--muted);white-space:nowrap}
+/* Favoritter i guld, så de skiller sig ud fra sportsgrenenes farver */
+:root{--favc:#D99A00;--favbg:color-mix(in srgb,#F5B301 14%,var(--card))}
+.sp-favrow .sp-sec{color:var(--favc)}
+.bx.is-fav,.sp-favrow .bx.is-fav{background:var(--favbg);box-shadow:inset 0 4px 0 var(--sc),inset 0 0 0 2px var(--favc)}
+.bx.is-fav.in{background:color-mix(in srgb,#E5484D 10%,var(--favbg))}
+.sp-favrow .bx:not(.is-fav){box-shadow:inset 0 4px 0 var(--sc),inset 0 0 0 2px color-mix(in srgb,var(--favc) 60%,transparent)}
+.bx-t.mine b{color:color-mix(in srgb,var(--favc) 85%,var(--text))}
+.bx-t.mine b::after{content:' ★';color:var(--favc);font-size:12px}
+.sp-row.has-mine{background:var(--favbg)!important;box-shadow:inset 5px 0 0 var(--favc)}
+.tm-l.mine b{color:color-mix(in srgb,var(--favc) 85%,var(--text))}
+.tm-l.mine b::after{background:var(--favc)}
+.lv.mine{box-shadow:0 0 0 3px var(--favc),0 6px 18px color-mix(in srgb,var(--favc) 35%,transparent)}
+.lv-mine{background:var(--favc)}
