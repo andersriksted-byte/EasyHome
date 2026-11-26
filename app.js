@@ -1558,7 +1558,7 @@ function wInspiration(size, h = 1, wd = 1, x = null) {
 
 function wNed(size, h = 1, wd = 1) {
   const list = countdowns();
-  if (!list.length) return '<div class="cdcard"><div class="cdinner">' + cardHead('Nedtælling') + '<div class="empty">Vælg nedtællinger til kortet under Indstillinger → Kalender.</div></div></div>';
+  if (!list.length) return '<div class="cdcard"><div class="cdinner">' + cardHead('Nedtælling') + '<div class="empty">Vælg nedtællinger under Indstillinger → Nedtælling.</div></div></div>';
   const n = list.length; const idx = ((ui.cdIdx % n) + n) % n; const c = list[idx];
   // Brede, lave kort: flere nedtællinger ved siden af hinanden
   const k = h === 1 && wd >= 2 ? Math.min(n, wd + (wd >= 3 ? 1 : 0)) : 1;
@@ -2058,7 +2058,7 @@ function lookSettings() {
 const SET_TABS = [
   { id: 'familie', label: 'Familie' },
   { id: 'tjenester', label: 'Tjenester' },
-  { id: 'vejr', label: 'Vejret' }, { id: 'nyheder', label: 'Nyheder' }, { id: 'kalender', label: 'Kalender' }, { id: 'todo', label: 'To do' }, 
+  { id: 'vejr', label: 'Vejret' }, { id: 'nyheder', label: 'Nyheder' }, { id: 'kalender', label: 'Kalender' }, { id: 'nedtaelling', label: 'Nedtælling' }, { id: 'todo', label: 'To do' },
   { id: 'musik', label: 'Musik' }, { id: 'tv', label: 'DR TV' }, { id: 'somfy', label: 'Somfy' }, { id: 'fodbold', label: 'Sport' }, { id: 'el', label: 'Strøm' }, { id: 'udseende', label: 'Udseende' }, { id: 'forbindelse', label: 'Forbindelse' }
 ];
 function pageIndstillinger() {
@@ -2082,7 +2082,8 @@ function pageIndstillinger() {
       ${ui.feedMsg ? `<div class="small ${ui.feedMsg.err ? 'err' : 'muted'}">${esc(ui.feedMsg.text)}</div>` : ''}
       ${D.news && D.news.errors.length ? `<div class="err small">Virker ikke lige nu: ${esc(D.news.errors.map((e) => e.source + ' (' + e.msg + ')').join(' · '))}</div>` : ''}</section>`,
     kalender: () => `
-    ${calSection(s)}
+    ${calSection(s)}`,
+    nedtaelling: () => `
     ${cdSection(s)}`,
     tv: () => `
     <section class="card"><b>DR TV-knapper</b>${s.tv.channels.map((c, i) => `<div class="calrow" style="grid-template-columns:1fr 2fr auto"><input type="text" data-tv="${i}" data-field="name" value="${esc(c.name)}" aria-label="Navn"><input type="url" data-tv="${i}" data-field="url" value="${esc(c.url)}" aria-label="Adresse"><button class="btn" data-act="tvRm" data-i="${i}">Fjern</button></div>`).join('')}
