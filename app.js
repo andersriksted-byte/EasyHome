@@ -54,6 +54,7 @@ const themeLabel = (id) => (id === 'auto' ? 'Automatisk' : THEMES[id].label);
 
 /* ---------- Ikoner ---------- */
 const ICON = {
+  people: 'M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 21v-1a6 6 0 0 1 6-6h2a6 6 0 0 1 6 6v1M16 3.1a4 4 0 0 1 0 7.8M22 21v-1a6 6 0 0 0-4-5.6', palette: 'M12 2a10 10 0 1 0 0 20c1.1 0 2-.9 2-2 0-.5-.2-1-.5-1.3-.3-.4-.5-.8-.5-1.3 0-1.1.9-2 2-2h2.3A5.7 5.7 0 0 0 22 9.7C22 5.4 17.5 2 12 2zM6.5 12.5h.01M9.5 7.5h.01M14.5 7.5h.01M17.5 11.5h.01', link: 'M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7',
   sunon: 'M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10zM12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4', sunoff: 'M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z',
   stroem: 'M13 2 4 14h7l-1 8 9-12h-7l1-8z', bolt: 'M13 2 4 14h7l-1 8 9-12h-7l1-8z',
   todo: 'M10 6h10M10 12h10M10 18h10M3.5 6l1.5 1.5L7.5 5M3.5 12l1.5 1.5 2.5-2.5M3.5 18l1.5 1.5 2.5-2.5',
@@ -2136,11 +2137,12 @@ function lookSettings() {
       <label class="check"><input type="checkbox" data-look-blur ${lk.blur !== false ? 'checked' : ''}>Slør baggrunden bag kortene, så teksten er nem at læse</label>
     </section>`;
 }
+// Faner i Indstillinger: ikon og farve pr. emne
 const SET_TABS = [
-  { id: 'familie', label: 'Familie' },
-  { id: 'tjenester', label: 'Tjenester' },
-  { id: 'vejr', label: 'Vejret' }, { id: 'nyheder', label: 'Nyheder' }, { id: 'kalender', label: 'Kalender' }, { id: 'nedtaelling', label: 'Nedtælling' }, { id: 'todo', label: 'To do' },
-  { id: 'musik', label: 'Musik' }, { id: 'tv', label: 'DR TV' }, { id: 'somfy', label: 'Somfy' }, { id: 'fodbold', label: 'Sport' }, { id: 'el', label: 'Strøm' }, { id: 'udseende', label: 'Udseende' }, { id: 'forbindelse', label: 'Forbindelse' }
+  { id: 'familie', label: 'Familie', ic: 'people', c: '#E5484D' },
+  { id: 'tjenester', label: 'Tjenester', ic: 'store', c: '#6E56CF' },
+  { id: 'vejr', label: 'Vejret', ic: 'vejr', c: '#0EA5E9' }, { id: 'nyheder', label: 'Nyheder', ic: 'nyheder', c: '#F97316' }, { id: 'kalender', label: 'Kalender', ic: 'kalender', c: '#EF4444' }, { id: 'nedtaelling', label: 'Nedtælling', ic: 'timer', c: '#D946EF' }, { id: 'todo', label: 'To do', ic: 'todo', c: '#22A35A' },
+  { id: 'musik', label: 'Musik', ic: 'musik', c: '#EC4899' }, { id: 'tv', label: 'DR TV', ic: 'tv', c: '#3B82F6' }, { id: 'somfy', label: 'Somfy', ic: 'blinds', c: '#14B8A6' }, { id: 'fodbold', label: 'Sport', ic: 'sport', c: '#16A34A' }, { id: 'el', label: 'Strøm', ic: 'bolt', c: '#EAB308' }, { id: 'udseende', label: 'Udseende', ic: 'palette', c: '#8B5CF6' }, { id: 'forbindelse', label: 'Forbindelse', ic: 'link', c: '#64748B' }
 ];
 function pageIndstillinger() {
   const s = settings;
@@ -2223,7 +2225,7 @@ function pageIndstillinger() {
         <details class="howto"><summary>Sådan sætter du Somfy op</summary><p class="note">Cloudflare → <b>Workers &amp; Pages</b> → <b>easyhome</b> → <b>Settings</b> → <b>Variables and Secrets</b> → <b>Add</b>. Tilføj to af typen <b>Secret</b>: <code>SOMFY_USER</code> (mailen I logger ind i TaHoma-appen med) og <code>SOMFY_PASSWORD</code> (adgangskoden). Tryk <b>Deploy</b>, og tryk derefter <b>Test Somfy</b> her.</p></details></section>` : ''}`
   };
   return `<div class="ptitle"><h1>Indstillinger</h1></div>
-  <div class="tabs" role="tablist" aria-label="Indstillinger">${tabs.map((t) => `<button role="tab" class="tab" data-act="setTab" data-tab="${t.id}" aria-selected="${t.id === tab}">${esc(t.label)}</button>`).join('')}</div>
+  <div class="tabs" role="tablist" aria-label="Indstillinger">${tabs.map((t) => `<button role="tab" class="tab" data-act="setTab" data-tab="${t.id}" aria-selected="${t.id === tab}" style="--tc:${t.c}"><i class="tab-ic">${svg(t.ic, 20)}</i><span>${esc(t.label)}</span></button>`).join('')}</div>
   ${needsConn ? '<div class="empty">Denne del kræver forbindelsen til jeres server. <button class="btn line" data-act="setTab" data-tab="forbindelse">Gå til Forbindelse</button></div>' : ''}
   <div class="form" role="tabpanel">${T[tab]()}</div>`;
 }
