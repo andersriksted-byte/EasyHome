@@ -1,5 +1,5 @@
 {
-  "version": "1.103.2",
+  "version": "1.104.0",
   "files": [
     "index.html",
     "app.js",
@@ -31,6 +31,16 @@
     "leaflet.css"
   ],
   "notes": [
+    {
+      "version": "1.104.0",
+      "date": "26. november 2026",
+      "title": "Trafik på selve ruten",
+      "items": [
+        "Vælger du et mål (eller har en aftale med adresse), vises den rigtige rute langs vejene på kortet",
+        "Kun trafikmeldinger på selve ruten tælles med – ikke sideveje i nærheden",
+        "Kø på ruten vises med forsinkelsen i minutter"
+      ]
+    },
     {
       "version": "1.103.2",
       "date": "26. november 2026",

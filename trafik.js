@@ -84,15 +84,30 @@ function segKm(p, a, b) {
   const L = B[0] ** 2 + B[1] ** 2; const t = L ? Math.max(0, Math.min(1, (P[0] * B[0] + P[1] * B[1]) / L)) : 0;
   return Math.hypot(P[0] - t * B[0], P[1] - t * B[1]);
 }
-// Meldinger langs turen fra a til b (inden for en korridor, der bliver bredere på lange ture, fordi vejen sjældent er lige)
-export function along(a, b) {
-  if (!state.items || !a || !b) return [];
-  const len = km(a, b); const width = Math.max(3, Math.min(15, len * 0.08));
+// Meldinger langs turen. Med en rigtig rute (punkter langs vejen) tæller kun meldinger, der ligger på selve vejen (inden for ~300 m),
+// og TomTom's trafik på ruten (kø, uheld, vejarbejde med forsinkelse) kommer med. Uden rute: en korridor om den lige linje.
+export function along(a, b, rt) {
+  if (!a || !b) return [];
   const now = Date.now(); const c = cfg();
-  return state.items
-    .filter((x) => !x.future && (!x.from || x.from.getTime() <= now + 3600000) && (!x.to || x.to.getTime() > now))
-    .filter((x) => c.roadworks || x.kind !== 'vejarbejde')
-    .map((x) => ({ ...x, km: km(a, x), off: segKm(x, a, b) }))
-    .filter((x) => x.off <= width)
-    .sort((p, q) => (p.kind === 'vejarbejde') - (q.kind === 'vejarbejde') || p.km - q.km);
+  const live = (state.items || []).filter((x) => !x.future && (!x.from || x.from.getTime() <= now + 3600000) && (!x.to || x.to.getTime() > now)).filter((x) => c.roadworks || x.kind !== 'vejarbejde');
+  const pts = rt && rt.points && rt.points.length > 1 ? rt.points.map((p) => ({ lat: p[0], lon: p[1] })) : null;
+  let out;
+  if (pts) {
+    const offRoute = (x) => { let m = Infinity; for (let i = 1; i < pts.length; i++) { const d = segKm(x, pts[i - 1], pts[i]); if (d < m) m = d; if (m < 0.05) break; } return m; };
+    // Hurtig forfiltrering: kun meldinger inden for rutens omkreds
+    const la = pts.map((p) => p.lat); const lo = pts.map((p) => p.lon);
+    const bb = [Math.min(...lo) - 0.02, Math.min(...la) - 0.02, Math.max(...lo) + 0.02, Math.max(...la) + 0.02];
+    out = live.filter((x) => x.lon >= bb[0] && x.lon <= bb[2] && x.lat >= bb[1] && x.lat <= bb[3]).map((x) => ({ ...x, off: offRoute(x) })).filter((x) => x.off <= 0.3);
+    (rt.sections || []).forEach((sec, i) => {
+      if (!c.roadworks && sec.kind === 'vejarbejde') return;
+      const dup = out.find((x) => x.kind === sec.kind && km(x, sec) < 2);
+      if (dup) { if (sec.delayMin && !dup.delay) dup.delay = sec.delayMin; return; }
+      const K = KINDS[sec.kind] || KINDS.haendelse;
+      out.push({ id: 'rt' + i, src: 'route', kind: sec.kind, title: `${K.label} på ruten`, text: '', lat: sec.lat, lon: sec.lon, delay: sec.delayMin, from: null, to: null, kommune: '', off: 0 });
+    });
+  } else {
+    const len = km(a, b); const width = Math.max(3, Math.min(15, len * 0.08));
+    out = live.map((x) => ({ ...x, off: segKm(x, a, b) })).filter((x) => x.off <= width);
+  }
+  return out.map((x) => ({ ...x, km: km(a, x) })).sort((p, q) => (p.kind === 'vejarbejde') - (q.kind === 'vejarbejde') || p.km - q.km);
 }

@@ -592,6 +592,17 @@ function routeFor(e) {
   }
   return ROUTES[key].data || null;
 }
+// Rute fra hjem til et af jeres steder (til Trafik-siden)
+function routeToPlace(p) {
+  if (!hasProxy() || !p || !p.lat) return null;
+  const h = home(); const key = 'p|' + p.lat + ',' + p.lon;
+  const r = ROUTES[key];
+  if (!r || Date.now() - r.at > 10 * 60000) {
+    ROUTES[key] = { at: Date.now(), data: r && r.data };
+    workerFetch(`/route?from=${h.lat},${h.lon}&to=${p.lat},${p.lon}&at=${encodeURIComponent(new Date().toISOString())}`).then((x) => x.json()).then((d) => { ROUTES[key] = { at: Date.now(), data: d }; if (ui.page === 'trafik') softRender(); }).catch(() => {});
+  }
+  return ROUTES[key].data || null;
+}
 const durTxt = (min) => (min >= 60 ? `${Math.floor(min / 60)} t${min % 60 ? ' ' + (min % 60) + ' min' : ''}` : `${Math.max(1, min)} min`);
 // Næste i kalenderen: hvor lang tid der er til – og hvornår man skal køre, hvis aftalen er et andet sted
 function wNaeste(size, h = 1, wd = 1, x = null) {
@@ -620,7 +631,7 @@ function wNaeste(size, h = 1, wd = 1, x = null) {
     const traf = !rt.traffic ? '' : rt.delayMin <= 2 ? 'Trafikken er let' : rt.delayMin <= 9 ? 'Lidt trafik' : 'Tæt trafik';
     // Trafikmeldinger på vejen (Vejdirektoratet), når Trafik er slået til
     let warn = '';
-    if (svcOn('trafik') && rt.lat && lm <= 180) { trafikLoad(rt); const on = TR.along(home(), rt).filter((y) => y.kind !== 'vejarbejde'); if (on.length) warn = `⚠ ${on.length} ${on.length === 1 ? 'melding' : 'meldinger'} på vejen`; }
+    if (svcOn('trafik') && rt.lat && lm <= 180) { trafikLoad(); const on = TR.along(home(), rt, rt).filter((y) => y.kind !== 'vejarbejde'); if (on.length) warn = `⚠ ${on.length} ${on.length === 1 ? 'melding' : 'meldinger'} på vejen`; }
     drive = `<div class="nx2-drive ${cls}"><b>${lm <= 0 ? 'Kør nu!' : 'Kør kl. ' + hhmm(leave)}</b><span>${[warn, traf, durTxt(rt.min) + ' i bil'].filter(Boolean).join(' · ')}</span></div>`;
   }
   const until = running ? `I gang – til ${hhmm(e.end)}` : mins < 60 ? `om ${Math.max(1, mins)} min` : sameDay(e.start, new Date()) ? `om ${durTxt(mins)}` : day.toLowerCase();
@@ -2039,20 +2050,21 @@ function pageTrafik() {
   const f = ui.trFilter || 'alle';
   // Hvor skal du hen? Omkring hjem, et af jeres steder eller næste aftale i kalenderen (view-valg, ikke indstilling)
   const dests = [{ id: 'hjem', label: '🏠 Omkring hjem' }];
-  settings.places.slice(1).forEach((p, i) => { if (p.lat) dests.push({ id: 'p:' + (p.id || i), label: '→ ' + placeLabel(p), to: p }); });
+  settings.places.slice(1).forEach((p, i) => { if (p.lat) dests.push({ id: 'p:' + (p.id || i), label: '→ ' + placeLabel(p), to: p, place: p }); });
   const nxt = D.cal ? D.cal.events.filter((e) => !e.allDay && e.start.getTime() > Date.now() && e.start.getTime() < Date.now() + 24 * 3600000 && mineEvent(e) && isPlace(e.location)).sort((a, b) => a.start - b.start)[0] : null;
   const nrt = nxt ? routeFor(nxt) : null;
   if (nrt && nrt.found && nrt.lat) dests.splice(1, 0, { id: 'cal', label: `📅 ${nxt.title} ${hhmm(nxt.start)}`, to: { lat: nrt.lat, lon: nrt.lon }, rt: nrt, ev: nxt });
   const dest = dests.find((d) => d.id === ui.trDest) || dests[0];
-  trafikLoad(dest.to);
+  if (dest.place) { const r = routeToPlace(dest.place); if (r && r.found) dest.rt = r; }
+  trafikLoad(dest.rt ? null : dest.to); // med en rigtig rute kommer TomTom's trafik med ruten – så hentes der kun omkring hjem
   if (!TR.state.items) return `<div class="empty">${TR.state.err ? 'Kunne ikke hente trafikken fra Vejdirektoratet.' : 'Henter trafikken …'}</div>`;
-  const all = dest.to ? TR.along(home(), dest.to) : TR.near(home());
+  const all = dest.to ? TR.along(home(), dest.to, dest.rt) : TR.near(home());
   const acute = all.filter((x) => x.kind !== 'vejarbejde');
   const sum = dest.to ? `<div class="tr-sum ${acute.length ? 'warn' : 'ok'}"><span>${acute.length ? '⚠' : '✓'}</span><div><b>${acute.length ? `${acute.length} ${acute.length === 1 ? 'melding' : 'meldinger'} på vejen` : 'Fri vej'}${dest.rt ? ` · ${durTxt(dest.rt.min)} i bil${dest.rt.traffic && dest.rt.delayMin > 2 ? ` (+${dest.rt.delayMin} min pga. trafik)` : ''}` : ''}</b><small>${esc(dest.label.replace(/^\S+ /, ''))}${all.length - acute.length ? ` · 🚧 ${all.length - acute.length} vejarbejde` : ''}</small></div></div>` : '';
   const counts = {}; all.forEach((x) => { counts[x.kind] = (counts[x.kind] || 0) + 1; });
   const chips = [['alle', 'Alle', all.length]].concat(Object.keys(TR.KINDS).filter((k) => counts[k]).map((k) => [k, TR.KINDS[k].icon + ' ' + TR.KINDS[k].label, counts[k]]));
   const list = f === 'alle' ? all : all.filter((x) => x.kind === f);
-  ui.trMapArgs = { home: home(), dest: dest.to || null, items: list, flow: TR.state.flow, radius: TR.cfg().radius };
+  ui.trMapArgs = { home: home(), dest: dest.to || null, route: dest.rt && dest.rt.points || null, items: list, flow: TR.state.flow, radius: TR.cfg().radius };
   setTimeout(() => { const el = document.getElementById('trMap'); if (el && ui.trMapArgs) TRM.sync(el, { ...ui.trMapArgs, dark: document.documentElement.style.colorScheme === 'dark' }); }, 0);
   return `<div class="tr-page">
     ${dests.length > 1 ? `<div class="tr-chips tr-dests">${dests.map((d) => `<button class="chip${d.id === dest.id ? ' accent' : ''}" data-act="trDest" data-k="${esc(d.id)}">${esc(d.label)}</button>`).join('')}</div>` : ''}
@@ -2061,7 +2073,7 @@ function pageTrafik() {
 </div>
     <div class="tr-main"><div class="tr-map card" id="trMap" data-keep></div>
       <div class="tr-side">${list.length ? list.map((x) => `<button class="card tr-card" data-act="trFocus" data-lat="${x.lat}" data-lon="${x.lon}">${trRow(x, true)}</button>`).join('') : '<div class="tr-ok big"><span>✓</span><b>Ingen trafikmeldinger</b></div>'}
-      <div class="tr-src">Data: Vejdirektoratet · opdateret ${esc(hhmm(new Date(TR.state.at)))}</div></div></div>
+      <div class="tr-src">Data: Vejdirektoratet${TR.state.flow ? " · TomTom" : ""} · opdateret ${esc(hhmm(new Date(TR.state.at)))}</div></div></div>
   </div>`;
 }
 function trafikSettings() {

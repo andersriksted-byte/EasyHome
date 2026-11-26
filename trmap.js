@@ -40,7 +40,7 @@ const flowLayer = () => workerTiles('flow', { opacity: 0.95, minZoom: 5, zIndex:
 const baseLayer = (dark) => workerTiles(dark ? 'night' : 'base', { zIndex: 1, attribution: '© TomTom · © OpenStreetMap · Vejdirektoratet' });
 
 // Tegner kortet i elementet (eller genbruger det, hvis det allerede står der)
-export async function sync(el, { home, dest, items, flow, dark, radius }) {
+export async function sync(el, { home, dest, route, items, flow, dark, radius }) {
   if (!el) return;
   try { await loadLeaflet(); } catch (e) { el.innerHTML = '<div class="empty">Kortet kunne ikke hentes.</div>'; return; }
   const L = window.L;
@@ -57,7 +57,9 @@ export async function sync(el, { home, dest, items, flow, dark, radius }) {
   if (!flow && M.flow) { M.flow.remove(); M.flow = null; }
 
   M.layer.clearLayers();
-  if (dest) L.polyline([[home.lat, home.lon], [dest.lat, dest.lon]], { color: '#6E56CF', weight: 4, opacity: 0.55, dashArray: '8 8' }).addTo(M.layer);
+  // Ruten tegnes langs vejene (kant + farve, så den kan ses oven på trafikfarverne); uden rute en stiplet linje
+  if (dest && route && route.length > 1) { L.polyline(route, { color: '#fff', weight: 9, opacity: 0.9 }).addTo(M.layer); L.polyline(route, { color: '#6E56CF', weight: 5, opacity: 0.95 }).addTo(M.layer); }
+  else if (dest) L.polyline([[home.lat, home.lon], [dest.lat, dest.lon]], { color: '#6E56CF', weight: 4, opacity: 0.55, dashArray: '8 8' }).addTo(M.layer);
   items.forEach((x) => {
     const K = KINDS[x.kind] || KINDS.haendelse;
     const icon = L.divIcon({ className: 'tr-pin', html: `<span style="--kc:${K.c}">${K.icon}</span>`, iconSize: [30, 30], iconAnchor: [15, 15] });
@@ -68,10 +70,10 @@ export async function sync(el, { home, dest, items, flow, dark, radius }) {
   if (dest) L.marker([dest.lat, dest.lon], { icon: L.divIcon({ className: 'tr-pin home', html: '<span>📍</span>', iconSize: [30, 30], iconAnchor: [15, 15] }), zIndexOffset: 1000 }).addTo(M.layer);
 
   // Udsnittet sættes kun, når mål eller radius skifter – ellers bliver kortet, hvor brugeren har flyttet det hen
-  const key = dest ? `d${dest.lat},${dest.lon}` : `r${radius}`;
+  const key = dest ? `d${dest.lat},${dest.lon}${route ? 'r' : ''}` : `r${radius}`;
   if (M.viewKey !== key) {
     M.viewKey = key;
-    if (dest) map.fitBounds(L.latLngBounds([[home.lat, home.lon], [dest.lat, dest.lon]]).pad(0.15));
+    if (dest) map.fitBounds(L.latLngBounds(route && route.length > 1 ? route : [[home.lat, home.lon], [dest.lat, dest.lon]]).pad(0.08));
     else if (radius) map.fitBounds(L.latLng(home.lat, home.lon).toBounds(radius * 2000));
     else map.fitBounds([[54.55, 8.0], [57.8, 15.2]]);
   }

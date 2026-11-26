@@ -381,26 +381,43 @@ async function geocode(env, q) {
   if (env.DASH_KV) await env.DASH_KV.put(key, JSON.stringify(found), { expirationTtl: found ? 60 * 60 * 24 * 30 : 60 * 60 * 24 });
   return found;
 }
+// Forenkler en rute til et punkt ca. hver 150 m (højst 2000 punkter)
+function thin(pts) {
+  const out = []; let last = null;
+  for (const p of pts) { if (!last || Math.abs(p[0] - last[0]) + Math.abs(p[1] - last[1]) > 0.0016) { out.push([+p[0].toFixed(5), +p[1].toFixed(5)]); last = p; } }
+  if (pts.length && out[out.length - 1] !== pts[pts.length - 1]) out.push([+pts[pts.length - 1][0].toFixed(5), +pts[pts.length - 1][1].toFixed(5)]);
+  const step = Math.ceil(out.length / 2000); return step > 1 ? out.filter((_, i) => i % step === 0) : out;
+}
 async function route(req, env, ctx) {
   const p = new URL(req.url).searchParams;
   const [flat, flon] = (p.get('from') || '').split(',').map(Number);
   const to = (p.get('to') || '').trim().slice(0, 300); const at = p.get('at') || '';
   if (!isFinite(flat) || !isFinite(flon) || !to) return json(env, { error: 'Mangler fra/til' }, 400);
-  const ck = new Request('https://cache.easyhome/route/' + encodeURIComponent([flat.toFixed(3), flon.toFixed(3), to, at.slice(0, 15)].join('|')));
+  const ck = new Request('https://cache.easyhome/route2/' + encodeURIComponent([flat.toFixed(3), flon.toFixed(3), to, at.slice(0, 15)].join('|')));
   const hit = await caches.default.match(ck);
   if (hit) { const o = new Response(hit.body, hit); for (const [k, v] of Object.entries(cors(env))) o.headers.set(k, v); return o; }
-  const dest = await geocode(env, to);
+  const ll = /^(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?)$/.exec(to);
+  const dest = ll ? { lat: +ll[1], lon: +ll[2], name: '' } : await geocode(env, to);
   let out = { found: !!dest };
   if (dest) {
     if (env.TOMTOM_KEY) {
       const arrive = at && new Date(at) > new Date(Date.now() + 10 * 60000) ? `&arriveAt=${encodeURIComponent(new Date(at).toISOString())}` : '';
-      const r = await fetch(`https://api.tomtom.com/routing/1/calculateRoute/${flat},${flon}:${dest.lat},${dest.lon}/json?key=${env.TOMTOM_KEY}&traffic=true&travelMode=car${arrive}`).then((x) => x.json()).catch(() => null);
+      const r = await fetch(`https://api.tomtom.com/routing/1/calculateRoute/${flat},${flon}:${dest.lat},${dest.lon}/json?key=${env.TOMTOM_KEY}&traffic=true&travelMode=car&sectionType=traffic${arrive}`).then((x) => x.json()).catch(() => null);
       const s = r && r.routes && r.routes[0] && r.routes[0].summary;
-      if (s) out = { found: true, place: dest.name, lat: dest.lat, lon: dest.lon, min: Math.round(s.travelTimeInSeconds / 60), km: Math.round(s.lengthInMeters / 100) / 10, delayMin: Math.round((s.trafficDelayInSeconds || 0) / 60), departAt: s.departureTime || null, traffic: true };
+      // Selve vejen (forenklet) og trafikken langs den (kø, uheld, vejarbejde, spærringer) – kun på ruten, ikke sideveje
+      const pts = s ? ((r.routes[0].legs || [])[0] || {}).points || [] : [];
+      const sections = ((s && r.routes[0].sections) || []).filter((x) => x.sectionType === 'TRAFFIC').map((x) => {
+        const cause = ((x.tec || {}).causes || [])[0] || {}; const c = cause.mainCauseCode;
+        const kind = c === 2 ? 'uheld' : c === 3 || c === 4 ? 'vejarbejde' : c === 5 || x.simpleCategory === 'ROAD_CLOSURE' ? 'spaerring' : x.simpleCategory === 'ROAD_WORK' ? 'vejarbejde' : x.simpleCategory === 'JAM' || c === 1 ? 'koe' : 'haendelse';
+        const mid = pts[Math.floor(((x.startPointIndex || 0) + (x.endPointIndex || 0)) / 2)] || pts[0] || {};
+        return { kind, delayMin: Math.round((x.delayInSeconds || 0) / 60), mag: x.magnitudeOfDelay || 0, lat: mid.latitude, lon: mid.longitude };
+      }).filter((x) => x.lat && (x.kind !== 'haendelse' || x.delayMin >= 3) && (x.kind !== 'koe' || x.delayMin >= 2 || x.mag >= 2));
+      out.points = thin(pts.map((q) => [q.latitude, q.longitude])); out.sections = sections;
+      if (s) out = { ...out, found: true, place: dest.name, lat: dest.lat, lon: dest.lon, min: Math.round(s.travelTimeInSeconds / 60), km: Math.round(s.lengthInMeters / 100) / 10, delayMin: Math.round((s.trafficDelayInSeconds || 0) / 60), departAt: s.departureTime || null, traffic: true };
     } else {
-      const r = await fetch(`https://router.project-osrm.org/route/v1/driving/${flon},${flat};${dest.lon},${dest.lat}?overview=false`, { headers: UA }).then((x) => x.json()).catch(() => null);
+      const r = await fetch(`https://router.project-osrm.org/route/v1/driving/${flon},${flat};${dest.lon},${dest.lat}?overview=full&geometries=geojson`, { headers: UA }).then((x) => x.json()).catch(() => null);
       const rt = r && r.routes && r.routes[0];
-      if (rt) out = { found: true, place: dest.name, lat: dest.lat, lon: dest.lon, min: Math.round(rt.duration / 60), km: Math.round(rt.distance / 100) / 10, traffic: false };
+      if (rt) out = { points: thin(((rt.geometry || {}).coordinates || []).map((c) => [c[1], c[0]])), sections: [], found: true, place: dest.name, lat: dest.lat, lon: dest.lon, min: Math.round(rt.duration / 60), km: Math.round(rt.distance / 100) / 10, traffic: false };
     }
   }
   const res = new Response(JSON.stringify(out), { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'max-age=' + (out.traffic ? 600 : 3600) } });
