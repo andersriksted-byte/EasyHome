@@ -1,5 +1,5 @@
 {
-  "version": "1.100.4",
+  "version": "1.100.5",
   "files": [
     "index.html",
     "app.js",
@@ -27,6 +27,15 @@
     "todo.js"
   ],
   "notes": [
+    {
+      "version": "1.100.5",
+      "date": "26. november 2026",
+      "title": "Bedre hentning af nyheder",
+      "items": [
+        "Nyheder og artikler fra fx Fyens Stiftstidende hentes mere stabilt",
+        "Artikler, der før ikke kunne vises, viser nu teksten eller i det mindste et resumé"
+      ]
+    },
     {
       "version": "1.100.4",
       "date": "26. november 2026",

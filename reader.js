@@ -86,7 +86,19 @@ export async function loadArticle(url, source, fallbackImg = '') {
   const doc = new DOMParser().parseFromString(html, 'text/html');
   const base = doc.createElement('base'); base.href = url; doc.head.prepend(base);
   const ogImg = (doc.querySelector('meta[property="og:image"]') || {}).content || fallbackImg || '';
-  const art = new window.Readability(doc, { charThreshold: 200 }).parse();
+  // Artikelteksten fra sidens strukturerede data (JSON-LD) – bruges, hvis læsevisningen ikke finder teksten (fx Fyens Stiftstidende)
+  let ld = null;
+  doc.querySelectorAll('script[type="application/ld+json"]').forEach((sc) => { if (ld) return; try { const walk = (o) => { if (!o || typeof o !== 'object' || ld) return; if (Array.isArray(o)) return o.forEach(walk); if (o.articleBody || (/Article/.test(o['@type']) && o.headline)) { ld = o; return; } if (o['@graph']) walk(o['@graph']); }; walk(JSON.parse(sc.textContent)); } catch (e) { /* ugyldig */ } });
+  const metaDesc = (doc.querySelector('meta[property="og:description"],meta[name="description"]') || {}).content || '';
+  const ogTitle = (doc.querySelector('meta[property="og:title"]') || {}).content || '';
+  let art = null;
+  try { art = new window.Readability(doc.cloneNode(true), { charThreshold: 200 }).parse(); } catch (e) { art = null; }
+  const ldText = ld && ld.articleBody ? String(ld.articleBody) : '';
+  if ((!art || (art.textContent || '').trim().length < 400) && (ldText.length > ((art && art.textContent) || '').trim().length)) {
+    art = { title: ld.headline || ogTitle || (art && art.title) || '', byline: (art && art.byline) || '', siteName: '', textContent: ldText,
+      content: (ld.description ? `<p class="lead">${esc(ld.description)}</p>` : '') + ldText.split(/\n{1,}/).map((x) => x.trim()).filter(Boolean).map((x) => `<p>${esc(x)}</p>`).join('') };
+  }
+  if ((!art || !art.content) && metaDesc) art = { title: ogTitle, byline: '', siteName: '', textContent: metaDesc, content: `<p class="lead">${esc(metaDesc)}</p>` };
   if (!art || !art.content) throw new Error('Ingen tekst');
   const body = new DOMParser().parseFromString('<div>' + art.content + '</div>', 'text/html').body.firstChild;
   tidy(body, url);

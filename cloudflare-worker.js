@@ -170,7 +170,13 @@ async function proxy(req, env, ctx) {
   const cacheKey = new Request('https://cache.easyhome/' + encodeURIComponent(u.toString()));
   let res = await cache.match(cacheKey);
   if (!res) {
-    const up = await fetch(u.toString(), { headers: { 'User-Agent': 'easyHome/1.0 (privat familie-dashboard)', Accept: 'application/rss+xml, application/xml, text/calendar, text/xml, */*' }, redirect: 'follow' });
+    // Nogle nyhedssider (fx Fyens Stiftstidende) svarer langsomt eller afviser ukendte programmer – så hentes der som en almindelig browser,
+    // med tidsgrænse og ét nyt forsøg
+    const BROWSER = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Safari/605.1.15';
+    const get = (ua) => fetch(u.toString(), { headers: { 'User-Agent': ua, Accept: 'application/rss+xml, application/xml, text/calendar, text/xml, text/html;q=0.9, */*;q=0.8', 'Accept-Language': 'da-DK,da;q=0.9,en;q=0.5' }, redirect: 'follow', signal: AbortSignal.timeout(12000) });
+    let up;
+    try { up = await get(BROWSER); } catch (e) { up = null; }
+    if (!up || !up.ok) { try { up = await get('easyHome/1.0 (privat familie-dashboard)'); } catch (e) { return json(env, { error: 'Kilden svarede ikke i tide' }, 504); } }
     if (!up.ok) return json(env, { error: 'Kilden svarede ' + up.status }, 502);
     const body = await up.text();
     if (body.length > 3000000) return json(env, { error: 'Kilden er for stor' }, 413);
