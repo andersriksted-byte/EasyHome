@@ -1,5 +1,5 @@
 {
-  "version": "1.93.1",
+  "version": "1.93.2",
   "files": [
     "index.html",
     "app.js",
@@ -27,6 +27,14 @@
     "todo.js"
   ],
   "notes": [
+    {
+      "version": "1.93.2",
+      "date": "26. november 2026",
+      "title": "Dagens ret i kalenderen",
+      "items": [
+        "Under Indstillinger → Kalender kan I nu vælge, om dagens ret skal vises nederst i kalenderen"
+      ]
+    },
     {
       "version": "1.93.1",
       "date": "26. november 2026",

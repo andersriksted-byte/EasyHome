@@ -1653,7 +1653,7 @@ function calTimeGrid(days, today) {
     const nowLine = sameDay(d, today) ? `<i class="tg-now" style="top:${((now - s0) / 3600000) * CAL_HH}px"></i>` : '';
     return `<div class="tg-day${sameDay(d, today) ? ' today' : ''}">${html}${nowLine}</div>`;
   }).join('');
-  const menus = days.map((d) => dayMenu(d));
+  const menus = days.map((d) => (settings.calMenu === false ? '' : dayMenu(d)));
   const menu = menus.some(Boolean) ? `<div class="tg-row tg-menu" style="${cols}"><span></span>${menus.map((m) => `<div>${m}</div>`).join('')}</div>` : '';
   requestAnimationFrame(calScroll);
   return `<div class="tgrid" data-swipe="cal">${head}${ad}<div class="tg-body" id="tgBody"><div class="tg-inner" style="${cols};height:${24 * CAL_HH}px"><div class="tg-hours">${hours}</div>${body}</div></div>${menu}</div>`;
@@ -1961,7 +1961,8 @@ function sonosConnSection() {
         <div><button class="btn" data-act="copyRedir">Kopiér adressen</button></div></div>` : ''}</section>`;
 }
 function calSection(s) {
-  return `<section class="card wide"><b>Kalendere</b>
+  return `<section class="card"><b>Visning</b><label class="check"><input type="checkbox" data-set="calMenu"${s.calMenu === false ? '' : ' checked'}>Vis dagens ret i kalenderen</label></section>
+    <section class="card wide"><b>Kalendere</b>
       <details class="howto"><summary>Sådan finder du kalenderlinket</summary><p class="note">Indsæt et link for hver kalender (fx én pr. familiemedlem). <b>iPhone/iPad:</b> Kalender → Kalendere → tryk ⓘ ved kalenderen → slå <i>Offentlig kalender</i> til → <i>Del link</i> → Kopiér. <b>Mac:</b> Kalender → højreklik på kalenderen → Del kalender → <i>Offentlig kalender</i> → kopiér adressen. Linket starter med <code>webcal://</code> – det klarer dashboardet. Andre: Google ("Hemmelig adresse i iCal-format") og Outlook (ICS-link) virker også. Behandl linkene som adgangskoder.</p></details>
       <div class="calgrid">${s.calendars.map((c, i) => { const err = D.cal && D.cal.errors.find((e) => e.cal === c.name); const open = ui.calEdit === c.id || !c.url; const own = members().find((m) => m.id === c.owner); return `<div class="caltile ${open ? 'open' : ''} ${err ? 'bad' : ''}" style="--c:${esc(c.color)}">
         <label class="caldot" title="Farve"><input type="color" data-cal="${i}" data-field="color" value="${esc(c.color)}" aria-label="Farve for ${esc(c.name)}"></label>
