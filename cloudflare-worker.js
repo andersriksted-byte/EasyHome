@@ -393,7 +393,7 @@ async function route(req, env, ctx) {
   const [flat, flon] = (p.get('from') || '').split(',').map(Number);
   const to = (p.get('to') || '').trim().slice(0, 300); const at = p.get('at') || '';
   if (!isFinite(flat) || !isFinite(flon) || !to) return json(env, { error: 'Mangler fra/til' }, 400);
-  const ck = new Request('https://cache.easyhome/route2/' + encodeURIComponent([flat.toFixed(3), flon.toFixed(3), to, at.slice(0, 15)].join('|')));
+  const ck = new Request('https://cache.easyhome/route3/' + encodeURIComponent([flat.toFixed(3), flon.toFixed(3), to, at.slice(0, 15)].join('|')));
   const hit = await caches.default.match(ck);
   if (hit) { const o = new Response(hit.body, hit); for (const [k, v] of Object.entries(cors(env))) o.headers.set(k, v); return o; }
   const ll = /^(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?)$/.exec(to);
@@ -402,7 +402,7 @@ async function route(req, env, ctx) {
   if (dest) {
     if (env.TOMTOM_KEY) {
       const arrive = at && new Date(at) > new Date(Date.now() + 10 * 60000) ? `&arriveAt=${encodeURIComponent(new Date(at).toISOString())}` : '';
-      const r = await fetch(`https://api.tomtom.com/routing/1/calculateRoute/${flat},${flon}:${dest.lat},${dest.lon}/json?key=${env.TOMTOM_KEY}&traffic=true&travelMode=car&sectionType=traffic${arrive}`).then((x) => x.json()).catch(() => null);
+      const r = await fetch(`https://api.tomtom.com/routing/1/calculateRoute/${flat},${flon}:${dest.lat},${dest.lon}/json?key=${env.TOMTOM_KEY}&traffic=true&travelMode=car&sectionType=traffic&instructionsType=coded&language=da-DK${arrive}`).then((x) => x.json()).catch(() => null);
       const s = r && r.routes && r.routes[0] && r.routes[0].summary;
       // Selve vejen (forenklet) og trafikken langs den (kø, uheld, vejarbejde, spærringer) – kun på ruten, ikke sideveje
       const pts = s ? ((r.routes[0].legs || [])[0] || {}).points || [] : [];
@@ -413,6 +413,8 @@ async function route(req, env, ctx) {
         return { kind, delayMin: Math.round((x.delayInSeconds || 0) / 60), mag: x.magnitudeOfDelay || 0, lat: mid.latitude, lon: mid.longitude };
       }).filter((x) => x.lat && (x.kind !== 'haendelse' || x.delayMin >= 3) && (x.kind !== 'koe' || x.delayMin >= 2 || x.mag >= 2));
       out.points = thin(pts.map((q) => [q.latitude, q.longitude])); out.sections = sections;
+      // Hvilke veje ruten kører på (vejnumre og navne fra vejvisningen) – så en spærring på en vej, der krydser under motorvejen, ikke tælles med
+      out.roads = (((s && r.routes[0].guidance) || {}).instructions || []).map((g) => ({ lat: (g.point || {}).latitude, lon: (g.point || {}).longitude, nums: g.roadNumbers || [], street: g.street || '' })).filter((g) => g.lat && (g.nums.length || g.street));
       if (s) out = { ...out, found: true, place: dest.name, lat: dest.lat, lon: dest.lon, min: Math.round(s.travelTimeInSeconds / 60), km: Math.round(s.lengthInMeters / 100) / 10, delayMin: Math.round((s.trafficDelayInSeconds || 0) / 60), departAt: s.departureTime || null, traffic: true };
     } else {
       const r = await fetch(`https://router.project-osrm.org/route/v1/driving/${flon},${flat};${dest.lon},${dest.lat}?overview=full&geometries=geojson`, { headers: UA }).then((x) => x.json()).catch(() => null);

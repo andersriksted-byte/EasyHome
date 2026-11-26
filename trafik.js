@@ -97,7 +97,16 @@ export function along(a, b, rt) {
     // Hurtig forfiltrering: kun meldinger inden for rutens omkreds
     const la = pts.map((p) => p.lat); const lo = pts.map((p) => p.lon);
     const bb = [Math.min(...lo) - 0.02, Math.min(...la) - 0.02, Math.max(...lo) + 0.02, Math.max(...la) + 0.02];
-    out = live.filter((x) => x.lon >= bb[0] && x.lon <= bb[2] && x.lat >= bb[1] && x.lat <= bb[3]).map((x) => ({ ...x, off: offRoute(x) })).filter((x) => x.off <= 0.3);
+    // Vejen ruten kører på ved hvert punkt (fra vejvisningen): et vejskilt gælder fra sit punkt og frem til det næste
+    const roadAt = roadIndex(pts, rt.roads || []);
+    const nearestIdx = (x) => { let m = Infinity; let k = 0; for (let i = 0; i < pts.length; i++) { const d = Math.abs(pts[i].lat - x.lat) + Math.abs(pts[i].lon - x.lon); if (d < m) { m = d; k = i; } } return k; };
+    out = live.filter((x) => x.lon >= bb[0] && x.lon <= bb[2] && x.lat >= bb[1] && x.lat <= bb[3]).map((x) => ({ ...x, off: offRoute(x) })).filter((x) => x.off <= 0.3)
+      .filter((x) => {
+        const ids = roadAt ? roadAt(nearestIdx(x)) : null;
+        if (!ids || !ids.length) return x.off <= 0.12; // ukendt vej: kun hvis meldingen ligger lige på ruten
+        const t = norm(x.title + ' ' + (x.text || ''));
+        return ids.some((id) => t.includes(id)); // meldingen skal nævne vejen (fx "e45", "rute 15", "djurslandmotorvejen")
+      });
     (rt.sections || []).forEach((sec, i) => {
       if (!c.roadworks && sec.kind === 'vejarbejde') return;
       const dup = out.find((x) => x.kind === sec.kind && km(x, sec) < 2);
@@ -110,4 +119,22 @@ export function along(a, b, rt) {
     out = live.map((x) => ({ ...x, off: segKm(x, a, b) })).filter((x) => x.off <= width);
   }
   return out.map((x) => ({ ...x, km: km(a, x) })).sort((p, q) => (p.kind === 'vejarbejde') - (q.kind === 'vejarbejde') || p.km - q.km);
+}
+
+// Normaliserer tekst og vej-id'er, så "E 45", "E45" og "Rute 15" kan sammenlignes
+const norm = (t) => ' ' + String(t || '').toLowerCase().replace(/\b(e|rute|route|primærrute|sekundærrute)\s*(\d+)/g, '$1$2').replace(/[^a-z0-9æøå]+/g, ' ') + ' ';
+function roadIndex(pts, roads) {
+  if (!roads.length) return null;
+  const idx = roads.map((r) => { let m = Infinity; let k = 0; pts.forEach((p, i) => { const d = Math.abs(p.lat - r.lat) + Math.abs(p.lon - r.lon); if (d < m) { m = d; k = i; } }); return { k, ids: ids(r) }; }).sort((a, b) => a.k - b.k);
+  return (i) => {
+    // Vejen ved punktet og nabostykkerne (et skilt ligger ofte lidt før/efter, og ved til- og frakørsler er begge veje relevante)
+    let j = 0; while (j + 1 < idx.length && idx[j + 1].k <= i) j++;
+    return [...new Set(idx[j].ids.concat(idx[j + 1] && idx[j + 1].k - i < 3 ? idx[j + 1].ids : []))];
+  };
+}
+function ids(r) {
+  const out = [];
+  (r.nums || []).forEach((n) => { const m = /^([A-Za-z]*)\s*(\d+)$/.exec(String(n).trim()); if (!m) return; const d = m[2]; if (/^e$/i.test(m[1])) out.push(' e' + d + ' '); else { out.push(' rute' + d + ' ', ' route' + d + ' ', ' primærrute' + d + ' ', ' sekundærrute' + d + ' ', ' vej ' + d + ' '); } });
+  if (r.street) { const st = norm(r.street).trim(); if (st.length > 3) out.push(st); }
+  return out;
 }

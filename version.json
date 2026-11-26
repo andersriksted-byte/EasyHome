@@ -1,5 +1,5 @@
 {
-  "version": "1.104.0",
+  "version": "1.104.1",
   "files": [
     "index.html",
     "app.js",
@@ -31,6 +31,14 @@
     "leaflet.css"
   ],
   "notes": [
+    {
+      "version": "1.104.1",
+      "date": "26. november 2026",
+      "title": "Mere præcis trafik på ruten",
+      "items": [
+        "Spærringer og uheld på veje, der krydser under eller over ruten, tælles ikke længere med – kun meldinger på den vej, du kører på"
+      ]
+    },
     {
       "version": "1.104.0",
       "date": "26. november 2026",
