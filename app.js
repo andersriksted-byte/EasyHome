@@ -428,7 +428,23 @@ function seekBar(btns = true) {
   const p = S.position(); if (!p) return '';
   return `<div class="mseek">${btns ? `<button class="mskip" data-act="sSeekBy" data-d="-15000" aria-label="15 sekunder tilbage">−15</button>` : ''}<span class="mst" data-seekpos></span><input type="range" min="0" max="${p.dur}" step="1000" value="0" data-seekbar aria-label="Spol i afspilningen"><span class="mst" data-seekleft></span>${btns ? `<button class="mskip" data-act="sSeekBy" data-d="30000" aria-label="30 sekunder frem">+30</button>` : ''}</div>`;
 }
+// Fremdriftsring på Musik-kortet: ringen fyldes, og indeni tælles ned til slut. Radio uden længde: "Live"
+const RING_C = 2 * Math.PI * 44;
+function progRing() {
+  const np = S.nowPlaying(); if (!np.title) return '';
+  return `<button class="mwring" data-act="nav" data-page="musik" aria-label="Fremdrift"><svg viewBox="0 0 100 100" aria-hidden="true"><circle class="rt" cx="50" cy="50" r="44"/><circle class="rp" cx="50" cy="50" r="44" stroke-dasharray="${RING_C.toFixed(1)}" stroke-dashoffset="${RING_C.toFixed(1)}" data-ringp/></svg><span data-ringt></span></button>`;
+}
+function ringTick() {
+  const p = S.position();
+  document.querySelectorAll('.mwring').forEach((el) => {
+    const c = el.querySelector('[data-ringp]'); const t = el.querySelector('[data-ringt]');
+    if (p) { c.setAttribute('stroke-dashoffset', (RING_C * (1 - p.pos / p.dur)).toFixed(1)); t.textContent = '−' + fmtMs(p.dur - p.pos); el.classList.remove('live'); el.classList.toggle('long', p.dur - p.pos >= 3600000); }
+    else { c.setAttribute('stroke-dashoffset', '0'); t.textContent = 'LIVE'; el.classList.add('live'); }
+    el.classList.toggle('paused', !S.nowPlaying().playing);
+  });
+}
 function seekTick() {
+  ringTick();
   const p = S.position();
   document.querySelectorAll('.mseek').forEach((el) => {
     const r = el.querySelector('[data-seekbar]'); if (!p || !r || r === document.activeElement && ui.seeking) return;
@@ -492,15 +508,16 @@ function wSonos(size, h = 1, wd = 1, x = {}) {
   const kind = shapeKind(wd, h);
   const art = np.image ? `background-image:url('${esc(np.image)}')` : '';
   const ctl = `<div class="mwctl"><button class="mwb" data-act="sPrev" aria-label="Forrige">${fillSvg('prev', 16)}</button><button class="mwb main" data-act="sPlay" aria-label="${np.playing ? 'Pause' : 'Afspil'}">${fillSvg(np.playing ? 'pause' : 'play', 20)}</button><button class="mwb" data-act="sNext" aria-label="Næste">${fillSvg('next', 16)}</button></div>`;
+  const ctlR = `<div class="mwctlrow">${ctl}${progRing()}</div>`;
   const vol = np.volume !== null ? `<label class="vol mwvol"><span class="small">Lyd</span><input type="range" min="0" max="100" value="${np.volume}" data-vol aria-label="Lydstyrke"></label>` : '';
   const info = `<div class="mwinfo"><span class="mwgrp">${esc(np.group)}</span><b>${esc(np.title || 'Intet spiller')}</b><span>${esc(np.artist || '')}</span></div>`;
   const fl = S.favorites().filter((f) => !x.fav || S.favKind(f) === x.fav);
   const favs = fl.length ? `<div class="mwfavs mlogos" data-trim>${fl.map((f) => favLogo('sFav', f.id, f.name, S.art(f), S.favKind(f), f.id === S.playingFavId())).join('')}</div>` : '';
   if (kind === 'tiny') return `<div class="mw mw-tiny" style="${art}"><div class="mwshade">${info}${ctl}</div></div>`;
-  if (kind === 'wide') return `<div class="mw mw-wide" style="grid-template-columns:auto minmax(0,1fr)${wd >= 3 ? ` minmax(0,${wd - 2}fr)` : ''}"><div class="mwart" style="${art}"></div><div class="mwside">${info}${ctl}${vol}</div>${wd >= 3 ? `<div class="mwfavcol">${favs}</div>` : ''}</div>`;
+  if (kind === 'wide') return `<div class="mw mw-wide" style="grid-template-columns:auto minmax(0,1fr)${wd >= 3 ? ` minmax(0,${wd - 2}fr)` : ''}"><div class="mwart" style="${art}"></div><div class="mwside">${info}${ctlR}${vol}</div>${wd >= 3 ? `<div class="mwfavcol">${favs}</div>` : ''}</div>`;
   if (ipSkin() && (kind === 'tall' || kind === 'big')) return `<div class="mw mw-ip">${ipodHtml(true)}</div>`;
-  if (kind === 'tall') return `<div class="mw mw-tall"><div class="mwart" style="${art}"></div>${info}${ctl}${vol}${favs}</div>`;
-  return `<div class="mw mw-big"><div class="mwtop"><div class="mwart" style="${art}"></div><div class="mwside">${info}${seekBar(false)}${ctl}${vol}</div></div>${favs}</div>`;
+  if (kind === 'tall') return `<div class="mw mw-tall"><div class="mwart" style="${art}"></div><div class="mwinforow">${info}${progRing()}</div>${ctl}${vol}${favs}</div>`;
+  return `<div class="mw mw-big"><div class="mwtop"><div class="mwart" style="${art}"></div><div class="mwside">${info}${ctlR}${vol}</div></div>${favs}</div>`;
 }
 function wTv(size, h = 1, wd = 1) {
   const ch = settings.tv.channels;

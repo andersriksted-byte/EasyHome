@@ -1,5 +1,5 @@
 {
-  "version": "1.84.0",
+  "version": "1.85.0",
   "files": [
     "index.html",
     "app.js",
@@ -27,6 +27,15 @@
     "todo.js"
   ],
   "notes": [
+    {
+      "version": "1.85.0",
+      "date": "26. november 2026",
+      "title": "Fremdriftsring på Musik-kortet",
+      "items": [
+        "Musik-kortet viser en ring, der fyldes, mens nummeret eller podcasten spiller – indeni tælles ned til slut",
+        "Ved radio står der LIVE i ringen"
+      ]
+    },
     {
       "version": "1.84.0",
       "date": "26. november 2026",
