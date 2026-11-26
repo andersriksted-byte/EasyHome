@@ -1758,3 +1758,70 @@ button.w7r.sel{background:color-mix(in srgb,var(--accent) 16%,transparent);box-s
 .forow{grid-template-columns:40px minmax(0,1fr) 40px 40px auto auto auto}
 .mlogo>i{font-style:normal;position:relative}
 .mlogo>i>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:inherit;background:#fff}
+
+/* Sonos-kortet: alt skal kunne ses i alle størrelser */
+.mw-wide{display:grid;grid-template-rows:minmax(0,1fr);align-items:stretch}
+.mw-wide .mwart{height:100%;width:auto;max-width:42cqw;aspect-ratio:1;min-height:0}
+.mw-wide .mwside{min-height:0;display:flex;flex-direction:column;justify-content:center;gap:8px}
+.mw-wide .mwfavcol{min-height:0;display:flex;flex-direction:column}
+.mw-wide .mwfavcol .mwfavs{flex:1;min-height:0}
+@container (max-height:200px){.mw-wide .mwside{gap:5px}.mw-wide .mwb{width:38px;height:38px}.mw-wide .mwb.main{width:46px;height:46px}.mw-wide .mwvol{min-height:28px}.mw-wide .mwinfo b{font-size:16px}}
+.mw-tall .mwart{max-height:40cqh;flex:0 1 40cqh}
+.mw-tall .mwart{min-height:0}
+.mw-tall .mwfavs.mlogos{min-height:54px;flex:1 0 54px}
+/* Screens-kortet: rækker klemmes aldrig – flere kolonner i brede kort, navn over knapperne i smalle */
+.w .sflist{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));grid-auto-rows:min-content;align-content:start;gap:2px 18px;overflow-y:auto}
+.w .sfrow{flex:none;min-height:48px;flex-wrap:wrap;row-gap:4px}
+.w .sfall{grid-column:1/-1}
+.sfstack .sfrow{padding:6px 0}.sfstack .sfrow .sfname{flex-basis:100%;flex-direction:row;align-items:baseline;justify-content:space-between;gap:8px}.sfstack .sfrow .sfb{flex:1}.sfstack .sfrow .sfp button{flex:1;min-width:0;padding:0 4px}.sfstack .sfrow .sfp .sfstop{flex:0 0 38px}
+.sfstack .sfrow{display:grid;grid-template-columns:minmax(0,1fr);gap:4px}
+.sfstack .sfrow .sfb{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:4px;width:100%}
+.sfstack .sfrow .sfp button{width:auto;min-width:0;height:40px;padding:0 2px;font-size:12px}
+.sfstack .sfrow .sfp .sfstop{width:auto;border-radius:12px}
+.w .sflow{grid-template-columns:repeat(auto-fill,minmax(min(100%,260px),1fr))}
+.w .sflow .sfall{grid-column:auto}
+.sflow .sfrow{display:grid;grid-template-columns:minmax(0,1fr);gap:4px;border-bottom:0;padding:2px 0}
+.sflow .sfrow .sfb{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:4px;width:100%}
+.sflow .sfrow .sfp button{width:auto;min-width:0;height:40px;padding:0 2px;font-size:12px}
+.sflow .sfrow .sfp .sfstop{width:auto;border-radius:12px}
+.sflow .sfrow .sfname{flex-direction:row;align-items:baseline;justify-content:space-between;gap:8px}
+/* Billig strøm: rækker i fast højde, så de aldrig klemmes ind over hinanden */
+.vt-apps,.vt-apps.compact{grid-auto-rows:min-content;align-content:start}
+.vt-apps.compact .vt-app{min-height:44px}
+.vt-txt b{white-space:nowrap}
+.vt-headstar{color:#16A34A;font-weight:800;white-space:nowrap}
+.vt2.low .vt-star{display:none}.vt2.low .vt-ticks{height:14px}.vt2.low{gap:4px}
+.vt2.low .vt-app{padding:5px 8px;gap:8px;border-radius:12px}.vt2.low .vt-ico{width:34px;height:34px;font-size:19px;border-radius:10px}.vt2.low .vt-txt b{font-size:18px}
+.vt2.low .vt-apps{gap:6px}
+/* Ugen: hele ord (orddeling i stedet for brud midt i ord); lave kort viser aftaler på én linje */
+.cw-ev span{overflow-wrap:normal;word-break:normal;hyphens:auto;-webkit-hyphens:auto}
+.cw-low .cw-ev{flex-direction:row;align-items:baseline;gap:6px;padding:3px 8px;border-radius:8px}
+.cw-low .cw-ev time{flex:none;font-size:11px}
+.cw-low .cw-ev span{display:block;white-space:nowrap;text-overflow:ellipsis;font-size:13px;flex:1;min-width:0}
+.cw-low .cw-evs{gap:4px}
+.cw-low .cw-day{padding-top:6px;padding-bottom:6px;gap:4px}
+.cw-low.cw-list .cw-row{padding-top:6px;padding-bottom:6px}
+.cw-low .cw-evs{overflow:hidden}
+/* Indkøbsliste i lave kort: brikker */
+.shopchips{flex:1;min-height:0;overflow:hidden;display:flex;flex-wrap:wrap;align-content:flex-start;gap:6px}
+.shopchip{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 11px 0 9px;border-radius:99px;background:color-mix(in srgb,var(--cc) 16%,var(--card));box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--cc) 35%,transparent);font-size:14px;font-weight:700;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.shopchip i{flex:none;width:8px;height:8px;border-radius:50%;background:var(--cc)}
+.shopchip em{font-style:normal;color:var(--muted);font-weight:600;font-size:12px}
+.shopchips{gap:5px}.shopchip{height:27px;font-size:13px}
+.shopchips+.shopadd{margin-top:4px}.shopchips+.shopadd input{min-height:40px}.shopchips+.shopadd .btn{width:40px;min-height:40px}
+.shopchip{height:23px;font-size:12.5px;padding:0 9px 0 8px}.shopchips{gap:4px}
+/* Madplan: to retter samme dag står side om side i rækkevisning – og i én linje hver i fliserne */
+.md-list .mdday:has(.mdmeal+.mdmeal){grid-template-columns:auto minmax(0,1fr) minmax(0,1fr);grid-auto-rows:minmax(0,1fr)}
+.md-list .mdday:has(.mdmeal+.mdmeal) .mdlab{grid-row:auto}
+.md-list .mdlab,.md-tiny .mdlab,.md-short .mdlab{writing-mode:horizontal-tb;transform:none;flex:0 0 64px!important;width:64px;text-align:left;align-self:center;font-size:10.5px}
+.md-wide .mdday:has(.mdmeal+.mdmeal){gap:4px!important}
+.md-wide .mdday:has(.mdmeal+.mdmeal) .mdmeal{padding:5px 7px}
+.md-wide .mdday:has(.mdmeal+.mdmeal) .mdmeal b{-webkit-line-clamp:1;font-size:12.5px}
+.md-wide .mdday:has(.mdmeal+.mdmeal) .mdst{width:18px;height:18px;font-size:10px;top:4px;left:4px}
+.md-list .mdmeal b,.md-short .mdmeal b{-webkit-line-clamp:1}
+.md-short .mdday{gap:6px!important}
+/* Stilling: smalle kort uden K-kolonnen, så forkortelsen kan stå helt; lave kort tættere rækker */
+.st-row{grid-template-columns:24px minmax(0,1fr) 36px 30px}
+.st-wrap.low .st-row{padding-top:3px;padding-bottom:3px}
+.st-wrap.low .st-h{padding-top:0;padding-bottom:0}
+.st-wrap{overflow:hidden}

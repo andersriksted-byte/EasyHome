@@ -356,7 +356,7 @@ async function sonos(req, env, path) {
     const token = await getToken(env).catch(() => null);
     if (!token) return json(env, { error: 'Sonos er ikke forbundet' }, 401);
     const sub = path.slice('/sonos/api'.length);
-    if (!/^\/(households|groups|players|favorites|playlists)[A-Za-z0-9_:./-]*$/.test(sub)) return json(env, { error: 'Ugyldig Sonos-sti' }, 400);
+    if (!/^\/(households|groups|players|favorites|playlists|playbackSessions)[A-Za-z0-9_:./-]*$/.test(sub)) return json(env, { error: 'Ugyldig Sonos-sti' }, 400);
     const up = await fetch(SONOS_API + sub, {
       method: req.method,
       headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
@@ -471,6 +471,78 @@ async function el(req, env, path, ctx) {
   return json(env, { error: 'Ukendt' }, 404);
 }
 
+// ---------- Podcast-serier på Sonos ----------
+// Sonos kan ikke afspille en hel podcast-serie fra en favorit via Control API. I stedet finder workeren seriens
+// RSS-feed (Apples offentlige katalog) og stiller sig selv til rådighed som "cloud queue": højttalerne henter
+// afsnittene herfra én efter én (nyeste først), så hele serien ligger i kø.
+const POD_UA = { 'User-Agent': 'easyHome/1.0 (+podcast)' };
+const shortHash = async (t) => [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(t)))].slice(0, 8).map((b) => b.toString(16).padStart(2, '0')).join('');
+const xmlText = (t) => String(t || '').replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1').replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;|&apos;/g, "'").replace(/&#(\d+);/g, (m, n) => String.fromCharCode(+n)).trim();
+const durSec = (d) => { d = String(d || '').trim(); if (!d) return 0; if (/^\d+$/.test(d)) return +d; return d.split(':').reduce((a, x) => a * 60 + (+x || 0), 0); };
+async function parseFeed(feed) {
+  const r = await fetch(feed, { headers: POD_UA, cf: { cacheTtl: 900 } });
+  if (!r.ok) throw new Error('Podcastens feed svarede ' + r.status);
+  const x = await r.text();
+  const chanImg = (/<itunes:image[^>]*href="([^"]+)"/.exec(x.split('<item')[0]) || [])[1] || '';
+  const eps = [];
+  for (const m of x.matchAll(/<item[\s>][\s\S]*?<\/item>/g)) {
+    const it = m[0];
+    const enc = /<enclosure\b[^>]*>/.exec(it); if (!enc) continue;
+    const url = (/url="([^"]+)"/.exec(enc[0]) || [])[1]; if (!url) continue;
+    const type = (/type="([^"]+)"/.exec(enc[0]) || [])[1] || 'audio/mpeg';
+    if (!/^audio\//.test(type) && !/\.(mp3|m4a|aac)(\?|$)/i.test(url)) continue;
+    const u = xmlText(url);
+    eps.push({ id: await shortHash(u), url: u, type, title: xmlText((/<title>([\s\S]*?)<\/title>/.exec(it) || [])[1]) || 'Afsnit',
+      dur: durSec(xmlText((/<itunes:duration>([\s\S]*?)<\/itunes:duration>/.exec(it) || [])[1])), image: (/<itunes:image[^>]*href="([^"]+)"/.exec(it) || [])[1] || chanImg,
+      date: Date.parse(xmlText((/<pubDate>([\s\S]*?)<\/pubDate>/.exec(it) || [])[1])) || 0 });
+    if (eps.length >= 300) break;
+  }
+  eps.sort((a, b) => b.date - a.date); // nyeste først
+  return { eps, image: chanImg };
+}
+async function podcastEps(env, id) {
+  const meta = JSON.parse((await env.DASH_KV.get('pod_' + id)) || 'null'); if (!meta) return null;
+  let cached = JSON.parse((await env.DASH_KV.get('pod_eps_' + id)) || 'null');
+  if (!cached) { cached = await parseFeed(meta.feed); await env.DASH_KV.put('pod_eps_' + id, JSON.stringify(cached), { expirationTtl: 3600 }); }
+  return { meta, eps: cached.eps, qv: cached.eps.length + '-' + (cached.eps[0] ? cached.eps[0].id : '0') };
+}
+// Find serien ud fra favorittens navn (kræver login)
+async function podcastResolve(req, env) {
+  const body = await req.json().catch(() => ({}));
+  const name = String(body.name || '').slice(0, 200).trim();
+  if (!name) return json(env, { error: 'Mangler navn' }, 400);
+  const r = await fetch('https://itunes.apple.com/search?' + new URLSearchParams({ term: name, media: 'podcast', entity: 'podcast', limit: '5', country: 'dk' }));
+  const j = await r.json().catch(() => ({}));
+  const norm = (t) => String(t || '').toLowerCase().replace(/[^a-z0-9æøå]+/g, '');
+  const res = (j.results || []).filter((x) => x.feedUrl);
+  const hit = res.find((x) => norm(x.collectionName) === norm(name)) || res[0];
+  if (!hit) return json(env, { error: 'Fandt ikke podcasten ' + name }, 404);
+  const id = await shortHash(hit.feedUrl);
+  await env.DASH_KV.put('pod_' + id, JSON.stringify({ feed: hit.feedUrl, name: hit.collectionName || name, image: hit.artworkUrl600 || '' }));
+  const p = await podcastEps(env, id);
+  if (!p || !p.eps.length) return json(env, { error: 'Podcasten har ingen afsnit, der kan afspilles' }, 404);
+  return json(env, { id, name: p.meta.name, count: p.eps.length, firstId: p.eps[0].id, first: p.eps[0].title, queueBaseUrl: new URL(req.url).origin + '/cq/' + id + '/v2.3/' });
+}
+// Cloud queue, som højttalerne selv kalder (uden login – den giver kun adgang til serier, familien selv har valgt)
+async function cloudQueue(req, env, id, op) {
+  const p = await podcastEps(env, id);
+  if (!p) return new Response('{}', { status: 404, headers: { 'Content-Type': 'application/json' } });
+  const out = (o) => new Response(JSON.stringify(o), { headers: { 'Content-Type': 'application/json' } });
+  if (op === 'timePlayed') return new Response(null, { status: 204 });
+  if (op === 'version') return out({ contextVersion: '1', queueVersion: p.qv });
+  if (op === 'context') return out({ contextVersion: '1', queueVersion: p.qv, container: { type: 'playlist', name: p.meta.name, imageUrl: p.meta.image },
+    playbackPolicies: { canSkip: true, canSkipBack: true, canSeek: true, canRepeat: true, canRepeatOne: true, canShuffle: false, canCrossfade: true, showNNextTracks: 10, showNPreviousTracks: 10 } });
+  // itemWindow
+  const q = new URL(req.url).searchParams;
+  let i = p.eps.findIndex((e) => e.id === q.get('itemId')); if (i < 0) i = 0;
+  const before = Math.min(20, Math.max(0, +(q.get('previousWindowSize') ?? 10)));
+  const after = Math.min(40, Math.max(0, +(q.get('upcomingWindowSize') ?? 20)));
+  const a = Math.max(0, i - before); const b = Math.min(p.eps.length, i + after + 1);
+  return out({ includesBeginningOfQueue: a === 0, includesEndOfQueue: b === p.eps.length, contextVersion: '1', queueVersion: p.qv,
+    items: p.eps.slice(a, b).map((e) => ({ id: e.id, track: { type: 'track', mediaUrl: e.url, contentType: e.type, name: e.title, imageUrl: e.image || p.meta.image,
+      ...(e.dur ? { durationMillis: e.dur * 1000 } : {}), artist: { name: p.meta.name }, album: { name: p.meta.name }, canSkip: true, canSeek: true } })) });
+}
+
 export default {
   async fetch(req, env, ctx) {
     if (req.method === 'OPTIONS') return new Response(null, { headers: cors(env) });
@@ -478,9 +550,11 @@ export default {
     try {
       if (path.startsWith('/sonos/')) return await sonos(req, env, path);
       if (path.startsWith('/auth/')) return await auth(req, env, path);
+      { const cq = /^\/cq\/([0-9a-f]{16})\/v2\.\d+\/+(context|version|itemWindow|timePlayed)$/.exec(path); if (cq) return await cloudQueue(req, env, cq[1], cq[2]); }
       if (!(await authOk(req, env))) return json(env, { error: 'Forkert nøgle' }, 401);
       if (path.startsWith('/somfy/')) return await somfy(req, env, path);
       if (path.startsWith('/el/')) return await el(req, env, path, ctx);
+      if (path === '/podcast/resolve' && req.method === 'POST') return await podcastResolve(req, env);
       if (path === '/route') return await route(req, env, ctx);
       if (path === '/health') return json(env, { ok: true, sonosConfigured: sonosReady(env), version: 3 });
       if (path === '/proxy') return await proxy(req, env, ctx);

@@ -272,7 +272,7 @@ function wUge(size, h = 1, w = 1, x = null) {
   const today = startOfDay(new Date());
   const demo = D.cal && D.cal.demo ? '<span class="small muted">Eksempel</span>' : '';
   if (!D.cal) return cardHead('Kalender') + '<div class="empty">Henter kalender …</div>';
-  const auto = w === 1 ? (h >= 2 ? h * 2 : 2) : Math.min(7, w * 2 - (w >= 3 ? 1 : 0));
+  const auto = w === 1 ? (h >= 2 ? h * 2 : 1) : h >= 2 ? Math.min(7, w * 3) : Math.min(7, [0, 0, 3, 4, 6][w] || 6);
   const n = Math.max(1, Math.min(7, +(x && x.days) || auto));
   
   const tag = (d) => (sameDay(d, today) ? 'I dag' : sameDay(d, addDays(today, 1)) ? 'I morgen' : cap(DAYS[d.getDay()]));
@@ -284,11 +284,11 @@ function wUge(size, h = 1, w = 1, x = null) {
   const start = sorted(today).length ? today : addDays(today, 1);
   const days = Array.from({ length: n }, (_, i) => addDays(start, i));
   const title = n === 1 ? (start === today ? 'I dag' : 'I morgen') : n === 2 && start === today ? 'I dag og i morgen' : 'Næste ' + n + ' dage';
-  const cols = w >= 2 && n > 1 ? Math.min(n, w * 2) : 1;
+  const cols = w >= 2 && n > 1 ? Math.min(n, h >= 2 ? Math.ceil(n / h) : w * 2) : 1;
   if (cols === 1) {
-    return `${cardHead(title, demo)}<div class="cw-list">${days.map((d) => `<div class="cw-row${sameDay(d, today) ? ' today' : ''}"><div class="cw-date"><b>${d.getDate()}</b><span>${esc(tag(d))}</span></div><div class="cw-evs">${list(d)}</div></div>`).join('')}</div>`;
+    return `${cardHead(title, demo)}<div class="cw-list${h === 1 ? ' cw-low' : ''}">${days.map((d) => `<div class="cw-row${sameDay(d, today) ? ' today' : ''}"><div class="cw-date"><b>${d.getDate()}</b><span>${esc(tag(d))}</span></div><div class="cw-evs">${list(d)}</div></div>`).join('')}</div>`;
   }
-  return `${cardHead(title, demo)}<div class="cw-cols days" style="grid-template-columns:repeat(${cols},minmax(0,1fr))">${days.map((d) => `<div class="cw-day${sameDay(d, today) ? ' today' : ''}"><div class="cw-dh"><span>${esc(tag(d))}</span><b>${d.getDate()}.</b></div><div class="cw-evs">${list(d)}</div></div>`).join('')}</div>`;
+  return `${cardHead(title, demo)}<div class="cw-cols days${h === 1 ? ' cw-low' : ''}" style="grid-template-columns:repeat(${cols},minmax(0,1fr));grid-auto-rows:minmax(0,1fr)">${days.map((d) => `<div class="cw-day${sameDay(d, today) ? ' today' : ''}"><div class="cw-dh"><span>${esc(tag(d))}</span><b>${d.getDate()}.</b></div><div class="cw-evs">${list(d)}</div></div>`).join('')}</div>`;
 }
 const i0 = (d, today) => (sameDay(d, today) ? 'I dag' : sameDay(d, addDays(today, 1)) ? 'I morgen' : cap(DAYS_LONG[d.getDay()]) + ' ' + d.getDate() + '.');
 function pageArrows(scope, idx, n, what) {
@@ -411,7 +411,7 @@ function wNyheder(size, h = 1, wd = 1) {
   const list = `<div class="news nlist" data-trim style="--ncols:${heroItem && kind === 'wide' ? 1 : cols}">${rest.map((i) => link(i)).join('')}</div>`;
   return head + `<div class="nbody nb-${kind}${heroItem ? ' has-hero' : ''}">${hero}${list}</div>`;
 }
-const FAVK = { radio: ['📻', 'Radio'], playlist: ['🎵', 'Playlister'], other: ['💿', 'Andet'] };
+const FAVK = { radio: ['📻', 'Radio'], playlist: ['🎵', 'Playlister'], podcast: ['🎙️', 'Podcasts'], other: ['💿', 'Andet'] };
 // Favoritter som logoer: radiostationens logo eller playlistens cover. Uden billede laves et logo med navnet i en fast farve.
 const LOGO_COLORS = ['#D0563C', '#4C78D0', '#2E9D5B', '#8E5BD0', '#C98A12', '#C2417A', '#1F8A99', '#5E6B7A'];
 const logoColor = (t) => { let h = 0; for (const c of String(t)) h = (h * 31 + c.charCodeAt(0)) >>> 0; return LOGO_COLORS[h % LOGO_COLORS.length]; };
@@ -452,7 +452,7 @@ function madroStatus(title) {
 function wMadplan(size, h = 1, wd = 1, x = {}) {
   const wait = madroStatus('Madplan'); if (wait) return wait;
   const kind = shapeKind(wd, h);
-  const n = x.days === 1 ? 1 : 5;
+  const n = x.days === 1 || kind === 'tiny' ? 1 : 5;
   const today = startOfDay(new Date());
   const days = Array.from({ length: n }, (_, i) => addDays(today, i));
   const dayLabel = (d, i) => (i === 0 ? 'I dag' : i === 1 ? 'I morgen' : cap(DAYS[d.getDay()]) + ' ' + d.getDate() + '.');
@@ -468,8 +468,9 @@ function wMadplan(size, h = 1, wd = 1, x = {}) {
     return `${cardHead('Madplan · i dag')}<div class="mdone" style="grid-template-${wd >= h ? 'columns' : 'rows'}:repeat(${Math.max(1, Math.min(ms.length, 2))},minmax(0,1fr))">${one}</div>`;
   }
   const cols = kind === 'wide';
-  const layout = cols ? `style="grid-template-columns:repeat(${n},minmax(0,1fr))"` : `style="grid-template-rows:repeat(${n},minmax(0,1fr))"`;
-  return `${cardHead('Madplan · 5 dage')}<div class="mdplan md-${cols ? 'wide' : kind === 'big' ? 'list' : kind}" ${layout}>${cells}</div>`;
+  const two = !cols && kind !== 'big' && MD.mealsOn(today).length > 1; // to retter i dag: den række får mere plads
+  const layout = cols ? `style="grid-template-columns:repeat(${n},minmax(0,1fr))"` : `style="grid-template-rows:${two ? 'minmax(0,1.8fr) ' : ''}repeat(${two ? n - 1 : n},minmax(0,1fr))"`;
+  return `${cardHead('Madplan · ' + n + ' dage')}<div class="mdplan md-${cols ? 'wide' : kind === 'big' ? 'list' : kind}${kind === 'tall' && h <= 2 ? ' md-short' : ''}" ${layout}>${cells}</div>`;
 }
 // Køretid hjemmefra til aftalens sted (hentes via workeren, gemmes 10 min)
 const ROUTES = {};
@@ -956,13 +957,12 @@ function wVasketid(size, h = 1, wd = 1, x = null) {
   let tight = false; let narrow = false;
   const card = (r) => { const go = r.b.from <= now; const c = r.b.avg * r.a.kwh;
     return `<div class="vt-app${go ? ' go' : ''}"><div class="vt-ico">${r.a.ico}</div><div class="vt-txt"><span>${tight ? esc(r.a.short) : `${esc(narrow ? r.a.short : r.a.name)} · ${go ? 'nu' : until(r.b.from)}`}</span><b>${go ? 'Start nu' : `kl. ${pad(r.b.from.getHours())}`}</b><em class="vt-save">💰 ${kr(c, c >= 10 ? 0 : 2)} kr</em></div></div>`; };
-  const head = cardHead('🔌 Billig strøm', '<span class="small muted">næste 24 timer</span>');
+  const head = cardHead('🔌 Billig strøm', h === 1 && best ? `<span class="small vt-headstar">★ billigst ${pad(best.from.getHours())}–${pad(best.to.getHours())}</span>` : '<span class="small muted">næste 24 timer</span>');
   if (!list.length) return head + '<div class="empty">Priserne for i morgen kommer ved 13-tiden.</div>';
-  const cols = wd >= 3 ? Math.min(6, list.length) : wd === 2 ? 2 : 1; tight = cols >= 5; // mange ved siden af hinanden: korte navne const rows = Math.max(1, h * (wd === 1 ? 2 : 1));
-  // Smalle kort: alle apparater som tætte rækker (ikon · navn og starttid · pris), så de kan være der på et 1×2-felt
-  const compact = wd === 1 && list.length > h * 2; narrow = compact;
-  const shown = compact ? list : list.slice(0, cols * (h >= 2 ? 2 : 1) * (wd === 1 ? h : 1));
-  return head + `<div class="vt2">${line}<div class="vt-apps${compact ? ' compact' : ''}" style="grid-template-columns:repeat(${cols},minmax(0,1fr))">${shown.map(card).join('')}</div></div>`;
+  const cols = Math.min(list.length, wd >= 4 ? 6 : wd === 3 ? 4 : wd); tight = cols >= 5;
+  // Smalle, lave kort: tætte rækker (ikon · navn og starttid · pris). Alle apparater tegnes; dem der ikke kan være, fjernes hele rækker ad gangen
+  const compact = wd === 1 && h <= 2; narrow = compact || cols >= 3;
+  return head + `<div class="vt2${h === 1 ? ' low' : ''}">${line}<div class="vt-apps${compact ? ' compact' : ''}" data-trim data-cols="${cols}" style="grid-template-columns:repeat(${cols},minmax(0,1fr))">${list.map(card).join('')}</div></div>`;
 }
 function wElforbrug(size, h = 1, wd = 1) {
   const head = cardHead('🏠 Elforbrug');
@@ -1131,12 +1131,14 @@ function wStilling(size, h = 1, wd = 1) {
   if (!T.groups.length) return head + '<div class="empty">Ingen stilling lige nu.</div>';
   const favIds = ((settings.football || {}).teams || []).filter((t) => t.lg === L.id).map((t) => t.id); // kun hold, der følges i netop denne liga
   const wide = wd >= 2; const num = (v) => (v === null || v === undefined ? '' : v);
-  const hdr = `<div class="st-row st-h${wide ? ' wide' : ''}"><span>#</span><span></span>${wide ? '<span>K</span><span>V</span><span>U</span><span>T</span>' : '<span>K</span>'}<span>+/-</span><span>P</span></div>`;
-  const row = (t) => `<div class="st-row${wide ? ' wide' : ''}${favIds.includes(t.id) ? ' st-fav' : ''}${t.note ? ' noted' : ''}"${t.note ? ` style="--nc:${esc(t.note.color)}" title="${esc(t.note.text)}"` : ''}><span class="st-rk">${num(t.rank)}</span><span class="st-tm">${t.logo ? `<img src="${esc(t.logo)}" alt="" loading="lazy">` : ''}<b data-abbr="${esc(t.abbr)}">${esc(wide ? t.name : t.abbr || t.name)}</b></span>${wide ? `<span>${num(t.gp)}</span><span>${num(t.w)}</span><span>${num(t.d)}</span><span>${num(t.l)}</span>` : `<span>${num(t.gp)}</span>`}<span>${t.gd > 0 ? '+' : ''}${num(t.gd)}</span><span class="st-p">${num(t.pts)}</span></div>`;
+  const hdr = `<div class="st-row st-h${wide ? ' wide' : ''}"><span>#</span><span></span>${wide ? '<span>K</span><span>V</span><span>U</span><span>T</span>' : ''}<span>+/-</span><span>P</span></div>`;
+  const row = (t) => `<div class="st-row${wide ? ' wide' : ''}${favIds.includes(t.id) ? ' st-fav' : ''}${t.note ? ' noted' : ''}"${t.note ? ` style="--nc:${esc(t.note.color)}" title="${esc(t.note.text)}"` : ''}><span class="st-rk">${num(t.rank)}</span><span class="st-tm">${t.logo ? `<img src="${esc(t.logo)}" alt="" loading="lazy">` : ''}<b data-abbr="${esc(t.abbr || t.name)}">${esc(t.name)}</b></span>${wide ? `<span>${num(t.gp)}</span><span>${num(t.w)}</span><span>${num(t.d)}</span><span>${num(t.l)}</span>` : ''}<span>${t.gd > 0 ? '+' : ''}${num(t.gd)}</span><span class="st-p">${num(t.pts)}</span></div>`;
   // Forklaring på farverne (mesterskab, Europa, op- og nedrykning)
   const notes = new Map(); T.groups.forEach((g) => g.rows.forEach((t) => { if (t.note && !notes.has(t.note.text)) notes.set(t.note.text, t.note.color); }));
   const legend = notes.size ? `<div class="st-legend">${[...notes].map(([t, c]) => `<span style="--nc:${esc(c)}"><i></i>${esc(t)}</span>`).join('')}</div>` : '';
-  return head + `<div class="st-wrap">${T.groups.map((g) => `${T.groups.length > 1 && g.name ? `<div class="fb-sub">${esc(g.name)}</div>` : ''}${hdr}${g.rows.map(row).join('')}`).join('')}${legend}</div>`;
+  // Lave kort: start ved holdet I følger (én plads over), så det altid kan ses. Kun hele rækker vises
+  const from = (g) => { if (h > 1 || T.groups.length > 1) return 0; const i = g.rows.findIndex((t) => favIds.includes(t.id)); return Math.max(0, i - 1); };
+  return head + `<div class="st-wrap${h === 1 ? ' low' : ''}" data-trim>${T.groups.map((g) => `${T.groups.length > 1 && g.name ? `<div class="fb-sub">${esc(g.name)}</div>` : ''}${hdr}${g.rows.slice(from(g)).map(row).join('')}`).join('')}${legend}</div>`;
 }
 function fodboldSettings() {
   const fb = settings.football || { leagues: [], teams: [] };
@@ -1177,6 +1179,12 @@ function wIndkob(size, h = 1, wd = 1) {
   const add = `<form class="shopadd" data-shopadd><input type="text" name="v" placeholder="Tilføj vare, fx 2 l mælk" aria-label="Tilføj vare til indkøbslisten" enterkeyhint="done" autocomplete="off"><button class="btn primary" aria-label="Tilføj">+</button></form>`;
   if (!items.length) return head + '<div class="empty">Listen er tom.</div>' + add;
   const cols = Math.min(3, wd, shapeKind(wd, h) === 'big' ? 2 : 3);
+  const amt0 = (x) => [x.amount != null && x.amount !== '' ? String(x.amount).replace('.', ',') : '', x.unit || ''].join(' ').trim();
+  // Lave kort: varerne som små brikker i butikkens rækkefølge (farve = kategori)
+  if (h === 1) {
+    const sortedItems = items.slice().sort((p, q) => MC.CATS.indexOf(MC.catOf(p)) - MC.CATS.indexOf(MC.catOf(q)));
+    return head + `<div class="shopchips" data-trim>${sortedItems.map((x) => `<span class="shopchip" style="--cc:${MC.catColor(MC.catOf(x))}"><i aria-hidden="true"></i>${esc(x.name)}${amt0(x) ? ` <em>${esc(amt0(x))}</em>` : ''}</span>`).join('')}</div>` + add;
+  }
   const amt = (x) => [x.amount != null && x.amount !== '' ? String(x.amount).replace('.', ',') : '', x.unit || ''].join(' ').trim();
   // Opdelt i kategorier i samme rækkefølge som i Madro (gangen gennem butikken)
   const groups = new Map(); items.forEach((x) => { const c = MC.catOf(x); if (!groups.has(c)) groups.set(c, []); groups.get(c).push(x); });
@@ -1259,7 +1267,7 @@ function wScreens(size, h = 1, wd = 1, x = {}) {
     return cardHead('Screens', `<span class="small muted">${st.devices.length} stk.</span>`) + `<div class="sfone ${wd >= 2 * h ? 'one-row' : 'grid2'}" style="--cols:${wd >= 2 * h ? presets.length : Math.min(3, Math.max(2, Math.ceil(presets.length / 2)))};--prow:${wd >= 2 * h ? 1 : Math.ceil(presets.length / Math.min(3, Math.max(2, Math.ceil(presets.length / 2))))}"><span class="sfname"><b>Alle screens</b>${same ? `<small>${esc(sts[0])}</small>` : ''}</span>${st.devices.some((d) => !d.rts && d.commands.includes('setClosure')) ? `<input class="sfslider sfh sfw" type="range" min="0" max="100" step="5" value="${(() => { const p = st.devices.filter((d) => d.closure != null); return p.length ? Math.round(p.reduce((a, d) => a + +d.closure, 0) / p.length / 5) * 5 : 0; })()}" data-sfposall="1" aria-label="Hvor langt nede – alle screens">` : ''}${btns(st.devices.map((d) => d.url), null, true)}</div>`;
   }
   const all = mode === 3 && st.devices.length > 1 ? `<div class="sfrow sfall"><span class="sfname"><b>Alle</b></span>${btns(st.devices.map((d) => d.url), null, true)}</div>` : '';
-  return cardHead('Screens') + `<div class="sflist">${all}${rows}</div>`;
+  return cardHead('Screens') + `<div class="sflist${wd < 2 ? ' sfstack' : ''}${h < 2 ? ' sflow' : ''}">${all}${rows}</div>`;
 }
 
 // Inspiration: en ret fra kogebogen ad gangen, skifter hvert 20. sekund
@@ -1308,7 +1316,7 @@ function pageForside() {
         ${x.id === 'screens' ? `<span class="wopt" role="group" aria-label="Betjening">${[[1, 'Alle samlet'], [2, 'Hver for sig'], [3, 'Begge']].map(([v, l]) => `<button data-act="wOpt" data-id="screens" data-k="mode" data-v="${v}" aria-pressed="${(x.mode || 3) === v}">${l}</button>`).join('')}</span>` : ''}
         ${x.id === 'naeste' ? `<select class="wsel" data-wsel="naeste" data-k="count" aria-label="Antal aftaler">${[['', 'Så mange som muligt'], ...[1, 2, 3, 4, 5, 6].map((v) => [String(v), v === 1 ? 'Den næste + én til' : v + ' aftaler'])].map(([v, l]) => `<option value="${v}"${String(x.count || '') === v ? ' selected' : ''}>${l}</option>`).join('')}</select>` : ''}
         ${x.id === 'uge' ? `<select class="wsel" data-wsel="uge" data-k="days" aria-label="Antal dage">${[['', 'Automatisk'], ...[1, 2, 3, 4, 5, 6, 7].map((v) => [String(v), v === 1 ? '1 dag' : v + ' dage'])].map(([v, l]) => `<option value="${v}"${String(x.days || '') === v ? ' selected' : ''}>${l}</option>`).join('')}</select>` : ''}
-        ${x.id === 'sonos' ? `<select class="wsel" data-wsel="sonos" data-k="fav" aria-label="Favoritter">${[['', 'Alle favoritter'], ['radio', 'Kun radio'], ['playlist', 'Kun playlister']].map(([v, l]) => `<option value="${v}"${(x.fav || '') === v ? ' selected' : ''}>${l}</option>`).join('')}</select>` : ''}
+        ${x.id === 'sonos' ? `<select class="wsel" data-wsel="sonos" data-k="fav" aria-label="Favoritter">${[['', 'Alle favoritter'], ['radio', 'Kun radio'], ['playlist', 'Kun playlister'], ['podcast', 'Kun podcasts']].map(([v, l]) => `<option value="${v}"${(x.fav || '') === v ? ' selected' : ''}>${l}</option>`).join('')}</select>` : ''}
         ${x.id === 'inspiration' ? `<select class="wsel" data-wsel="inspiration" data-k="meal" aria-label="Måltid">${['', ...MD.MEALS].map((m) => `<option value="${m}"${(x.meal || '') === m ? ' selected' : ''}>${m || 'Alle måltider'}</option>`).join('')}</select>` : ''}
         ${x.id === 'madplan' ? `<span class="wopt" role="group" aria-label="Antal dage">${[[1, '1 dag'], [5, '5 dage']].map(([v, l]) => `<button data-act="wOpt" data-id="madplan" data-k="days" data-v="${v}" aria-pressed="${(x.days || 5) === v}">${l}</button>`).join('')}</span>` : ''}
         <button class="sz" data-act="sizeFor" data-id="${x.id}" aria-expanded="${ui.sizeFor === x.id}" aria-label="Vælg størrelse (nu ${w} gange ${h})">${shapeIcon(w, h)}<span>${w}×${h}</span></button>
@@ -1612,12 +1620,12 @@ function pageMusik() {
   const nowFav = S.playingFavId();
   const tile = (act, id, name, img, k) => `<button class="mtile${act === 'sFav' && id === nowFav ? ' playing' : ''}" data-act="${act}" data-id="${esc(id)}" ${act === 'sFav' && id === nowFav ? 'aria-current="true"' : ''}><i style="${img ? `background-image:url('${esc(img)}')` : ''}">${favBadge(k)}</i><span>${esc(name)}</span></button>`;
   // Favoritterne delt op: radiostationer, playlister (også Sonos' egne) og andet
-  const grp = { radio: [], playlist: [], other: [] };
+  const grp = { radio: [], playlist: [], podcast: [], other: [] };
   S.favorites().forEach((f) => { const k = S.favKind(f); grp[k].push(favLogo('sFav', f.id, f.name, S.art(f), k, f.id === nowFav)); });
   S.state.playlists.forEach((pl) => grp.playlist.push(favLogo('sPlaylist', pl.id, pl.name, S.art(pl), 'playlist', false)));
   // Hver gruppe (radio, playlister, andet) ruller for sig, når der er flere favoritter, end der er plads til
   const sec = (k) => (grp[k].length ? `<div class="mgrp-sec"><div class="mgrp-h">${FAVK[k][0]} ${FAVK[k][1]}</div><div class="mlogos mgrp-list">${grp[k].join('')}</div></div>` : '');
-  const favs = sec('radio') + sec('playlist') + sec('other');
+  const favs = sec('radio') + sec('playlist') + sec('podcast') + sec('other');
   return `<div class="music">
     <section class="player mplayer">
       <div class="art" style="${np.image ? `background-image:url('${esc(np.image)}')` : ''}"></div>
@@ -1803,7 +1811,7 @@ function pageIndstillinger() {
           <span class="foart" style="${S.art(f) ? `background-image:url('${esc(S.art(f))}')` : ''}"></span><b title="${esc(f.name)}">${esc(f.name)}</b>
           <button class="fobtn" data-act="favMove" data-id="${esc(f.id)}" data-d="-1" ${i === 0 ? 'disabled' : ''} aria-label="Flyt ${esc(f.name)} op">${svg('up', 18)}</button>
           <button class="fobtn" data-act="favMove" data-id="${esc(f.id)}" data-d="1" ${i === fav.length - 1 ? 'disabled' : ''} aria-label="Flyt ${esc(f.name)} ned">${svg('down', 18)}</button>
-          <select class="fokind" data-favkind="${esc(f.id)}" aria-label="Type for ${esc(f.name)}">${Object.entries(FAVK).map(([k, [ico, l]]) => `<option value="${k}"${S.favKind(f) === k ? ' selected' : ''}>${ico} ${k === 'playlist' ? 'Playliste' : k === 'radio' ? 'Radio' : l}</option>`).join('')}</select>
+          <select class="fokind" data-favkind="${esc(f.id)}" aria-label="Type for ${esc(f.name)}">${Object.entries(FAVK).map(([k, [ico, l]]) => `<option value="${k}"${S.favKind(f) === k ? ' selected' : ''}>${ico} ${k === 'playlist' ? 'Playliste' : k === 'radio' ? 'Radio' : k === 'podcast' ? 'Podcast' : l}</option>`).join('')}</select>
           <label class="check small"><input type="checkbox" data-favname="${esc(f.id)}" ${favShowName(f.id) ? 'checked' : ''}>Navn</label>
           <label class="check small"><input type="checkbox" data-favshow="${esc(f.id)}" ${hidden.includes(f.id) ? '' : 'checked'}>Vis</label></div>`).join('')}</div>`}
       </section>`;
@@ -1907,14 +1915,37 @@ function scaleGrid() {
   const row = (avail - 2 * gap) / 3;
   if (grid && row > 120) grid.style.gridAutoRows = (row / k) + 'px';
 }
+// Logo-gitre (Sonos-favoritter) fylder pladsen: vælg det antal kolonner, der giver de største logoer, så alle kan være der.
+// Er der for mange, bruges mindste størrelse, og resten fjernes af data-trim.
+function fitLogos() {
+  document.querySelectorAll('#grid .w .mlogos').forEach((g) => {
+    g.style.display = ''; const n = g.children.length; if (!n) return;
+    const gap = 8; const MIN = 46; const MAX = 150; const W = g.clientWidth; const H = g.clientHeight;
+    if (H < MIN || W < MIN) { g.style.display = 'none'; return; } // ingen plads: ingen halve logoer
+    let best = null;
+    for (let c = 1; c <= n; c++) {
+      const wfit = (W - gap * (c - 1)) / c; if (wfit < MIN) break;
+      const need = Math.ceil(n / c); const fitRows = Math.max(1, Math.floor((H + gap) / (Math.min(wfit, MAX) + gap)));
+      let rows = Math.min(need, fitRows); let sz = Math.min(wfit, MAX, (H - gap * (rows - 1)) / rows);
+      // Kan en række mere være der med lidt mindre logoer (men stadig over mindstemålet)? Så vis flere.
+      while (rows < need) { const s2 = Math.min(wfit, MAX, (H - gap * rows) / (rows + 1)); if (s2 < MIN) break; rows++; sz = s2; }
+      const shown = Math.min(n, c * rows);
+      if (!best || shown > best.shown || (shown === best.shown && sz > best.sz)) best = { c, sz, shown };
+    }
+    if (!best) { g.style.display = 'none'; return; }
+    g.style.gridTemplateColumns = `repeat(${best.c}, ${Math.floor(best.sz)}px)`; g.style.gap = gap + 'px'; g.style.justifyContent = 'center';
+  });
+}
 function trimCards() {
+  fitLogos();
   document.querySelectorAll('#grid .w [data-trim]').forEach((list) => {
     let guard = 60;
     while (guard-- > 0 && list.children.length > 1 && list.scrollHeight > list.clientHeight + 1) list.lastElementChild.remove();
+    const cols = +list.dataset.cols || 1; while (cols > 1 && list.children.length > cols && list.children.length % cols) list.lastElementChild.remove(); // kun hele rækker
     while (list.lastElementChild && list.lastElementChild.classList.contains('fb-sub')) list.lastElementChild.remove(); // ingen overskrift uden kampe under
   });
   // Stilling: er der ikke plads til hele klubnavnet, bruges forkortelsen (aldrig halve navne)
-  document.querySelectorAll('#grid .st-tm b').forEach((b) => { if (b.scrollWidth > b.clientWidth + 1 && b.dataset.abbr) b.textContent = b.dataset.abbr; });
+  document.querySelectorAll('#grid .st-wrap').forEach((wrap) => { const bs = [...wrap.querySelectorAll('.st-tm b')]; if (bs.some((b) => b.scrollWidth > b.clientWidth + 1)) bs.forEach((b) => { if (b.dataset.abbr) b.textContent = b.dataset.abbr; }); }); // samme slags navn i hele tabellen
   // Lister, der må fylde resten af kortet: fjern de sidste, til hele kortet kan ses
   document.querySelectorAll('#grid .w [data-trimcard]').forEach((list) => {
     const card = list.closest('.w'); let guard = 20;
@@ -2096,7 +2127,7 @@ const act = {
   newsToggle: (b) => { toggleNews(b.dataset.id); renderMain(); },
   newsRefresh: () => { N.clearNewsCache(); D.news = null; renderMain(); loadNews(); },
   sPlay: () => sonosDo(S.togglePlay), sNext: () => sonosDo(S.next), sPrev: () => sonosDo(S.prev),
-  sFav: (b) => { S.markFav(b.dataset.id); sonosDo(() => S.playFavorite(b.dataset.id)); },
+  sFav: (b) => { S.markFav(b.dataset.id); sonosDo(async () => { const pod = await S.playFav(b.dataset.id); if (pod && pod.count) toast(`${pod.count} afsnit af ${pod.name} er sat i kø`); }); },
   sGroup: (b) => { const cg = S.currentGroup(); if (cg) { const np = S.nowPlaying(); S.state.groupMeta[cg.id] = { title: np.title, image: np.image }; } S.controlGroup(b.dataset.id); S.state.playerVol = {}; S.state.meta = null; renderMain(false); loadSonos(); },
   sGroupPlay: (b) => { sonosDo(() => S.toggleGroupPlay(b.dataset.id)); renderMain(false); },
   sReload: () => loadSonos(true),

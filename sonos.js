@@ -147,6 +147,22 @@ export const next = () => api(`/groups/${gid()}/playback/skipToNextTrack`, 'POST
 export const prev = () => api(`/groups/${gid()}/playback/skipToPreviousTrack`, 'POST', {});
 export const setVolume = (v) => api(`/groups/${gid()}/groupVolume`, 'POST', { volume: Math.max(0, Math.min(100, Math.round(v))) });
 export const playFavorite = (id) => api(`/groups/${gid()}/favorites`, 'POST', { favoriteId: id, playOnCompletion: true });
+// Podcast-serier: Sonos kan ikke starte en hel serie fra en favorit, så workeren finder seriens afsnit
+// og lægger dem i kø (nyeste først) som en "cloud queue", højttalerne selv henter afsnittene fra.
+const isSeries = (f) => favKind(f) === 'podcast' && !/EPISODE|TRACK/.test(String((f.resource && f.resource.type) || '').toUpperCase());
+export async function playFav(id) {
+  const f = state.favorites.find((x) => x.id === id);
+  if (!f || !isSeries(f)) return playFavorite(id);
+  let pod = null;
+  try { pod = await (await workerFetch('/podcast/resolve', { method: 'POST', body: JSON.stringify({ name: f.name }) })).json(); } catch (e) { pod = null; }
+  if (!pod || !pod.id) return playFavorite(id); // fandt ikke serien – prøv som almindelig favorit
+  const s = await api(`/groups/${gid()}/playbackSession/joinOrCreate`, 'POST', { appId: 'dk.easyhome.dashboard', appContext: 'easyhome' });
+  if (!s.sessionId) throw new Error('Sonos gav ingen afspilning');
+  await rawApi(`/playbackSessions/${s.sessionId}/playbackSession/loadCloudQueue`, 'POST', { queueBaseUrl: pod.queueBaseUrl, itemId: pod.firstId, playOnCompletion: true,
+    trackMetadata: { name: pod.first, artist: { name: pod.name }, imageUrl: S_img(f) } });
+  return pod;
+}
+const S_img = (f) => art(f) || '';
 export const playerName = (pid) => (state.players.find((p) => p.id === pid) || {}).name || pid;
 
 const metaTitle = (m) => { m = m || {}; const it = m.currentItem && m.currentItem.track;
@@ -224,6 +240,7 @@ export function favKind(f) {
   const own = ((settings.sonos || {}).favKind || {})[f.id]; if (own) return own;
   const t = String((f.resource && f.resource.type) || '').toUpperCase();
   const d = `${f.description || ''} ${(f.service && f.service.name) || ''} ${(f.resource && f.resource.id && f.resource.id.serviceId) || ''}`.toLowerCase();
+  if (/PODCAST|SHOW|EPISODE/.test(t) || /podcast|afsnit|episode/.test(d)) return 'podcast';
   if (/STATION|STREAM|PROGRAM|RADIO/.test(t) || /radio|station|tunein|dr lyd|radioplay|stream/.test(d)) return 'radio';
   if (/PLAYLIST/.test(t) || /playlist|afspilningsliste|spilleliste/.test(d)) return 'playlist';
   return 'other';

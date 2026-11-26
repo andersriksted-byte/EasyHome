@@ -1,5 +1,5 @@
 {
-  "version": "1.77.2",
+  "version": "1.78.0",
   "files": [
     "index.html",
     "app.js",
@@ -27,6 +27,17 @@
     "todo.js"
   ],
   "notes": [
+    {
+      "version": "1.78.0",
+      "date": "26. november 2026",
+      "title": "Podcasts og pænere kort",
+      "items": [
+        "Podcasts har fået deres egen gruppe under Musik – og når I trykker på en podcast-serie, sættes alle afsnit i kø (nyeste først)",
+        "Screens, Billig strøm, Familiens uge, Madplan og Indkøbslisten passer nu i alle kortstørrelser uden at noget bliver skåret over",
+        "Indkøbslisten viser varerne som små brikker i de lave kort, og stillingen viser altid jeres hold",
+        "Sonos-kortet udnytter pladsen bedre i alle størrelser"
+      ]
+    },
     {
       "version": "1.77.2",
       "date": "26. november 2026",
