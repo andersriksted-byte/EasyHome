@@ -2113,3 +2113,35 @@ html,body{overscroll-behavior:none}
 .sp-cgw>.sp-card::before{display:none}
 .sp-cgw{position:relative}
 .sp-cgw::before{content:'';position:absolute;left:0;right:0;top:0;height:4px;background:var(--sc,var(--accent));z-index:1}
+/* Turnering: tættere kampe, så en hel runde kan ses uden at scrolle */
+.sp-cgw>.sp-card>.sp-h{display:none}
+.sp-cgw>.sp-card{padding-top:4px}
+.sp-cgw .sp-row{grid-template-columns:52px minmax(0,1fr);padding:5px 4px!important;gap:8px}
+.sp-cgw .tm-ls{gap:2px}
+.sp-cgw .tm-l{gap:8px}
+.sp-cgw .tm-l img,.sp-cgw .tm-l .sp-ab{width:20px;height:20px}
+.sp-cgw .tm-l .sp-ab{font-size:8px}
+.sp-cgw .tm-l b{font-size:14px;line-height:1.25}
+.sp-cgw .tm-s{font-size:16px}
+.sp-cgw .sp-when{font-size:12px}.sp-cgw .sp-when.time{font-size:14px}
+.sp-cgw .sp-dayhd{padding:8px 4px 2px;font-size:11px}
+.sp-cgw.tight .tm-ls{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:16px;align-items:center}
+.sp-cgw.tight .tm-l+.tm-l{flex-direction:row-reverse;text-align:right}
+.sp-cgw.tight .sp-row{padding:6px 4px!important}
+.sp-cgw.tight .sp-row.pre .tm-ls{position:relative}
+.sp-cgw.tight .sp-row.pre .tm-ls::after{content:'–';position:absolute;left:50%;transform:translateX(-50%);color:var(--muted)}
+.sp-cgw .sp-row{min-height:0}.sp-cgw.tight .sp-row{padding:7px 4px!important}
+/* Sport → Alle: én liste efter tidspunkt, i to spalter på brede skærme */
+.sp-page>.sp-allw{flex:1;min-height:0;max-height:none;container-type:normal}
+.sp-allw>.empty{margin:12px}
+.sp-all{flex:1;min-height:0;overflow-y:auto;columns:2 380px;column-gap:28px;padding:4px 16px 12px;display:block}
+.sp-all>.sp-ent{break-inside:avoid;border-top:1px solid var(--line);padding:6px 0 2px}
+.sp-all>.sp-ent:first-child{border-top:0}
+.sp-tag{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:800;color:var(--sc);text-transform:uppercase;letter-spacing:.04em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 4px}
+.sp-ent>.sp-row,.sp-ent>.sp-tn,.sp-ent>.sp-f1{border:0!important;background:transparent!important;padding:4px 4px 6px!important;min-height:0}
+.sp-ent .gf-mini .gf-row{padding:3px 4px;min-height:0}
+.sp-ent .tm-l img,.sp-ent .tm-l .sp-ab{width:22px;height:22px}
+.sp-all{columns:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,380px),1fr));column-gap:28px;align-content:start}
+.sp-all>.sp-ent{border-top:1px solid var(--line)}
+.sp-all>.sp-ent:nth-child(-n+2){border-top:0}
+.sp-all{align-items:start}

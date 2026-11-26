@@ -917,6 +917,10 @@ function spStandings(c) {
   }
   return '';
 }
+// Kan runden ikke være der, sættes kampene på én linje (hjemme – ude), så hele runden kan ses uden at scrolle
+function spFitRound() {
+  document.querySelectorAll('.sp-cgw:not(.sp-allw)').forEach((w) => { w.classList.remove('tight'); const l = w.querySelector('.sp-list'); if (l && l.scrollHeight > l.clientHeight + 1) w.classList.add('tight'); });
+}
 function pageSport() {
   const day = spDay(); const off = ui.spOff || 0; const today = startOfDay(new Date());
   // Dagsliste: syv dage omkring den valgte
@@ -931,6 +935,8 @@ function pageSport() {
   if (!hasProxy()) return head() + `<section class="card">${needProxyMsg('Sport')}</section>`;
   const cards = []; const live = []; let waiting = false; const errs = [];
   const add = (key, ico, title, sub, body, isLive) => cards.push({ key, html: spCard(ico, title, sub, body, isLive, key), live: isLive });
+  const ents = []; // alle kampe i én liste (til "Alle")
+  const ent = (key, ico, label, t, html) => ents.push({ t: +t || 0, html: `<div class="sp-ent" style="--sc:${SP_COL[spColKey(key)] || 'var(--accent)'}"><span class="sp-tag">${ico} ${esc(label)}</span>${html}</div>` });
   if (hasFb) {
     if (!FB.state.at) waiting = true;
     const { all, order } = fbDays();
@@ -940,6 +946,7 @@ function pageSport() {
     [...groups.keys()].sort((a, b) => { const ia = order.indexOf(a), ib = order.indexOf(b); return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib); }).forEach((k) => {
       const ms = groups.get(k);
       ms.filter((m) => m.state === 'in').forEach((m) => live.push({ key: 'fb:' + (m.lg || 'x'), html: spLiveTile({ kind: 'fb', m }, 'fb') }));
+      ms.forEach((m) => ent('fb', '⚽', k, m.date, spTeamRow({ kind: 'fb', m }, favIn(m.home.id, m.comp) ? m.home.id : favIn(m.away.id, m.comp) ? m.away.id : '')));
       add('fb:' + ((ms[0] && ms[0].lg) || 'x'), '⚽', k, '', `<div class="sp-list">${ms.map((m) => spTeamRow({ kind: 'fb', m }, favIn(m.home.id, m.comp) ? m.home.id : favIn(m.away.id, m.comp) ? m.away.id : '')).join('')}</div>`, ms.some((m) => m.state === 'in'));
     });
   }
@@ -952,6 +959,10 @@ function pageSport() {
     const items = c.items.slice().sort((a, b) => (a.state === 'in' ? 0 : 1) - (b.state === 'in' ? 0 : 1) || a.date - b.date);
     if (!items.length) return;
     if (sp.kind === 'team' || sp.kind === 'tennis') items.filter((x) => x.state === 'in').forEach((x) => live.push({ key, html: spLiveTile(x, key) }));
+    if (sp.kind === 'team') items.forEach((x) => ent(key, sp.ico, sp.id.toUpperCase(), x.date, spTeamRow(x)));
+    if (sp.kind === 'tennis') items.forEach((x) => ent(key, sp.ico, x.tour || sp.name, x.date, spTennisRow(x)));
+    if (sp.kind === 'f1') items.forEach((x) => ent(key, sp.ico, x.race || 'Formel 1', x.date, spF1Row(x)));
+    if (sp.kind === 'golf') items.forEach((x) => ent(key, sp.ico, x.name, 0, `<div ${spRef(x)} class="gf-open gf-mini">${spGolfRows(x, 3)}</div>`));
     if (sp.kind === 'team') add(key, sp.ico, sp.name.replace(/^.*· /, ''), '', `<div class="sp-list">${items.map((x) => spTeamRow(x)).join('')}</div>`, items.some((x) => x.state === 'in'));
     if (sp.kind === 'tennis') { const by = new Map(); items.forEach((x) => { if (!by.has(x.tour)) by.set(x.tour, []); by.get(x.tour).push(x); });
       by.forEach((xs, tour) => add(key, sp.ico, tour, sp.id === 'wta' ? 'Damer' : 'Herrer', `<div class="sp-list">${xs.map(spTennisRow).join('')}</div>`, xs.some((x) => x.state === 'in'))); }
@@ -964,16 +975,19 @@ function pageSport() {
   if (ui.spFilter && !comps.some((c) => c.key === ui.spFilter)) ui.spFilter = '';
   const f = ui.spFilter || '';
   const chips = comps.length ? `<div class="sp-filter"><button class="sp-fchip${f ? '' : ' on'}" data-act="spFilter" data-k="">Alle</button>${comps.map((c) => `<button class="sp-fchip${f === c.key ? ' on' : ''}" data-act="spFilter" data-k="${c.key}" style="--sc:${SP_COL[c.col] || 'var(--accent)'}">${c.ico} ${esc(c.name)}${cards.some((x) => x.key === c.key && x.live) ? '<i class="lv-dot"></i>' : ''}</button>`).join('')}</div>` : '';
+  const dnav = `<div class="sp-rnav"><button class="arr" data-act="spDay" data-dir="-1" ${off <= -7 ? 'disabled' : ''} aria-label="Dagen før">‹</button><div class="sp-rlab${off ? '' : ' cur'}"><span>${off === 0 ? 'I dag' : off === 1 ? 'I morgen' : off === -1 ? 'I går' : cap(DAYS[day.getDay()])}</span><b>${cap(DAYS_LONG[day.getDay()])} ${day.getDate()}. ${MONTHS[day.getMonth()]}</b></div><button class="arr" data-act="spDay" data-dir="1" ${off >= 14 ? 'disabled' : ''} aria-label="Dagen efter">›</button><button class="sp-today${off ? '' : ' at'}" data-act="spDay" data-dir="0">I dag</button></div>`;
   if (f) { const c = comps.find((x) => x.key === f);
     if (c.kind === 'fb') { const r = spRoundView(c, live.filter((x) => x.key === f)); return `<div class="sp-page">${head(chips, r)}${r.body}</div>`; }
-    const dnav = `<div class="sp-rnav"><button class="arr" data-act="spDay" data-dir="-1" ${off <= -7 ? 'disabled' : ''} aria-label="Dagen før">‹</button><div class="sp-rlab${off ? '' : ' cur'}"><span>${off === 0 ? 'I dag' : off === 1 ? 'I morgen' : off === -1 ? 'I går' : cap(DAYS[day.getDay()])}</span><b>${cap(DAYS_LONG[day.getDay()])} ${day.getDate()}. ${MONTHS[day.getMonth()]}</b></div><button class="arr" data-act="spDay" data-dir="1" ${off >= 14 ? 'disabled' : ''} aria-label="Dagen efter">›</button><button class="sp-today${off ? '' : ' at'}" data-act="spDay" data-dir="0">I dag</button></div>`;
     return `<div class="sp-page">${head(chips, { label: c.name, nav: '' })}${spCompView(c, day, cards.filter((x) => x.key === f), live.filter((x) => x.key === f), dnav)}</div>`; }
   const err = errs.length ? `<div class="small err">Kunne ikke hente: ${esc(errs.join(', '))}</div>` : '';
-  if (!cards.length) return head() + err + `<section class="card"><div class="empty">${waiting ? 'Henter …' : `Ingen kampe ${sameDay(day, today) ? 'i dag' : 'denne dag'}.`}</div></section>`;
+  const alt = { label: `${cap(DAYS_LONG[day.getDay()])} ${day.getDate()}. ${MONTHS[day.getMonth()]}`, nav: '' };
+  if (!cards.length) return `<div class="sp-page">${head(chips, alt)}${err}<div class="sp-cgw sp-allw">${dnav}<div class="empty">${waiting ? 'Henter …' : `Ingen kampe ${sameDay(day, today) ? 'i dag' : 'denne dag'}`}</div></div></div>`;
   const shown = cards.slice().sort((a, b) => (b.live ? 1 : 0) - (a.live ? 1 : 0));
   const lv = live;
   const liveRow = lv.length ? `<section class="sp-live"><div class="sp-sec"><span class="lv-dot"></span>Live nu <small>${lv.length}</small></div><div class="sp-lvrow">${lv.map((x) => x.html).join('')}</div></section>` : '';
-  return `<div class="sp-page">${head(chips)}${err}${liveRow}<div class="sp-grid">${shown.map((c) => c.html).join('')}</div></div>`;
+  // Alle: alle kampe i én liste efter tidspunkt
+  ents.sort((a, b) => a.t - b.t);
+  return `<div class="sp-page">${head(chips, alt)}${err}${liveRow}<div class="sp-cgw sp-allw">${dnav}<div class="sp-list sp-all">${ents.map((x) => x.html).join('')}</div></div></div>`;
 }
 
 /* Detaljer om en kamp (vindue, der opdateres hvert halve minut, mens kampen spilles) */
@@ -2086,7 +2100,7 @@ function renderMain(keepScroll = true) {
   if (m._page === ui.page && m.firstChild) { const tpl = document.createElement('div'); tpl.innerHTML = html; morphKids(m, tpl); } else m.innerHTML = html;
   m._page = ui.page;
   if (ui.page === 'forside') { const g = document.getElementById('grid'); m._rest = (() => { const c = m.cloneNode(true); const gg = c.querySelector('#grid'); if (gg) gg.innerHTML = ''; return c.innerHTML; })(); if (g) [...g.children].forEach((c) => { c._src = stableSrc(c.outerHTML); }); scaleGrid(); fitCards(); trimCards(); seekTick(); }
-  if (ui.page === 'sport') spFitNames();
+  if (ui.page === 'sport') { spFitNames(); spFitRound(); }
   seekTick(); ipTick(); // afspilningstid udfyldes med det samme (ellers står den tom et øjeblik)
   if (keepScroll) m.scrollTop = y;
 }

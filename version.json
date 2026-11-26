@@ -1,5 +1,5 @@
 {
-  "version": "1.85.2",
+  "version": "1.86.0",
   "files": [
     "index.html",
     "app.js",
@@ -27,6 +27,16 @@
     "todo.js"
   ],
   "notes": [
+    {
+      "version": "1.86.0",
+      "date": "26. november 2026",
+      "title": "Sport: alle kampe efter tid",
+      "items": [
+        "Under \"Alle\" står dagens kampe fra alle sportsgrene nu i én liste efter tidspunkt – med turneringen over hver kamp",
+        "En hel Superliga-runde kan ses uden at scrolle, når ligaen er valgt",
+        "Datovælgeren sidder også i listen under \"Alle\""
+      ]
+    },
     {
       "version": "1.85.2",
       "date": "26. november 2026",
