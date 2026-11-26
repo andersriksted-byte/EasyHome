@@ -974,6 +974,20 @@ function spTeamCards() {
   }).filter(Boolean);
   return cards.length ? `<section class="sp-teams">${cards.join('')}</section>` : '';
 }
+// Stjernemarkerede kampe (ud over favoritholdenes) står i favoritrækken øverst på Live
+const spStarred = (id) => !!id && (settings.spStar || []).includes(String(id));
+const spItemId = (it) => { const m = it && (it.m || it); return m && m.id ? String(m.id) : ''; };
+const spStarBtn = (it, on) => { const id = spItemId(it); return id ? `<button class="bx-star${on ? ' on' : ''}" data-act="spStar" data-id="${esc(id)}" aria-pressed="${on}" aria-label="${on ? 'Fjern fra favoritter' : 'Sæt i favoritter'}">${on ? '★' : '☆'}</button>` : ''; };
+// Favoritrækken: en kamp pr. kort (hjemme til venstre, ude til højre)
+function spFavCard(x) {
+  const it = x.it; const m = it && (it.m || it);
+  if (!m || !m.home) return spBox(x);
+  const goal = spGoalCheck(m); const pre = m.state === 'pre' || (it.kind === 'fb' && FB.pending(m)); const favs = spFavIds();
+  const res = pre ? '' : `<span class="ft-score">${esc(m.home.score)}<i>–</i>${esc(m.away.score)}</span>`;
+  const status = m.state === 'in' ? `<span class="ft-live"><i class="lv-dot"></i>${esc(it.kind === 'fb' ? m.clock || 'Live' : liveDa(m.detail) || m.clock || 'Live')}</span>` : m.state === 'post' ? '<span class="ft-last">Slut</span>' : `<span class="ft-next">${hhmm(m.date)}</span>`;
+  const t = (x2, cls) => `<div class="${cls}${favs.has(x2.id) ? ' mine' : ''}">${cls === 'ft-me' ? spLogo(x2) + `<b>${esc(x2.name)}</b>` : `<span><b>${esc(x2.name)}</b>${spLogo(x2)}</span>`}</div>`;
+  return `<div class="ft${m.state === 'in' ? ' is-live' : ''}${goal ? ' goal' : ''}" ${spRef(it)}>${t(m.home, 'ft-me')}${t(m.away, 'ft-op')}<div class="ft-mid">${status}${res}${goal ? '<span class="bx-goalt">MÅL!</span>' : ''}<em class="ft-comp">${esc(x.label || m.comp || '')}</em>${x.fav ? '' : spStarBtn(it, true)}</div></div>`;
+}
 // Mål: når stillingen i en kamp stiger, lyser kampens boks op i et minut
 const spScore = {}; const spGoal = {};
 function spGoalCheck(m) {
@@ -991,9 +1005,9 @@ function spBox(x) {
     const goal = spGoalCheck(m); const pre = m.state === 'pre' || (it.kind === 'fb' && FB.pending(m));
     const favs = spFavIds(); const side = (t) => `<div class="bx-t${!pre && t.win ? ' win' : ''}${favs.has(t.id) ? ' mine' : ''}">${spLogo(t)}<b>${esc(t.name)}</b>${pre ? '' : `<span class="bx-s">${esc(t.score)}</span>`}</div>`;
     const st = m.state === 'in' ? `<span class="bx-live"><i class="lv-dot"></i>${esc(it.kind === 'fb' ? m.clock || 'Live' : liveDa(m.detail) || m.clock || 'Live')}</span>` : m.state === 'post' ? '<span class="bx-end">Slut</span>' : `<span class="bx-time">${hhmm(m.date)}</span>`;
-    return `<div class="bx${m.state === 'in' ? ' in' : ''}${x.fav ? ' is-fav' : ''}${goal ? ' goal' : ''}" style="--sc:${col}" ${spRef(it)}><div class="bx-h">${tag}${goal ? '<span class="bx-goalt">MÅL!</span>' : ''}${st}</div>${side(m.home)}${side(m.away)}</div>`;
+    return `<div class="bx${m.state === 'in' ? ' in' : ''}${x.fav ? ' is-fav' : ''}${goal ? ' goal' : ''}" style="--sc:${col}" ${spRef(it)}><div class="bx-h">${tag}${goal ? '<span class="bx-goalt">MÅL!</span>' : ''}${st}${spStarBtn(it, spStarred(spItemId(it)))}</div>${side(m.home)}${side(m.away)}</div>`;
   }
-  return `<div class="bx${x.live ? ' in' : ''}" style="--sc:${col}"><div class="bx-h">${tag}</div><div class="bx-body">${x.html.replace(/^<div class="sp-ent"[^>]*><span class="sp-tag">[^<]*<\/span>/, '').replace(/<\/div>$/, '')}</div></div>`;
+  return `<div class="bx${x.live ? ' in' : ''}" style="--sc:${col}"><div class="bx-h">${tag}${spStarBtn(it, spStarred(spItemId(it)))}</div><div class="bx-body">${x.html.replace(/^<div class="sp-ent"[^>]*><span class="sp-tag">[^<]*<\/span>/, '').replace(/<\/div>$/, '')}</div></div>`;
 }
 function spFitRound() {
   document.querySelectorAll('.sp-cgw:not(.sp-allw)').forEach((w) => { w.classList.remove('tight'); const l = w.querySelector('.sp-list'); if (l && l.scrollHeight > l.clientHeight + 1) w.classList.add('tight'); });
@@ -1080,8 +1094,11 @@ function pageSport() {
   const grp = new Map(); ents.forEach((x) => { if (!grp.has(x.key)) grp.set(x.key, []); grp.get(x.key).push(x); });
   const secs = [...grp.keys()].sort((a, b) => order.indexOf(a) - order.indexOf(b)).map((k) => `<section class="sp-fsec" style="--sc:${SP_COL[k] || 'var(--accent)'}"><div class="sp-fsh"><span class="sp-ico">${SP_ICO[k] || ''}</span><b>${SP_NAME[k] || k}</b><small>${grp.get(k).length}</small></div><div class="sp-list">${grp.get(k).map((x) => x.html).join('')}</div></section>`).join('');
   // Dagens kampe: én boks pr. kamp – jeres hold først, så kampe i gang, så efter tid
-  const boxes = ents.slice().sort((a, b) => (b.fav ? 1 : 0) - (a.fav ? 1 : 0) || (b.live ? 1 : 0) - (a.live ? 1 : 0) || a.t - b.t).map(spBox).join('');
-  return `<div class="sp-page">${head(chips, alt)}${err}${spTeamCards()}<div class="sp-cgw sp-allw">${dnav}<div class="sp-boxes">${boxes}</div></div></div>`;
+  const isTop = (x) => x.fav || spStarred(spItemId(x.it));
+  const top = ents.filter(isTop).sort((a, b) => (b.live ? 1 : 0) - (a.live ? 1 : 0) || a.t - b.t);
+  const rest = ents.filter((x) => !isTop(x)).sort((a, b) => a.t - b.t);
+  const favRow = top.length ? `<section class="sp-teams">${top.map(spFavCard).join('')}</section>` : '';
+  return `<div class="sp-page">${head(chips, alt)}${err}${favRow}<div class="sp-cgw sp-allw">${dnav}<div class="sp-boxes">${rest.map(spBox).join('') || '<div class="empty">Ingen andre kampe denne dag</div>'}</div></div></div>`;
 }
 
 /* Detaljer om en kamp (vindue, der opdateres hvert halve minut, mens kampen spilles) */
@@ -2517,6 +2534,7 @@ const act = {
   choreAt: (b) => { const c = TD.chores().find((x) => x.id === b.dataset.id); if (c) { c.at = b.dataset.v; save(); renderMain(); } },
   tdsOpen: (b) => { ui.tdOpen = b.dataset.id || null; renderMain(); },
   navMove: (b) => { const ids = navPages().map((p) => p.id); const i = ids.indexOf(b.dataset.id); const j = i + +b.dataset.d; if (i < 0 || j < 0 || j >= ids.length) return; [ids[i], ids[j]] = [ids[j], ids[i]]; settings.navOrder = ids; save(); renderNav(); renderMain(); },
+  spStar: (b) => { const id = b.dataset.id; const l = (settings.spStar || []).filter((x) => x !== id); if (b.getAttribute('aria-pressed') !== 'true') l.push(id); settings.spStar = l.slice(-200); save(); renderMain(false); },
   sFav: (b) => { S.markFav(b.dataset.id); sonosDo(async () => { const pod = await S.playFav(b.dataset.id); if (pod && pod.count) toast(`${pod.count} afsnit af ${pod.name} er sat i kø`); }); },
   sGroup: (b) => { const cg = S.currentGroup(); if (cg) { const np = S.nowPlaying(); S.state.groupMeta[cg.id] = { title: np.title, image: np.image }; } S.controlGroup(b.dataset.id); S.state.playerVol = {}; S.state.meta = null; renderMain(false); loadSonos(); },
   sGroupPlay: (b) => { sonosDo(() => S.toggleGroupPlay(b.dataset.id)); renderMain(false); },

@@ -2309,3 +2309,10 @@ body.navpinned .nav.open{box-shadow:none}
 .bx.goal .bx-s{color:var(--text)}
 .sp-boxes{padding:14px}
 .bx-goalt{position:static;flex:none;margin-left:auto}.bx-goalt+.bx-live{margin-left:0}
+/* Stjerne: sæt en kamp i favoritrækken */
+.bx-star{flex:none;width:34px;height:34px;margin:-6px -6px -6px 0;border:0;border-radius:50%;background:transparent;color:var(--muted);font-size:20px;line-height:1;display:grid;place-items:center}
+.bx-star.on{color:#F5B301}
+.ft .bx-star{color:#ffd44d;margin:-6px -8px -6px 4px}
+.ft-me.mine b,.ft-op.mine b{text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:3px}
+.ft.goal{animation:bxGoal 1.2s ease-in-out infinite}
+.ft .bx-goalt{margin-left:6px}
