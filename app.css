@@ -315,9 +315,9 @@ a{color:var(--accent)}
 .tvtile small{font-size:13px;font-weight:600;opacity:.8}
 
 /* Indstillinger */
-.tabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;border-bottom:2px solid var(--line)}
-.tab{flex:none;min-height:48px;border:0;background:transparent;padding:0 18px;font-size:15px;font-weight:800;color:var(--muted);border-radius:12px 12px 0 0;border-bottom:3px solid transparent;margin-bottom:-2px}
-.tab[aria-selected=true]{color:var(--text);border-bottom-color:var(--accent);background:var(--card)}
+.tabs{display:flex;flex-wrap:wrap;gap:8px;padding-bottom:12px;border-bottom:2px solid var(--line)}
+.tab{flex:none;min-height:44px;border:0;background:var(--dayBg);padding:0 16px;font-size:15px;font-weight:800;color:var(--muted);border-radius:99px}
+.tab[aria-selected=true]{color:var(--onAccent);background:var(--accent)}
 .form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
 .form .card.wide{grid-column:1/-1}
 .form[role=tabpanel]{align-items:start}
@@ -414,7 +414,7 @@ textarea{min-height:140px;font-family:ui-monospace,monospace;font-size:13px}
 .has-bg .ftr{background:color-mix(in srgb,var(--card) 82%,transparent);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
 .has-bg .ptitle h1,.has-bg .ptitle>.muted{background:color-mix(in srgb,var(--card) 80%,transparent);padding:2px 14px;border-radius:12px;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
 .has-bg .ptitle .btn.line{background:color-mix(in srgb,var(--card) 85%,transparent)}
-.has-bg .tabs{background:color-mix(in srgb,var(--card) 80%,transparent);border-radius:14px 14px 0 0;padding:4px 4px 0}
+.has-bg .tabs{background:color-mix(in srgb,var(--card) 80%,transparent);border-radius:16px;padding:8px;border-bottom:0}
 .bgtiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px}
 .bgtile{border:2px solid var(--line);background:var(--card);border-radius:14px;padding:6px;display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:800;color:var(--text);text-align:left}
 .bgtile[aria-pressed=true]{border-color:var(--accent)}
