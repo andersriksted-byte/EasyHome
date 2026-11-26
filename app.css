@@ -1713,3 +1713,16 @@ button.w7r.sel{background:color-mix(in srgb,var(--accent) 16%,transparent);box-s
 .mgrp-h:first-child{margin-top:0}
 .forow{grid-template-columns:40px minmax(0,1fr) 40px 40px auto auto}
 .fokind{min-height:40px;font-size:13px;padding:0 8px}
+/* Sonos: rum i grupper */
+.sgroups{display:flex;flex-direction:column;gap:10px}
+.sg{border:1.5px solid var(--line);border-radius:14px;overflow:hidden}
+.sg.on{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.sg .rooms{border:0;border-radius:0}
+.sg-h{display:flex;align-items:center;gap:8px;padding:8px 10px 8px 12px;background:var(--bg);min-height:56px}
+.sg.on .sg-h{background:color-mix(in srgb,var(--accent) 14%,var(--bg))}
+.sg-pick{flex:1;min-width:0;display:flex;flex-direction:column;align-items:flex-start;border:0;background:transparent;padding:0;text-align:left;color:var(--text);min-height:44px;justify-content:center}
+.sg-pick b{font-size:15px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.sg-pick span{font-size:12px;font-weight:600;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.sg-tag{font-style:normal;font-size:11px;font-weight:800;color:var(--accent);text-transform:uppercase;letter-spacing:.04em;flex:none}
+.sg-go{min-height:40px;padding:0 14px;flex:none}
+.sg-h .mwb{flex:none}

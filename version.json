@@ -1,5 +1,5 @@
 {
-  "version": "1.75.0",
+  "version": "1.76.0",
   "files": [
     "index.html",
     "app.js",
@@ -27,6 +27,16 @@
     "todo.js"
   ],
   "notes": [
+    {
+      "version": "1.76.0",
+      "date": "26. november 2026",
+      "title": "Forskellig musik i forskellige rum",
+      "items": [
+        "Musik: rummene står nu i deres grupper, så fx kontoret kan spille en playliste, mens stuen og køkkenet hører radio.",
+        "Tryk \"Styr\" ved en gruppe for at vælge musik og lydstyrke dér – og pause eller afspil de andre grupper direkte fra listen.",
+        "Fjern fluebenet ved et rum for at tage det ud af gruppen, så det kan spille sit eget."
+      ]
+    },
     {
       "version": "1.75.0",
       "date": "26. november 2026",

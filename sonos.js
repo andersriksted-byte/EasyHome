@@ -54,7 +54,7 @@ export function lookupArt(artist, title) {
   return '';
 }
 
-export const state = { connected: false, checked: false, household: null, groups: [], players: [], favorites: [], playlists: [], playerVol: {}, meta: null, playback: null, volume: null, error: null };
+export const state = { groupMeta: {}, groupsAt: 0, connected: false, checked: false, household: null, groups: [], players: [], favorites: [], playlists: [], playerVol: {}, meta: null, playback: null, volume: null, error: null };
 
 export async function status() {
   if (!hasProxy()) { state.connected = false; state.checked = true; return state; }
@@ -79,6 +79,7 @@ export async function loadHousehold() {
   if (!state.household) throw new Error('Ingen Sonos-husstand fundet');
   const g = await api(`/households/${state.household}/groups`);
   state.groups = g.groups || []; state.players = g.players || [];
+  state.groupsAt = 0; // hent også, hvad de andre grupper spiller
   if (!settings.sonos.groupId || !state.groups.find((x) => x.id === settings.sonos.groupId)) {
     const playing = state.groups.find((x) => x.playbackState === 'PLAYBACK_STATE_PLAYING');
     settings.sonos.groupId = (playing || state.groups[0] || {}).id || null; save();
@@ -102,6 +103,13 @@ export async function refresh() {
       const vols = await Promise.all((g.playerIds || []).map((pid) => api(`/players/${pid}/playerVolume`).then((v) => [pid, v.volume]).catch(() => [pid, null])));
       state.playerVol = Object.fromEntries(vols);
     }
+    // De andre grupper (fx kontoret, der spiller sit eget): hvad spiller de? Hentes ca. hvert 20. sekund.
+    if (Date.now() - state.groupsAt > 20000) {
+      state.groupsAt = Date.now();
+      const gg = await api(`/households/${state.household}/groups`);
+      state.groups = gg.groups || state.groups; state.players = gg.players || state.players;
+      await Promise.all(state.groups.filter((x) => x.id !== gid).map((o) => api(`/groups/${o.id}/playbackMetadata`).then((mm) => { state.groupMeta[o.id] = metaTitle(mm); }).catch(() => {})));
+    }
   } catch (e) {
     if (/HTTP 4(04|10)/.test(e.message)) { state.household = null; state.error = null; } // grupper ændret: hentes igen næste gang
     else state.error = e.message;
@@ -123,7 +131,7 @@ export function nowPlaying() {
   const nx = m.nextItem && m.nextItem.track ? m.nextItem.track : null;
   const next = nx ? { title: nx.name || '', artist: nx.artist ? nx.artist.name : '', image: art(nx) || lookupArt(nx.artist && nx.artist.name, nx.name) } : null;
   const modes = (state.playback && state.playback.playModes) || {};
-  return { title, artist, image, playing, group: group ? group.name : '', volume: state.volume ? state.volume.volume : null, next, source: container.name && container.name !== title ? container.name : '', modes };
+  return { title, artist, image, playing, group: group ? (group.playerIds || []).map(playerName).sort((a, b) => a.localeCompare(b, 'da')).join(' + ') : '', volume: state.volume ? state.volume.volume : null, next, source: container.name && container.name !== title ? container.name : '', modes };
 }
 
 const gid = () => settings.sonos.groupId;
@@ -134,6 +142,14 @@ export const setVolume = (v) => api(`/groups/${gid()}/groupVolume`, 'POST', { vo
 export const playFavorite = (id) => api(`/groups/${gid()}/favorites`, 'POST', { favoriteId: id, playOnCompletion: true });
 export const playerName = (pid) => (state.players.find((p) => p.id === pid) || {}).name || pid;
 
+const metaTitle = (m) => { m = m || {}; const it = m.currentItem && m.currentItem.track; return it ? [it.name, it.artist && it.artist.name].filter(Boolean).join(' · ') : (m.container && m.container.name) || m.streamInfo || ''; };
+// Gruppens navn ud fra rummene ("Stue + Køkken") og hvad den spiller
+export function groupInfo(g) {
+  const names = (g.playerIds || []).map(playerName).sort((a, b) => a.localeCompare(b, 'da'));
+  const mine = g.id === settings.sonos.groupId;
+  return { label: names.join(' + '), title: mine ? nowPlaying().title : state.groupMeta[g.id] || '', playing: mine ? nowPlaying().playing : /PLAYING|BUFFERING/.test(g.playbackState || '') };
+}
+export const toggleGroupPlay = (id) => { const g = state.groups.find((x) => x.id === id); if (g) g.playbackState = /PLAYING/.test(g.playbackState || '') ? 'PLAYBACK_STATE_PAUSED' : 'PLAYBACK_STATE_PLAYING'; return api(`/groups/${id}/playback/togglePlayPause`, 'POST', {}); };
 export const currentGroup = () => state.groups.find((g) => g.id === settings.sonos.groupId) || null;
 export const groupOfPlayer = (pid) => state.groups.find((g) => (g.playerIds || []).includes(pid)) || null;
 
