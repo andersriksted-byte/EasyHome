@@ -1,5 +1,5 @@
 {
-  "version": "1.81.2",
+  "version": "1.82.0",
   "files": [
     "index.html",
     "app.js",
@@ -27,6 +27,17 @@
     "todo.js"
   ],
   "notes": [
+    {
+      "version": "1.82.0",
+      "date": "26. november 2026",
+      "title": "Ny sportsside",
+      "items": [
+        "Sport har fået nyt udseende: tryk direkte på en dag i dagslisten, og vælg sportsgren med knapperne øverst",
+        "Kampe, der spilles lige nu, står øverst under \"Live nu\" som store resultattavler",
+        "Holdene står under hinanden med resultatet ud for, og hver sportsgren har sin egen farve",
+        "Musik-kortet på forsiden er nu mørkt som afspilleren – og udseendet hedder Sonos-afspiller eller iPod-afspiller"
+      ]
+    },
     {
       "version": "1.81.2",
       "date": "26. november 2026",

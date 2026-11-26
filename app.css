@@ -1928,3 +1928,89 @@ button.w7r.sel{background:color-mix(in srgb,var(--accent) 16%,transparent);box-s
 .ip-k.pending svg{animation:ipPulse 1s ease-in-out infinite}
 .ip-center.pending{animation:pendingPulse 1s ease-in-out infinite;border-radius:50%}
 @keyframes ipPulse{50%{opacity:.35}}
+/* ---------- Sport, nyt udtryk ---------- */
+.sp-top{display:flex;flex-direction:column;gap:12px;margin-bottom:16px}
+.sp-title{display:flex;align-items:baseline;gap:12px}
+.sp-title h1{margin:0}
+.sp-title .muted{font-weight:700}
+.sp-title .sp-ref{margin-left:auto;align-self:center}
+.sp-days{display:flex;align-items:center;gap:6px;overflow-x:auto;scrollbar-width:none}
+.sp-days .arr{flex:none;width:40px;height:40px;border:0;border-radius:99px;background:var(--card);color:var(--text);font-size:24px;font-weight:700;line-height:1}
+.sp-days .arr:disabled{opacity:.3}
+.sp-dchip{flex:1 0 76px;height:56px;border:0;border-radius:14px;background:var(--card);color:var(--text);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;line-height:1.1;font:inherit}
+.sp-dchip span{font-size:12px;font-weight:700;color:var(--muted)}
+.sp-dchip b{font-size:18px;font-weight:800}
+.sp-dchip.today span{color:var(--accent)}
+.sp-dchip.on{background:var(--text);color:var(--card)}.sp-dchip.on span{color:inherit;opacity:.75}
+.sp-filter{display:flex;gap:8px;flex-wrap:wrap}
+.sp-fchip{display:inline-flex;align-items:center;gap:6px;height:40px;padding:0 16px;border-radius:99px;border:0;background:var(--card);color:var(--text);font:inherit;font-weight:700;font-size:14px}
+.sp-fchip.on{background:var(--sc,var(--accent));color:#fff}
+.lv-dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:#E5484D;flex:none;animation:lvBlink 1.6s ease-in-out infinite}
+.sp-fchip.on .lv-dot{background:#fff}
+@keyframes lvBlink{50%{opacity:.35}}
+/* Live nu */
+.sp-live{margin-bottom:18px}
+.sp-sec{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:0 2px 10px}
+.sp-sec small{font-size:12px;background:var(--card);border-radius:99px;padding:2px 8px;color:var(--text)}
+.sp-lvrow{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(300px,1fr);gap:12px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
+.lv{border-radius:20px;padding:14px 16px 16px;background:linear-gradient(150deg,#1d2230,#11141c);color:#fff;display:flex;flex-direction:column;gap:10px;cursor:pointer;position:relative;overflow:hidden;min-width:0}
+.lv::before{content:'';position:absolute;inset:0 auto 0 0;width:5px;background:var(--sc,#E5484D)}
+.lv.k-fb{--sc:#2E9D5B}.lv.k-tennis{--sc:#C9B000}.lv.k-nba{--sc:#E46A1C}.lv.k-nfl{--sc:#3D63C9}.lv.k-nhl{--sc:#8C99AA}
+.lv-top{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:800;color:#ff8a8d}
+.lv-top em{margin-left:auto;font-style:normal;color:rgba(255,255,255,.55);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.lv-mid{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:10px}
+.lv-team{display:flex;flex-direction:column;align-items:center;gap:6px;min-width:0;text-align:center}
+.lv-team img,.lv-team .sp-ab{width:44px;height:44px}
+.lv-team .sp-ab{background:rgba(255,255,255,.12);color:#fff}
+.lv-team b{font-size:14px;font-weight:700;line-height:1.2;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lv-score{display:flex;align-items:center;gap:6px;font-size:40px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1}
+.lv-score b{color:rgba(255,255,255,.6);font-weight:700}.lv-score b.won{color:#fff;font-weight:900}
+.lv-score i{font-style:normal;color:rgba(255,255,255,.4);font-size:28px}
+.lv-l{display:flex;align-items:center;gap:8px;font-size:16px;color:rgba(255,255,255,.75);min-width:0}
+.lv-l b{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:700}
+.lv-l.win{color:#fff}.lv-l.win b{font-weight:900}
+.lv-sets{display:flex;gap:10px;font-size:22px;font-weight:700;font-variant-numeric:tabular-nums}
+.lv-sets i{font-style:normal;min-width:16px;text-align:center}.lv-sets i.won{color:#fff;font-weight:900}
+.lv-sets sup{font-size:11px}
+/* Kortene: masonry uden huller og en farvestribe pr. sportsgren */
+.sp-grid{display:block;columns:2 420px;column-gap:16px}
+.sp-grid>.sp-card{break-inside:avoid;margin-bottom:16px;width:100%;display:inline-flex;flex-direction:column}
+.sp-card{gap:6px;padding-top:14px;position:relative;overflow:hidden}
+.sp-card.has-live{box-shadow:none}
+.sp-card::before{content:'';position:absolute;left:0;right:0;top:0;height:4px;background:var(--sc)}
+.sp-h{min-height:32px;padding-bottom:4px}
+.sp-ico{width:32px;height:32px;border-radius:10px;background:color-mix(in srgb,var(--sc) 14%,transparent);display:grid;place-items:center;font-size:17px}
+.sp-livetag{flex:none;font-size:11px;font-weight:800;color:#fff;background:#E5484D;border-radius:99px;padding:2px 8px;text-transform:uppercase;letter-spacing:.04em}
+.sp-list{gap:0}
+.sp-list>*{border-top:1px solid var(--line);border-radius:0!important;background:transparent!important}
+.sp-list>*:first-child{border-top:0}
+/* Holdkamp: holdene under hinanden */
+.sp-row{display:grid;grid-template-columns:64px minmax(0,1fr);align-items:center;gap:10px;padding:10px 4px!important;cursor:pointer}
+.sp-row.in .sp-when,.sp-tn.in .sp-when,.sp-f1.in .sp-when{color:#E5484D}
+.tm-ls{display:flex;flex-direction:column;gap:6px;min-width:0}
+.tm-l{display:flex;align-items:center;gap:10px;min-width:0;color:var(--muted)}
+.tm-l img,.tm-l .sp-ab{width:26px;height:26px;object-fit:contain;flex:none}
+.tm-l .sp-ab{font-size:10px}
+.tm-l b{flex:1;min-width:0;font-size:15px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text)}
+.tm-s{font-size:19px;font-weight:700;font-variant-numeric:tabular-nums;min-width:26px;text-align:right}
+.tm-l.win .tm-s,.tm-l.win b{color:var(--text);font-weight:900}
+.sp-row.pre .tm-l b{font-weight:700}
+.sp-row.post .tm-l:not(.win) b{color:var(--muted);font-weight:600}
+.tm-l.fav b::after{content:'★';margin-left:6px;color:var(--accent);font-size:12px}
+.sp-tn,.sp-f1{padding:10px 4px!important}
+.sp-when{font-size:13px}
+.sp-when.time{font-size:16px;font-weight:800}
+@media (max-width:900px){.sp-grid{columns:1}}
+.lv-score b{color:#fff}
+.sp-row.in .tm-s{color:var(--text);font-weight:800}
+.gf-open .gf-row{background:transparent;border-top:1px solid var(--line);border-radius:0}
+.gf-open .gf-row:first-child{border-top:0}
+/* Sonos-afspilleren på forsiden: mørk som afspilleren under Musik */
+.w:has(>.mw:not(.mw-ip)),.w:has(>.mw:not(.mw-ip)) .whead{background:var(--inv);color:var(--invFg)}
+.w:has(>.mw:not(.mw-ip)) .mwinfo span{color:color-mix(in srgb,var(--invFg) 70%,transparent)}
+.w:has(>.mw:not(.mw-ip)) .mwinfo .mwgrp{color:color-mix(in srgb,var(--accent) 55%,var(--invFg))}
+.w:has(>.mw:not(.mw-ip)) .mwb{background:color-mix(in srgb,var(--invFg) 14%,transparent);color:var(--invFg)}
+.w:has(>.mw:not(.mw-ip)) .mwb.main{background:var(--invFg);color:var(--inv)}
+.w:has(>.mw:not(.mw-ip)) .mwvol .small,.w:has(>.mw:not(.mw-ip)) .mst{color:var(--invFg)}
+.w:has(>.mw:not(.mw-ip)) .mlogo{color:var(--invFg)}
+.w:has(>.mw:not(.mw-ip)) .mwart:not([style*=url]){background-color:color-mix(in srgb,var(--invFg) 10%,transparent)}
