@@ -490,7 +490,7 @@ async function parseFeed(feed) {
     const enc = /<enclosure\b[^>]*>/.exec(it); if (!enc) continue;
     const url = (/url="([^"]+)"/.exec(enc[0]) || [])[1]; if (!url) continue;
     const type = (/type="([^"]+)"/.exec(enc[0]) || [])[1] || 'audio/mpeg';
-    if (!/^audio\//.test(type) && !/\.(mp3|m4a|aac)(\?|$)/i.test(url)) continue;
+    if (!/^audio\/|mpegurl/i.test(type) && !/\.(mp3|m4a|aac|m3u8)(\?|$)/i.test(url)) continue;
     const u = xmlText(url);
     eps.push({ id: await shortHash(u), url: u, type, title: xmlText((/<title>([\s\S]*?)<\/title>/.exec(it) || [])[1]) || 'Afsnit',
       dur: durSec(xmlText((/<itunes:duration>([\s\S]*?)<\/itunes:duration>/.exec(it) || [])[1])), image: (/<itunes:image[^>]*href="([^"]+)"/.exec(it) || [])[1] || chanImg,
@@ -506,6 +506,14 @@ async function podcastEps(env, id) {
   if (!cached) { cached = await parseFeed(meta.feed); await env.DASH_KV.put('pod_eps_' + id, JSON.stringify(cached), { expirationTtl: 3600 }); }
   return { meta, eps: cached.eps, qv: cached.eps.length + '-' + (cached.eps[0] ? cached.eps[0].id : '0') };
 }
+// DR LYD: DR's eget podcast-feed ud fra seriens navn ("Musikquizzen" → musikquizzen)
+async function drFeed(slugOrName, name) {
+  const slug = String(slugOrName).toLowerCase().replace(/æ/g, 'ae').replace(/ø/g, 'oe').replace(/å/g, 'aa').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  if (!slug) return null;
+  const feedUrl = 'https://api.dr.dk/podcasts/v1/feeds/' + slug + '.xml?format=podcast&limit=500';
+  try { const p = await parseFeed(feedUrl); if (p.eps.length) return { feedUrl, collectionName: name, artworkUrl600: p.image }; } catch (e) { /* findes ikke */ }
+  return null;
+}
 // Find serien ud fra favorittens navn (kræver login)
 async function podcastResolve(req, env) {
   const body = await req.json().catch(() => ({}));
@@ -518,8 +526,10 @@ async function podcastResolve(req, env) {
     // Eget link: Apple Podcasts-side (id123…) eller seriens RSS-feed
     const aid = /[?&/]id(\d{5,})/.exec(link);
     if (aid) { const j = await (await fetch('https://itunes.apple.com/lookup?id=' + aid[1] + '&entity=podcast')).json().catch(() => ({})); hit = (j.results || []).find((x) => x.feedUrl) || null; if (!hit) return json(env, { error: 'Apple kender ikke det link' }, 404); }
+    else if (/dr\.dk\/lyd\//.test(link)) hit = await drFeed(link.split('?')[0].replace(/\/+$/, '').split('/').pop().replace(/-\d{6,}$/, ''), name);
     else if (/^https:\/\//.test(link)) hit = { feedUrl: link, collectionName: name, artworkUrl600: '' };
     else return json(env, { error: 'Linket skal starte med https://' }, 400);
+    if (!hit) return json(env, { error: 'Fandt ingen afsnit bag linket' }, 404);
   } else {
     // Søg i Apples katalog – også på kortere udgaver af navnet ("Musikquizzen" → "Musikquiz")
     const terms = [...new Set([name, name.replace(/(erne|zen|en|et|ne)$/i, ''), name.split(/\s+/)[0]].filter((t) => t.length >= 3))];
@@ -530,7 +540,8 @@ async function podcastResolve(req, env) {
       for (const x of (j.results || []).filter((y) => y.feedUrl)) { const sc = score(x); if (sc > bs) { bs = sc; best = x; } }
       if (bs === 3) break;
     }
-    hit = bs > 0 ? best : null;
+    // Ikke et præcist navn hos Apple: prøv DR LYD's egne serier, før et lignende navn hos Apple bruges
+    hit = bs === 3 ? best : (await drFeed(name, name)) || (bs > 0 ? best : null);
     if (!hit) return json(env, { error: 'Fandt ikke podcasten ' + name + ' – indsæt et link under Indstillinger → Musik' }, 404);
   }
   const id = await shortHash(hit.feedUrl);

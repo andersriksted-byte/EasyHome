@@ -1,5 +1,5 @@
 {
-  "version": "1.78.3",
+  "version": "1.78.4",
   "files": [
     "index.html",
     "app.js",
@@ -27,6 +27,14 @@
     "todo.js"
   ],
   "notes": [
+    {
+      "version": "1.78.4",
+      "date": "26. november 2026",
+      "title": "DR LYD-podcasts",
+      "items": [
+        "Podcast-serier fra DR LYD (fx Musikquizzen) kan nu sættes i kø – og et link fra dr.dk/lyd kan bruges under Indstillinger → Musik"
+      ]
+    },
     {
       "version": "1.78.3",
       "date": "26. november 2026",
