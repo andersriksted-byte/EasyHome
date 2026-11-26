@@ -729,13 +729,14 @@ function pageTodo() {
     ${dn.length ? `<details class="mx-fold"><summary>Udført (${dn.length})</summary><div class="tdlist">${dn.slice(0, 30).map((i) => tdItemRow(i, true)).join('')}</div></details>` : ''}</section>`;
   // Ugeplan for de faste pligter
   const ws = addDays(TD.monday(today), (ui.tdWeek || 0) * 7); const days = [...Array(7)].map((_, i) => addDays(ws, i));
-  const rows = TD.chores().map((c) => `<div class="tdw-n"><span>${esc(c.icon || '✅')}</span><b>${esc(c.title)}</b></div>${days.map((d) => { const occ = TD.occurrence(c, d);
-    if (!occ) return '<div class="tdw-c"></div>';
-    const span = c.every !== 'day'; if (span && !sameDay(d, occ.due)) return `<div class="tdw-c${c.at === 'on' ? '' : ' span'}${sameDay(d, today) ? ' today' : ''}"></div>`;
-    const done = TD.choresOn(d).find((x) => x.c.id === c.id); const w = TD.whoFor(c, occ);
-    return `<div class="tdw-c${sameDay(d, today) ? ' today' : ''}${done && done.done ? ' done' : ''}">${tdAv(w, true)}</div>`; }).join('')}`).join('');
-  const weekCard = TD.chores().length ? `<section class="card wide"><div class="sechead2"><b>Turnus · uge ${isoWeek(ws)}</b><span class="parrows"><button class="arr" data-act="todoWeek" data-dir="-1" aria-label="Ugen før">‹</button><button class="arr" data-act="todoWeek" data-dir="1" aria-label="Ugen efter">›</button></span></div>
-    <div class="tdweek"><div></div>${days.map((d) => `<div class="tdw-h${sameDay(d, today) ? ' today' : ''}"><b>${DAYS[d.getDay()]}</b><span>${d.getDate()}/${d.getMonth() + 1}</span></div>`).join('')}${rows}</div></section>` : '';
+  // Turnus som liste: én linje pr. dag med pligterne og hvem der har dem
+  const dayRow = (d) => {
+    const xs = TD.chores().map((c) => { const occ = TD.occurrence(c, d); if (!occ) return null; if (c.every !== 'day' && !sameDay(d, occ.due)) return null;
+      const st = TD.choresOn(d).find((x) => x.c.id === c.id && x.occ.key === occ.key); return { c, w: TD.whoFor(c, occ), done: !!(st && st.done) }; }).filter(Boolean);
+    return `<div class="tdl-r${sameDay(d, today) ? ' today' : ''}"><span class="tdl-d"><b>${cap(DAYS[d.getDay()])}</b>${d.getDate()}/${d.getMonth() + 1}</span><span class="tdl-cs">${xs.length ? xs.map((x) => `<span class="tdl-c${x.done ? ' done' : ''}" title="${esc(x.c.title)}"><i>${esc(x.c.icon || '✅')}</i>${tdAv(x.w)}</span>`).join('') : '<span class="tdl-none">–</span>'}</span></div>`;
+  };
+  const weekCard = TD.chores().length ? `<section class="card"><div class="sechead2"><b>Turnus · uge ${isoWeek(ws)}</b><span class="parrows"><button class="arr" data-act="todoWeek" data-dir="-1" aria-label="Ugen før">‹</button><button class="arr" data-act="todoWeek" data-dir="1" aria-label="Ugen efter">›</button></span></div>
+    <div class="tdl-legend">${TD.chores().map((c) => `<span>${esc(c.icon || '✅')} ${esc(c.title)}</span>`).join('')}</div><div class="tdl">${days.map(dayRow).join('')}</div></section>` : '';
   return top + `<div class="tdgrid">${todayCard}${itemsCard}${weekCard}</div>`;
 }
 // Turnussens rækkefølge: nummereret liste med pile, og hvem der har den nu og næste gang

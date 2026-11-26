@@ -2186,3 +2186,16 @@ html,body{overscroll-behavior:none}
 .sp-fsec .sp-tag{color:var(--muted)}
 .sp-teams{padding-bottom:10px}.sp-fsec .sp-row.in{background:color-mix(in srgb,#E5484D 7%,transparent)!important;border-radius:10px}
 .tdrow.carried .tdtx small{color:#DC2626;font-weight:800}.tdcarry{margin-top:6px}
+/* Turnus som kompakt liste */
+.tdl{display:flex;flex-direction:column;gap:2px}
+.tdl-r{display:grid;grid-template-columns:64px minmax(0,1fr);align-items:center;gap:10px;padding:5px 8px;border-radius:10px}
+.tdl-r.today{background:color-mix(in srgb,var(--accent) 12%,transparent);box-shadow:inset 3px 0 0 var(--accent)}
+.tdl-d{display:flex;align-items:baseline;gap:6px;font-size:12px;color:var(--muted);font-weight:700}
+.tdl-d b{font-size:14px;color:var(--text);font-weight:800;min-width:28px}
+.tdl-cs{display:flex;flex-wrap:wrap;gap:6px}
+.tdl-c{display:inline-flex;align-items:center;gap:4px;padding:2px 4px 2px 6px;border-radius:99px;background:var(--dayBg)}
+.tdl-c i{font-style:normal;font-size:14px}
+.tdl-c .tdav{width:22px;height:22px;font-size:11px}
+.tdl-c.done{opacity:.45}
+.tdl-none{color:var(--muted)}
+.tdl-legend{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12px;font-weight:700;color:var(--muted);margin-bottom:6px}
