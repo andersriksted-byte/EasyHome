@@ -601,7 +601,7 @@ function routeToPlace(p) {
   const r = ROUTES[key];
   if (!r || Date.now() - r.at > 10 * 60000) {
     ROUTES[key] = { at: Date.now(), data: r && r.data };
-    workerFetch(`/route?from=${h.lat},${h.lon}&to=${p.lat},${p.lon}&at=${encodeURIComponent(new Date().toISOString())}`).then((x) => x.json()).then((d) => { ROUTES[key] = { at: Date.now(), data: d }; if (ui.page === 'trafik') softRender(); }).catch(() => {});
+    workerFetch(`/route?from=${h.lat},${h.lon}&to=${p.lat},${p.lon}&at=${encodeURIComponent(new Date().toISOString())}`).then((x) => x.json()).then((d) => { ROUTES[key] = { at: Date.now(), data: d }; if (ui.page === 'trafik' || ui.page === 'forside') softRender(); }).catch(() => {});
   }
   return ROUTES[key].data || null;
 }
@@ -2045,34 +2045,36 @@ function trShort(x) {
   if (r || place) return `${K.label}${r ? ' på ' + r : ''}${place ? ' ved ' + place : ''}`;
   return new RegExp('^' + K.label, 'i').test(t) ? t : `${K.label}: ${t}`;
 }
-// Trafik-kortet opsummerer: "Fri bane" eller den vigtigste melding + forventet ekstra tid. Har I en aftale med adresse inden for 6 timer, gælder det turen dertil.
+// Trafik-kortet: én klar status ("Fri bane" / "Uheld på E20 ved Odense S") + køretider med trafik til næste aftale og jeres steder
 function wTrafik(size, h = 1, wd = 1) {
-  const head = (r) => cardHead('Trafik', r);
-  if (!hasProxy()) return head('') + '<div class="empty">Kræver forbindelsen.</div>';
+  const head = cardHead('Trafik');
+  if (!hasProxy()) return head + '<div class="empty">Kræver forbindelsen.</div>';
   trafikLoad();
-  if (!TR.state.items) return head('') + `<div class="empty">${TR.state.err ? 'Kunne ikke hente trafikken.' : 'Henter trafikken …'}</div>`;
-  const kind = shapeKind(wd, h);
-  const now = Date.now();
-  const nxt = D.cal ? D.cal.events.filter((e) => !e.allDay && e.start.getTime() > now && e.start.getTime() < now + 6 * 3600000 && mineEvent(e) && isPlace(e.location)).sort((p, q) => p.start - q.start)[0] : null;
-  const rt = nxt ? routeFor(nxt) : null;
-  const trip = rt && rt.found && rt.points ? { label: `Til ${nxt.title} kl. ${hhmm(nxt.start)}`, rt, list: TR.along(travelHome(), rt, rt) } : null;
-  const list = (trip ? trip.list : TR.near(travelHome())).filter((x) => x.kind !== 'vejarbejde');
-  const works = (trip ? trip.list : TR.near(travelHome())).filter((x) => x.kind === 'vejarbejde').length;
-  // Vigtigst: spærring > uheld > kø, derefter størst forsinkelse og nærmest
+  if (!TR.state.items) return head + `<div class="empty">${TR.state.err ? 'Kunne ikke hente trafikken.' : 'Henter trafikken …'}</div>`;
+  const kind = shapeKind(wd, h); const now = Date.now(); const H = travelHome();
+  // Ture: næste aftale med adresse (inden for 12 timer) og jeres steder
+  const trips = [];
+  const nxt = D.cal ? D.cal.events.filter((e) => !e.allDay && e.start.getTime() > now && e.start.getTime() < now + 12 * 3600000 && mineEvent(e) && isPlace(e.location)).sort((p, q) => p.start - q.start)[0] : null;
+  const nrt = nxt ? routeFor(nxt) : null;
+  if (nrt && nrt.found) trips.push({ name: nxt.title, at: nxt.start, rt: nrt });
+  settings.places.slice(1).forEach((p) => { const r = routeToPlace(p); if (r && r.found) trips.push({ name: placeLabel(p), rt: r }); });
+  trips.forEach((t) => { t.ev = t.rt.points ? TR.along(H, t.rt, t.rt).filter((x) => x.kind !== 'vejarbejde') : []; t.extra = t.rt.traffic ? t.rt.delayMin || 0 : 0; });
+  // Status: det vigtigste på de store veje omkring jer eller på en af turene
   const rank = { spaerring: 0, uheld: 1, koe: 2 };
-  list.sort((p, q) => (rank[p.kind] ?? 3) - (rank[q.kind] ?? 3) || (q.delay || 0) - (p.delay || 0) || p.km - q.km);
-  const top = list[0];
-  const extra = trip ? (rt.traffic ? rt.delayMin : 0) : list.reduce((m, x) => Math.max(m, x.delay || 0), 0);
-  const ext = extra >= 3 ? `Forvent ca. ${extra >= 15 ? Math.round(extra / 5) * 5 : extra} min ekstra` : '';
-  const ok = !top && extra < 5;
-  const headline = ok ? (trip ? 'Fri bane' : 'Trafikken er let') : top ? trShort(top) : 'Tæt trafik';
-  const sub = ok ? (trip ? `${durTxt(rt.min)} i bil` : 'Fri bane omkring jer') : ext || (list.length > 1 ? `+ ${list.length - 1} ${list.length - 1 === 1 ? 'melding' : 'meldinger'} mere` : top && top.from ? 'Meldt ' + ago(top.from) : '');
-  const ctx = trip ? trip.label : TR.cfg().radius ? `Inden for ${TR.cfg().radius} km` : 'Hele landet';
-  const cls = ok ? 'ok' : top && (top.kind === 'spaerring' || top.kind === 'uheld' || extra >= 15) ? 'bad' : 'warn';
-  const icon = ok ? '✓' : top ? (TR.KINDS[top.kind] || TR.KINDS.haendelse).icon : '⚠';
-  const more = (kind === 'tall' || kind === 'big') && list.length > 1 ? `<ul class="trs-more" data-trim>${list.slice(1, 6).map((x) => `<li>${(TR.KINDS[x.kind] || TR.KINDS.haendelse).icon} ${esc(trShort(x))}${x.delay ? ` <b>+${x.delay} min</b>` : ''}</li>`).join('')}</ul>` : '';
-  return head(`<span class="small muted">${esc(ctx)}</span>`) + `<button class="trs ${cls} k-${kind}" data-act="nav" data-page="trafik">
-    <span class="trs-ic">${icon}</span><span class="trs-m"><b>${esc(headline)}</b>${sub ? `<span>${esc(sub)}</span>` : ''}${works && kind !== 'tiny' ? `<em>🚧 ${works} vejarbejde</em>` : ''}</span></button>${more}`;
+  const pool = TR.near(H).filter((x) => x.kind !== 'vejarbejde').concat(...trips.map((t) => t.ev));
+  pool.sort((p, q) => (rank[p.kind] ?? 3) - (rank[q.kind] ?? 3) || (q.delay || 0) - (p.delay || 0) || (p.km || 0) - (q.km || 0));
+  const top = pool[0]; const worst = trips.reduce((m, t) => Math.max(m, t.extra), 0);
+  const extra = Math.max(worst, top && top.delay ? top.delay : 0);
+  const st = !top && extra < 5 ? 'ok' : (top && (top.kind === 'spaerring' || top.kind === 'uheld')) || extra >= 15 ? 'bad' : 'warn';
+  const title = st === 'ok' ? 'Fri bane' : top ? trShort(top) : 'Tæt trafik';
+  const sub = st === 'ok' ? 'Ingen uheld eller kø på de store veje' : extra >= 3 ? `Forvent ca. ${extra >= 15 ? Math.round(extra / 5) * 5 : extra} min ekstra` : top && top.from ? 'Meldt ' + ago(top.from) : '';
+  const tripRow = (t) => { const s2 = t.ev.length || t.extra >= 15 ? 'bad' : t.extra >= 5 ? 'warn' : 'ok';
+    return `<div class="trw-t ${s2}"><span class="trw-n">${t.at ? `<small>${hhmm(t.at)}</small>` : ''}${esc(t.name)}</span><b>${durTxt(t.rt.min)}</b><i>${t.extra >= 3 ? '+' + t.extra + ' min' : t.ev.length ? '⚠' : '✓'}</i></div>`; };
+  const nTrips = kind === 'tiny' ? 0 : kind === 'wide' ? Math.min(trips.length, h >= 1 ? 2 : 1) : 6;
+  return head + `<button class="trw ${st} k-${kind}" data-act="nav" data-page="trafik">
+    <div class="trw-box"><div class="trw-s"><span class="trw-dot"></span><div><b>${esc(title)}</b>${sub && kind !== 'tiny' ? `<span>${esc(sub)}</span>` : ''}</div></div></div>
+    ${nTrips && trips.length ? `<div class="trw-trips" data-trim>${trips.slice(0, nTrips).map(tripRow).join('')}</div>` : ''}
+  </button>`;
 }
 function pageTrafik() {
   if (!hasProxy()) return '<div class="empty">Trafik kræver forbindelsen til jeres server.</div>';

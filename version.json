@@ -1,5 +1,5 @@
 {
-  "version": "1.105.2",
+  "version": "1.105.3",
   "files": [
     "index.html",
     "app.js",
@@ -31,6 +31,15 @@
     "leaflet.css"
   ],
   "notes": [
+    {
+      "version": "1.105.3",
+      "date": "26. november 2026",
+      "title": "Nyt Trafik-kort",
+      "items": [
+        "Trafik-kortet viser én tydelig status i grøn, gul eller rød – \"Fri bane\" eller det vigtigste problem",
+        "Under status står køretiden med trafik til næste aftale og jeres steder, og om der er ekstra tid"
+      ]
+    },
     {
       "version": "1.105.2",
       "date": "26. november 2026",
