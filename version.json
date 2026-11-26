@@ -1,5 +1,5 @@
 {
-  "version": "1.76.3",
+  "version": "1.76.4",
   "files": [
     "index.html",
     "app.js",
@@ -27,6 +27,14 @@
     "todo.js"
   ],
   "notes": [
+    {
+      "version": "1.76.4",
+      "date": "26. november 2026",
+      "title": "Fast plads til favoritterne",
+      "items": [
+        "Musik: radio, playlister og andet har nu hver sin faste del af pladsen – den ændrer sig ikke, når I tilføjer flere favoritter."
+      ]
+    },
     {
       "version": "1.76.3",
       "date": "26. november 2026",
