@@ -207,7 +207,7 @@ function tKind(layer, type, text) {
 }
 // Vejdirektoratets meldinger (fælles for hele landet, gemmes 2 min)
 async function trafikVD(ctx) {
-  const ck = new Request('https://cache.easyhome/trafik/vd2');
+  const ck = new Request('https://cache.easyhome/trafik/vd3');
   const hit = await caches.default.match(ck);
   if (hit) return hit.json();
   const get = async (f) => { try { const r = await fetch(TRAFIK_SRC + f + '?t=' + Math.floor(Date.now() / 60000), { signal: AbortSignal.timeout(10000) }); return r.ok ? await r.json() : null; } catch (e) { return null; } };
@@ -220,7 +220,16 @@ async function trafikVD(ctx) {
     if (!Array.isArray(c) || c.length < 2) return;
     if (String(p.visible) === 'false' || String(p.suspended) === 'true') return;
     const title = tStrip(p.header || p.title); const text = tStrip(p.description);
-    items.push({ id: 'vd' + String(p.featureId || p.id || items.length), src: 'vd', kind: tKind(layer, p.TrafficMan2_Type || p.category || '', title + ' ' + text), title, text: text.slice(0, 600),
+    // Kun det, der gælder nu: sluttidspunkt i fortiden eller en akut melding uden sluttid, der er over 4 timer gammel, springes over.
+    // (Vejdirektoratets fil indeholder ofte meldinger, der er dage gamle.)
+    const now = Date.now(); const fromT = Date.parse(tTime(p.beginPeriod) + '+01:00') || Date.parse(p.validFrom || '') || 0; const toT = Date.parse(tTime(p.endPeriod) + '+01:00') || 0;
+    if (toT && toT < now) return;
+    if (layer !== 'announce' && !toT && fromT && now - fromT > 4 * 3600000) return;
+    if (layer !== 'announce' && fromT && now - fromT > 2 * 86400000) return;
+    const kind = tKind(layer, p.TrafficMan2_Type || p.category || '', title + ' ' + text);
+    // Kun det, der betyder noget for turen: uheld, kø, spærringer og vejarbejde (ikke "tabt gods", dyr, cyklister, blæst o.l.)
+    if (kind === 'haendelse' || kind === 'vejr') return;
+    items.push({ id: 'vd' + String(p.featureId || p.id || items.length), src: 'vd', kind, title, text: text.slice(0, 600),
       lon: +c[0], lat: +c[1], from: tTime(p.beginPeriod) || p.validFrom || '', to: tTime(p.endPeriod) || '', kommune: p.kommune || '', future: String(p.future) === 'true' });
   };
   (Array.isArray(ev) ? ev : ev && ev.features ? [ev] : []).forEach((fc) => (fc.features || []).forEach((f) => add(f, fc.layerName || '')));
@@ -258,6 +267,8 @@ async function trafikTT(env, ctx, bb) {
     let c = (f.geometry || {}).coordinates; if (Array.isArray(c) && Array.isArray(c[0])) c = c[Math.floor(c.length / 2)];
     if (!Array.isArray(c)) return;
     const kind = TT_KIND[p.iconCategory] || 'haendelse';
+    if (kind === 'haendelse' || kind === 'vejr') return;
+    if (kind === 'vejarbejde' && !(p.delay > 60)) return; // vejarbejde uden forsinkelse kommer fra Vejdirektoratet
     if (kind === 'koe' && (p.magnitudeOfDelay || 0) < 2 && (p.delay || 0) < 120) return; // kun mærkbar kø
     const road = (p.roadNumbers || []).join('/');
     const desc = (p.events || []).map((e) => e.description).filter(Boolean).join(', ');
@@ -280,9 +291,9 @@ async function trafikTile(env, kind, z, x, y) {
   let url; let ttl = 7 * 86400; const opts = {};
   if (kind === 'flow') {
     if (!env.TOMTOM_KEY) return json(env, { error: 'TOMTOM_KEY mangler' }, 501);
-    url = `https://api.tomtom.com/traffic/map/4/tile/flow/relative0/${z}/${x}/${y}.png?key=${env.TOMTOM_KEY}&tileSize=256&thickness=8`; ttl = 120;
+    url = `https://api.tomtom.com/traffic/map/4/tile/flow/relative0/${z}/${x}/${y}.png?key=${env.TOMTOM_KEY}&tileSize=256`; ttl = 120;
   } else if (env.TOMTOM_KEY) {
-    url = `https://api.tomtom.com/map/1/tile/basic/${kind === 'night' ? 'night' : 'main'}/${z}/${x}/${y}.png?key=${env.TOMTOM_KEY}&tileSize=256&view=Unified&language=da-DK`;
+    url = `https://api.tomtom.com/map/1/tile/basic/${kind === 'night' ? 'night' : 'main'}/${z}/${x}/${y}.png?key=${env.TOMTOM_KEY}&tileSize=256`;
   } else {
     url = `https://tile.openstreetmap.org/${z}/${x}/${y}.png`; opts.headers = { 'User-Agent': 'easyHome/1.0 (privat familie-dashboard)' };
   }

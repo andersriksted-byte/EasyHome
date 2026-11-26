@@ -1,5 +1,5 @@
 {
-  "version": "1.103.1",
+  "version": "1.103.2",
   "files": [
     "index.html",
     "app.js",
@@ -31,6 +31,16 @@
     "leaflet.css"
   ],
   "notes": [
+    {
+      "version": "1.103.2",
+      "date": "26. november 2026",
+      "title": "Kun trafik der betyder noget",
+      "items": [
+        "Gamle trafikmeldinger vises ikke længere",
+        "Kun uheld, kø, spærringer og vejarbejde – ikke tabt gods, dyr på vejen o.l.",
+        "Trafikfarverne på vejene er rettet"
+      ]
+    },
     {
       "version": "1.103.1",
       "date": "26. november 2026",
