@@ -702,12 +702,14 @@ function tdItemRow(i, del) {
 }
 // Hvis man har valgt sig selv øverst, vises kun ens egne (og fælles) ting
 const tdMine = (who) => (x) => !who || !x || x === who;
-function wTodo(size, h = 1, wd = 1) {
-  const me = settings.me || ''; const today = startOfDay(new Date());
+function wTodo(size, h = 1, wd = 1, x = {}) {
+  // Hele familien som udgangspunkt; på kortet kan man vælge én person eller den, der er valgt på skærmen
+  const who = (x && x.who) || ''; const me = who === 'me' ? settings.me || '' : who; const today = startOfDay(new Date());
   const ch = TD.choresOn(today).filter((x) => tdMine(me)(x.who)).sort((a, b) => (a.done ? 1 : 0) - (b.done ? 1 : 0));
   const its = TD.openItems(me);
   const open = ch.filter((x) => !x.done).length + its.length;
-  const head = cardHead(meMember() ? `${meMember().name}s to do` : 'To do', open ? `<span class="small muted">${open}</span>` : '');
+  const mm = members().find((m) => m.id === me);
+  const head = cardHead(mm ? `${mm.name}s to do` : 'To do', open ? `<span class="small muted">${open}</span>` : '');
   if (!ch.length && !its.length) return head + `<div class="empty">${TD.chores().length || TD.items().length ? 'Alt er klaret ✓' : 'Ingen gøremål.'}</div>`;
   const chHtml = ch.map(tdChoreRow).join(''); const itHtml = its.map((i) => tdItemRow(i)).join('');
   if (wd >= 2 && ch.length && its.length) return head + `<div class="tdcols${h === 1 ? ' tdlow' : ''}"><div class="tdlist" data-trimcard><div class="tdsub">I dag</div>${chHtml}</div><div class="tdlist" data-trimcard><div class="tdsub">Gøremål</div>${itHtml}</div></div>`;
@@ -1568,6 +1570,7 @@ function pageForside() {
         ${x.id === 'naeste' ? `<select class="wsel" data-wsel="naeste" data-k="count" aria-label="Antal aftaler">${[['', 'Så mange som muligt'], ...[1, 2, 3, 4, 5, 6].map((v) => [String(v), v === 1 ? 'Den næste + én til' : v + ' aftaler'])].map(([v, l]) => `<option value="${v}"${String(x.count || '') === v ? ' selected' : ''}>${l}</option>`).join('')}</select>` : ''}
         ${x.id === 'uge' ? `<select class="wsel" data-wsel="uge" data-k="days" aria-label="Antal dage">${[['', 'Automatisk'], ...[1, 2, 3, 4, 5, 6, 7].map((v) => [String(v), v === 1 ? '1 dag' : v + ' dage'])].map(([v, l]) => `<option value="${v}"${String(x.days || '') === v ? ' selected' : ''}>${l}</option>`).join('')}</select>` : ''}
         ${x.id === 'sonos' ? `<select class="wsel" data-wsel="sonos" data-k="fav" aria-label="Favoritter">${[['', 'Alle favoritter'], ['radio', 'Kun radio'], ['playlist', 'Kun playlister'], ['podcast', 'Kun podcasts']].map(([v, l]) => `<option value="${v}"${(x.fav || '') === v ? ' selected' : ''}>${l}</option>`).join('')}</select>` : ''}
+        ${x.id === 'todo' ? `<select class="wsel" data-wsel="todo" data-k="who" aria-label="Hvis opgaver">${[['', 'Hele familien'], ['me', 'Den valgte på skærmen'], ...members().map((m) => [m.id, m.name])].map(([v, l]) => `<option value="${esc(v)}"${(x.who || '') === v ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select>` : ''}
         ${x.id === 'inspiration' ? `<select class="wsel" data-wsel="inspiration" data-k="meal" aria-label="Måltid">${['', ...MD.MEALS].map((m) => `<option value="${m}"${(x.meal || '') === m ? ' selected' : ''}>${m || 'Alle måltider'}</option>`).join('')}</select>` : ''}
         ${x.id === 'madplan' ? `<span class="wopt" role="group" aria-label="Antal dage">${[[1, '1 dag'], [5, '5 dage']].map(([v, l]) => `<button data-act="wOpt" data-id="madplan" data-k="days" data-v="${v}" aria-pressed="${(x.days || 5) === v}">${l}</button>`).join('')}</span>` : ''}
         <button class="sz" data-act="sizeFor" data-id="${x.id}" aria-expanded="${ui.sizeFor === x.id}" aria-label="Vælg størrelse (nu ${w} gange ${h})">${shapeIcon(w, h)}<span>${w}×${h}</span></button>

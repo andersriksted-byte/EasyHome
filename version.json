@@ -1,5 +1,5 @@
 {
-  "version": "1.88.0",
+  "version": "1.88.1",
   "files": [
     "index.html",
     "app.js",
@@ -27,6 +27,15 @@
     "todo.js"
   ],
   "notes": [
+    {
+      "version": "1.88.1",
+      "date": "26. november 2026",
+      "title": "To do for hele familien",
+      "items": [
+        "To do-kortet viser nu hele familiens opgaver som udgangspunkt",
+        "Under \"Tilpas forside\" kan du på kortet vælge, om det skal vise én person – eller den, der er valgt på skærmen"
+      ]
+    },
     {
       "version": "1.88.0",
       "date": "26. november 2026",
