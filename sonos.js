@@ -191,6 +191,15 @@ function currentFav(onlyPlaying) {
 }
 
 // Favoritterne i jeres egen rækkefølge (vælges under Indstillinger → Musik). Skjulte favoritter udelades.
+// Er favoritten en radiostation, en playliste eller andet (album, sang, podcast)? Kan rettes under Indstillinger → Musik.
+export function favKind(f) {
+  const own = ((settings.sonos || {}).favKind || {})[f.id]; if (own) return own;
+  const t = String((f.resource && f.resource.type) || '').toUpperCase();
+  const d = `${f.description || ''} ${(f.service && f.service.name) || ''} ${(f.resource && f.resource.id && f.resource.id.serviceId) || ''}`.toLowerCase();
+  if (/STATION|STREAM|PROGRAM|RADIO/.test(t) || /radio|station|tunein|dr lyd|radioplay|stream/.test(d)) return 'radio';
+  if (/PLAYLIST/.test(t) || /playlist|afspilningsliste|spilleliste/.test(d)) return 'playlist';
+  return 'other';
+}
 export function favorites(all = false) {
   const order = settings.sonos.favOrder || []; const hidden = settings.sonos.favHidden || [];
   const pos = (f) => { const i = order.indexOf(f.id); return i < 0 ? 1000 + state.favorites.indexOf(f) : i; };

@@ -411,7 +411,9 @@ function wNyheder(size, h = 1, wd = 1) {
   const list = `<div class="news nlist" data-trim style="--ncols:${heroItem && kind === 'wide' ? 1 : cols}">${rest.map((i) => link(i)).join('')}</div>`;
   return head + `<div class="nbody nb-${kind}${heroItem ? ' has-hero' : ''}">${hero}${list}</div>`;
 }
-function wSonos(size, h = 1, wd = 1) {
+const FAVK = { radio: ['📻', 'Radio'], playlist: ['🎵', 'Playlister'], other: ['💿', 'Andet'] };
+const favBadge = (k) => `<em class="mkind k-${k}" aria-label="${FAVK[k][1]}">${FAVK[k][0]}</em>`;
+function wSonos(size, h = 1, wd = 1, x = {}) {
   if (!S.state.connected) return `${cardHead('Musik')}<div class="empty">Sonos er ikke forbundet endnu.</div><button class="btn line" data-act="nav" data-page="musik">Gå til Musik</button>`;
   const np = S.nowPlaying();
   const kind = shapeKind(wd, h);
@@ -419,7 +421,8 @@ function wSonos(size, h = 1, wd = 1) {
   const ctl = `<div class="mwctl"><button class="mwb" data-act="sPrev" aria-label="Forrige">${fillSvg('prev', 16)}</button><button class="mwb main" data-act="sPlay" aria-label="${np.playing ? 'Pause' : 'Afspil'}">${fillSvg(np.playing ? 'pause' : 'play', 20)}</button><button class="mwb" data-act="sNext" aria-label="Næste">${fillSvg('next', 16)}</button></div>`;
   const vol = np.volume !== null ? `<label class="vol mwvol"><span class="small">Lyd</span><input type="range" min="0" max="100" value="${np.volume}" data-vol aria-label="Lydstyrke"></label>` : '';
   const info = `<div class="mwinfo"><span class="mwgrp">${esc(np.group)}</span><b>${esc(np.title || 'Intet spiller')}</b><span>${esc(np.artist || '')}</span></div>`;
-  const favs = S.favorites().length ? `<div class="mwfavs" data-trim>${S.favorites().map((f) => `<button class="mtile${f.id === S.playingFavId() ? ' playing' : ''}" data-act="sFav" data-id="${esc(f.id)}"><i style="${S.art(f) ? `background-image:url('${esc(S.art(f))}')` : ''}"></i><span>${esc(f.name)}</span></button>`).join('')}</div>` : '';
+  const fl = S.favorites().filter((f) => !x.fav || S.favKind(f) === x.fav);
+  const favs = fl.length ? `<div class="mwfavs" data-trim>${fl.map((f) => `<button class="mtile${f.id === S.playingFavId() ? ' playing' : ''}" data-act="sFav" data-id="${esc(f.id)}"><i style="${S.art(f) ? `background-image:url('${esc(S.art(f))}')` : ''}">${x.fav ? '' : favBadge(S.favKind(f))}</i><span>${esc(f.name)}</span></button>`).join('')}</div>` : '';
   if (kind === 'tiny') return `<div class="mw mw-tiny" style="${art}"><div class="mwshade">${info}${ctl}</div></div>`;
   if (kind === 'wide') return `<div class="mw mw-wide" style="grid-template-columns:auto minmax(0,1fr)${wd >= 3 ? ` minmax(0,${wd - 2}fr)` : ''}"><div class="mwart" style="${art}"></div><div class="mwside">${info}${ctl}${vol}</div>${wd >= 3 ? `<div class="mwfavcol">${favs}</div>` : ''}</div>`;
   if (kind === 'tall') return `<div class="mw mw-tall"><div class="mwart" style="${art}"></div>${info}${ctl}${vol}${favs}</div>`;
@@ -1296,6 +1299,7 @@ function pageForside() {
         ${x.id === 'screens' ? `<span class="wopt" role="group" aria-label="Betjening">${[[1, 'Alle samlet'], [2, 'Hver for sig'], [3, 'Begge']].map(([v, l]) => `<button data-act="wOpt" data-id="screens" data-k="mode" data-v="${v}" aria-pressed="${(x.mode || 3) === v}">${l}</button>`).join('')}</span>` : ''}
         ${x.id === 'naeste' ? `<select class="wsel" data-wsel="naeste" data-k="count" aria-label="Antal aftaler">${[['', 'Så mange som muligt'], ...[1, 2, 3, 4, 5, 6].map((v) => [String(v), v === 1 ? 'Den næste + én til' : v + ' aftaler'])].map(([v, l]) => `<option value="${v}"${String(x.count || '') === v ? ' selected' : ''}>${l}</option>`).join('')}</select>` : ''}
         ${x.id === 'uge' ? `<select class="wsel" data-wsel="uge" data-k="days" aria-label="Antal dage">${[['', 'Automatisk'], ...[1, 2, 3, 4, 5, 6, 7].map((v) => [String(v), v === 1 ? '1 dag' : v + ' dage'])].map(([v, l]) => `<option value="${v}"${String(x.days || '') === v ? ' selected' : ''}>${l}</option>`).join('')}</select>` : ''}
+        ${x.id === 'sonos' ? `<select class="wsel" data-wsel="sonos" data-k="fav" aria-label="Favoritter">${[['', 'Alle favoritter'], ['radio', 'Kun radio'], ['playlist', 'Kun playlister']].map(([v, l]) => `<option value="${v}"${(x.fav || '') === v ? ' selected' : ''}>${l}</option>`).join('')}</select>` : ''}
         ${x.id === 'inspiration' ? `<select class="wsel" data-wsel="inspiration" data-k="meal" aria-label="Måltid">${['', ...MD.MEALS].map((m) => `<option value="${m}"${(x.meal || '') === m ? ' selected' : ''}>${m || 'Alle måltider'}</option>`).join('')}</select>` : ''}
         ${x.id === 'madplan' ? `<span class="wopt" role="group" aria-label="Antal dage">${[[1, '1 dag'], [5, '5 dage']].map(([v, l]) => `<button data-act="wOpt" data-id="madplan" data-k="days" data-v="${v}" aria-pressed="${(x.days || 5) === v}">${l}</button>`).join('')}</span>` : ''}
         <button class="sz" data-act="sizeFor" data-id="${x.id}" aria-expanded="${ui.sizeFor === x.id}" aria-label="Vælg størrelse (nu ${w} gange ${h})">${shapeIcon(w, h)}<span>${w}×${h}</span></button>
@@ -1599,9 +1603,13 @@ function pageMusik() {
     <div><button class="btn primary big" data-act="sConnect">Forbind Sonos</button></div>${S.state.error ? `<div class="err">${esc(S.state.error)}</div>` : ''}</section>`;
   const np = S.nowPlaying();
   const nowFav = S.playingFavId();
-  const tile = (act, id, name, img) => `<button class="mtile${act === 'sFav' && id === nowFav ? ' playing' : ''}" data-act="${act}" data-id="${esc(id)}" ${act === 'sFav' && id === nowFav ? 'aria-current="true"' : ''}><i style="${img ? `background-image:url('${esc(img)}')` : ''}"></i><span>${esc(name)}</span></button>`;
-  const favs = S.favorites().map((f) => tile('sFav', f.id, f.name, S.art(f))).join('');
-  const pls = S.state.playlists.map((pl) => tile('sPlaylist', pl.id, pl.name, S.art(pl))).join('');
+  const tile = (act, id, name, img, k) => `<button class="mtile${act === 'sFav' && id === nowFav ? ' playing' : ''}" data-act="${act}" data-id="${esc(id)}" ${act === 'sFav' && id === nowFav ? 'aria-current="true"' : ''}><i style="${img ? `background-image:url('${esc(img)}')` : ''}">${favBadge(k)}</i><span>${esc(name)}</span></button>`;
+  // Favoritterne delt op: radiostationer, playlister (også Sonos' egne) og andet
+  const grp = { radio: [], playlist: [], other: [] };
+  S.favorites().forEach((f) => { const k = S.favKind(f); grp[k].push(tile('sFav', f.id, f.name, S.art(f), k)); });
+  S.state.playlists.forEach((pl) => grp.playlist.push(tile('sPlaylist', pl.id, pl.name, S.art(pl), 'playlist')));
+  const sec = (k) => (grp[k].length ? `<div class="mgrp-h">${FAVK[k][0]} ${FAVK[k][1]}</div><div class="mtiles">${grp[k].join('')}</div>` : '');
+  const favs = sec('radio') + sec('playlist') + sec('other');
   return `<div class="music">
     <section class="player mplayer">
       <div class="art" style="${np.image ? `background-image:url('${esc(np.image)}')` : ''}"></div>
@@ -1613,8 +1621,7 @@ function pageMusik() {
     ${sonosRooms()}
     <section class="card mcol">
       <div class="mhead"><span class="lab">Favoritter</span><button class="chipbtn" data-act="sReload" aria-label="Opdater rum og favoritter">${svg('refresh', 16)}</button></div>
-      <div class="mscroll"><div class="mtiles">${favs || '<span class="muted small">Ingen favoritter endnu.</span>'}</div>
-        ${pls ? `<div class="lab" style="margin:12px 0 8px">Sonos-playlister</div><div class="mtiles">${pls}</div>` : ''}</div>
+      <div class="mscroll">${favs || '<span class="muted small">Ingen favoritter endnu.</span>'}</div>
       
     </section>
     ${S.state.error ? `<div class="err" style="grid-column:1/-1">${esc(S.state.error)}</div>` : ''}
@@ -1788,6 +1795,7 @@ function pageIndstillinger() {
           <span class="foart" style="${S.art(f) ? `background-image:url('${esc(S.art(f))}')` : ''}"></span><b title="${esc(f.name)}">${esc(f.name)}</b>
           <button class="fobtn" data-act="favMove" data-id="${esc(f.id)}" data-d="-1" ${i === 0 ? 'disabled' : ''} aria-label="Flyt ${esc(f.name)} op">${svg('up', 18)}</button>
           <button class="fobtn" data-act="favMove" data-id="${esc(f.id)}" data-d="1" ${i === fav.length - 1 ? 'disabled' : ''} aria-label="Flyt ${esc(f.name)} ned">${svg('down', 18)}</button>
+          <select class="fokind" data-favkind="${esc(f.id)}" aria-label="Type for ${esc(f.name)}">${Object.entries(FAVK).map(([k, [ico, l]]) => `<option value="${k}"${S.favKind(f) === k ? ' selected' : ''}>${ico} ${k === 'playlist' ? 'Playliste' : k === 'radio' ? 'Radio' : l}</option>`).join('')}</select>
           <label class="check small"><input type="checkbox" data-favshow="${esc(f.id)}" ${hidden.includes(f.id) ? '' : 'checked'}>Vis</label></div>`).join('')}</div>`}
       </section>`;
     },
@@ -2218,6 +2226,7 @@ document.addEventListener('submit', (e) => {
 });
 document.addEventListener('change', (e) => {
   const t = e.target;
+  if (t.dataset.favkind) { settings.sonos.favKind = { ...(settings.sonos.favKind || {}), [t.dataset.favkind]: t.value }; save(); renderMain(); return; }
   if (t.dataset.chore) { const c = TD.chores().find((x) => x.id === t.dataset.chore); if (!c) return;
     if (t.dataset.k === 'plan') { c.plan = { ...(c.plan || {}), [t.dataset.wd]: t.value }; save(); return; }
     TD.setChore(c.id, t.dataset.k, t.dataset.k === 'day' ? +t.value : t.value.trim()); if (!['title', 'icon'].includes(t.dataset.k)) renderMain(); return; }

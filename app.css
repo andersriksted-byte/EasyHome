@@ -1706,3 +1706,10 @@ button.w7r.sel{background:color-mix(in srgb,var(--accent) 16%,transparent);box-s
 .upd-actions{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap}
 .upd-actions .btn{min-height:48px;padding:0 18px}
 .upd-box p{margin:0}
+/* Sonos: radio / playliste / andet */
+.mtile i{position:relative}
+.mkind{position:absolute;right:-5px;bottom:-5px;width:22px;height:22px;border-radius:99px;background:var(--card);font-style:normal;font-size:12px;line-height:22px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.25)}
+.mgrp-h{font-size:12px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin:14px 0 8px}
+.mgrp-h:first-child{margin-top:0}
+.forow{grid-template-columns:40px minmax(0,1fr) 40px 40px auto auto}
+.fokind{min-height:40px;font-size:13px;padding:0 8px}

@@ -1,5 +1,5 @@
 {
-  "version": "1.74.4",
+  "version": "1.75.0",
   "files": [
     "index.html",
     "app.js",
@@ -27,6 +27,16 @@
     "todo.js"
   ],
   "notes": [
+    {
+      "version": "1.75.0",
+      "date": "26. november 2026",
+      "title": "Radio og playlister hver for sig",
+      "items": [
+        "Musik: favoritterne er delt op i 📻 Radio, 🎵 Playlister og 💿 Andet, og hver favorit har et lille mærke.",
+        "Sonos-kortet på forsiden kan vise kun radio eller kun playlister – vælg det under \"Tilpas forside\".",
+        "Står en favorit forkert, kan typen rettes under Indstillinger → Musik."
+      ]
+    },
     {
       "version": "1.74.4",
       "date": "26. november 2026",
