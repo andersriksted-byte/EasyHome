@@ -511,12 +511,28 @@ async function podcastResolve(req, env) {
   const body = await req.json().catch(() => ({}));
   const name = String(body.name || '').slice(0, 200).trim();
   if (!name) return json(env, { error: 'Mangler navn' }, 400);
-  const r = await fetch('https://itunes.apple.com/search?' + new URLSearchParams({ term: name, media: 'podcast', entity: 'podcast', limit: '5', country: 'dk' }));
-  const j = await r.json().catch(() => ({}));
+  const link = String(body.link || '').trim().slice(0, 500);
   const norm = (t) => String(t || '').toLowerCase().replace(/[^a-z0-9æøå]+/g, '');
-  const res = (j.results || []).filter((x) => x.feedUrl);
-  const hit = res.find((x) => norm(x.collectionName) === norm(name)) || res[0];
-  if (!hit) return json(env, { error: 'Fandt ikke podcasten ' + name }, 404);
+  let hit = null;
+  if (link) {
+    // Eget link: Apple Podcasts-side (id123…) eller seriens RSS-feed
+    const aid = /[?&/]id(\d{5,})/.exec(link);
+    if (aid) { const j = await (await fetch('https://itunes.apple.com/lookup?id=' + aid[1] + '&entity=podcast')).json().catch(() => ({})); hit = (j.results || []).find((x) => x.feedUrl) || null; if (!hit) return json(env, { error: 'Apple kender ikke det link' }, 404); }
+    else if (/^https:\/\//.test(link)) hit = { feedUrl: link, collectionName: name, artworkUrl600: '' };
+    else return json(env, { error: 'Linket skal starte med https://' }, 400);
+  } else {
+    // Søg i Apples katalog – også på kortere udgaver af navnet ("Musikquizzen" → "Musikquiz")
+    const terms = [...new Set([name, name.replace(/(erne|zen|en|et|ne)$/i, ''), name.split(/\s+/)[0]].filter((t) => t.length >= 3))];
+    const score = (x) => { const a = norm(x.collectionName); const b = norm(name); return a === b ? 3 : a.startsWith(b) || b.startsWith(a) ? 2 : a.includes(b) || b.includes(a) ? 1 : 0; };
+    let best = null; let bs = 0;
+    for (const term of terms) {
+      const j = await (await fetch('https://itunes.apple.com/search?' + new URLSearchParams({ term, media: 'podcast', entity: 'podcast', limit: '15', country: 'dk' }))).json().catch(() => ({}));
+      for (const x of (j.results || []).filter((y) => y.feedUrl)) { const sc = score(x); if (sc > bs) { bs = sc; best = x; } }
+      if (bs === 3) break;
+    }
+    hit = bs > 0 ? best : null;
+    if (!hit) return json(env, { error: 'Fandt ikke podcasten ' + name + ' – indsæt et link under Indstillinger → Musik' }, 404);
+  }
   const id = await shortHash(hit.feedUrl);
   await env.DASH_KV.put('pod_' + id, JSON.stringify({ feed: hit.feedUrl, name: hit.collectionName || name, image: hit.artworkUrl600 || '' }));
   const p = await podcastEps(env, id);

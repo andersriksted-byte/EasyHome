@@ -1,5 +1,5 @@
 {
-  "version": "1.78.2",
+  "version": "1.78.3",
   "files": [
     "index.html",
     "app.js",
@@ -27,6 +27,15 @@
     "todo.js"
   ],
   "notes": [
+    {
+      "version": "1.78.3",
+      "date": "26. november 2026",
+      "title": "Find flere podcasts",
+      "items": [
+        "Podcast-serier findes nu også, når navnet i Sonos er lidt anderledes end i podcast-kataloget",
+        "Under Indstillinger → Musik kan du indsætte et link til podcasten (Apple Podcasts eller RSS), hvis den ikke bliver fundet"
+      ]
+    },
     {
       "version": "1.78.2",
       "date": "26. november 2026",

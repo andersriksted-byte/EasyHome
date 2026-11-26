@@ -1821,7 +1821,7 @@ function pageIndstillinger() {
           <button class="fobtn" data-act="favMove" data-id="${esc(f.id)}" data-d="1" ${i === fav.length - 1 ? 'disabled' : ''} aria-label="Flyt ${esc(f.name)} ned">${svg('down', 18)}</button>
           <select class="fokind" data-favkind="${esc(f.id)}" aria-label="Type for ${esc(f.name)}">${Object.entries(FAVK).map(([k, [ico, l]]) => `<option value="${k}"${S.favKind(f) === k ? ' selected' : ''}>${ico} ${k === 'playlist' ? 'Playliste' : k === 'radio' ? 'Radio' : k === 'podcast' ? 'Podcast' : l}</option>`).join('')}</select>
           <label class="check small"><input type="checkbox" data-favname="${esc(f.id)}" ${favShowName(f.id) ? 'checked' : ''}>Navn</label>
-          <label class="check small"><input type="checkbox" data-favshow="${esc(f.id)}" ${hidden.includes(f.id) ? '' : 'checked'}>Vis</label></div>`).join('')}</div>`}
+          <label class="check small"><input type="checkbox" data-favshow="${esc(f.id)}" ${hidden.includes(f.id) ? '' : 'checked'}>Vis</label>${S.favKind(f) === 'podcast' ? `<input class="fopod" type="url" inputmode="url" data-favpod="${esc(f.id)}" value="${esc(((settings.sonos.favPod || {})[f.id]) || '')}" placeholder="Link til podcasten (Apple Podcasts eller RSS)" aria-label="Link til ${esc(f.name)}">` : ''}</div>`).join('')}</div>`}
       </section>`;
     },
     somfy: () => { const l = settings.somfyPresets && settings.somfyPresets.length ? settings.somfyPresets : SF.DEFAULT_PRESETS; return `
@@ -2275,6 +2275,7 @@ document.addEventListener('submit', (e) => {
 });
 document.addEventListener('change', (e) => {
   const t = e.target;
+  if (t.dataset.favpod) { settings.sonos.favPod = { ...(settings.sonos.favPod || {}), [t.dataset.favpod]: t.value.trim() }; save(); return; }
   if (t.dataset.favkind) { settings.sonos.favKind = { ...(settings.sonos.favKind || {}), [t.dataset.favkind]: t.value }; save(); renderMain(); return; }
   if (t.dataset.chore) { const c = TD.chores().find((x) => x.id === t.dataset.chore); if (!c) return;
     if (t.dataset.k === 'plan') { c.plan = { ...(c.plan || {}), [t.dataset.wd]: t.value }; save(); return; }

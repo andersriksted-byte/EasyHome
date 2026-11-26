@@ -161,7 +161,7 @@ export async function playFav(id) {
 }
 async function playSeries(f, firstErr) {
   let pod = null; let why = '';
-  try { pod = await (await workerFetch('/podcast/resolve', { method: 'POST', body: JSON.stringify({ name: f.name }) })).json(); } catch (e) { why = e.message; }
+  try { pod = await (await workerFetch('/podcast/resolve', { method: 'POST', body: JSON.stringify({ name: f.name, link: ((settings.sonos || {}).favPod || {})[f.id] || '' }) })).json(); } catch (e) { why = e.message; }
   // Fandt vi ikke serien, så sig hvorfor – ellers starter Sonos bare det, der lå i køen i forvejen
   if (!pod || !pod.id) throw new Error('Podcasten kunne ikke sættes i kø' + (why === 'Ukendt' ? ' – workeren er ikke opdateret endnu' : why ? ': ' + why : '') + (firstErr ? ' · ' + firstErr.message : ''));
   const s = await api(`/groups/${gid()}/playbackSession/joinOrCreate`, 'POST', { appId: 'dk.easyhome.dashboard', appContext: 'easyhome' });
