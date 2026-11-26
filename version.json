@@ -1,5 +1,5 @@
 {
-  "version": "1.82.0",
+  "version": "1.82.1",
   "files": [
     "index.html",
     "app.js",
@@ -27,6 +27,16 @@
     "todo.js"
   ],
   "notes": [
+    {
+      "version": "1.82.1",
+      "date": "26. november 2026",
+      "title": "Pænere musikindstillinger",
+      "items": [
+        "Indstillinger → Musik: vælg udseende ved at trykke på et billede af afspilleren, og favoritterne står to og to",
+        "Feltet til podcast-link er fjernet",
+        "Siderne kan ikke længere trækkes ud over toppen og bunden"
+      ]
+    },
     {
       "version": "1.82.0",
       "date": "26. november 2026",

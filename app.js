@@ -1912,15 +1912,16 @@ function pageIndstillinger() {
         <label class="f">Efter solnedgang<select data-set="nightTheme">${Object.keys(THEMES).map((k) => `<option value="${k}" ${s.nightTheme === k ? 'selected' : ''}>${THEMES[k].label}</option>`).join('')}</select></label></div>` : ''}</section>`,
     musik: () => {
       const fav = S.favorites(true); const hidden = settings.sonos.favHidden || [];
-      return `<section class="card"><b>Udseende</b><label class="f">Afspiller<select data-sonosskin><option value="">Sonos-afspiller</option><option value="wheel"${ipSkin() ? ' selected' : ''}>iPod-afspiller</option></select></label></section>
+      const skinTile = (v, name, prev) => `<button class="skin-t${(ipSkin() ? 'wheel' : '') === v ? ' on' : ''}" data-act="sonosSkin" data-v="${v}" aria-pressed="${(ipSkin() ? 'wheel' : '') === v}"><span class="skin-p ${prev}"><i></i><i></i></span><b>${name}</b></button>`;
+      return `<section class="card"><b>Udseende</b><div class="skins">${skinTile('', 'Sonos-afspiller', 'sp-std')}${skinTile('wheel', 'iPod-afspiller', 'sp-ipod')}</div></section>
       <section class="card wide"><b>Favoritter</b>
         ${!S.state.connected ? '<div class="muted">Forbind Sonos under Forbindelse for at se jeres favoritter.</div>' : !fav.length ? '<div class="muted">Ingen favoritter i Sonos endnu.</div>' : `<div class="favorder">${fav.map((f, i) => `<div class="forow${hidden.includes(f.id) ? ' off' : ''}">
-          <span class="foart" style="${S.art(f) ? `background-image:url('${esc(S.art(f))}')` : ''}"></span><b title="${esc(f.name)}">${esc(f.name)}</b>
+          <span class="foart" style="background-color:${logoColor(f.name)};${S.art(f) && !BAD_IMG.has(S.art(f)) ? `background-image:url('${esc(S.art(f))}')` : ''}">${S.art(f) && !BAD_IMG.has(S.art(f)) ? '' : esc((f.name || '?').slice(0, 2))}</span><b title="${esc(f.name)}">${esc(f.name)}</b>
           <button class="fobtn" data-act="favMove" data-id="${esc(f.id)}" data-d="-1" ${i === 0 ? 'disabled' : ''} aria-label="Flyt ${esc(f.name)} op">${svg('up', 18)}</button>
           <button class="fobtn" data-act="favMove" data-id="${esc(f.id)}" data-d="1" ${i === fav.length - 1 ? 'disabled' : ''} aria-label="Flyt ${esc(f.name)} ned">${svg('down', 18)}</button>
           <select class="fokind" data-favkind="${esc(f.id)}" aria-label="Type for ${esc(f.name)}">${Object.entries(FAVK).map(([k, [ico, l]]) => `<option value="${k}"${S.favKind(f) === k ? ' selected' : ''}>${ico} ${k === 'playlist' ? 'Playliste' : k === 'radio' ? 'Radio' : k === 'podcast' ? 'Podcast' : l}</option>`).join('')}</select>
           <label class="check small"><input type="checkbox" data-favname="${esc(f.id)}" ${favShowName(f.id) ? 'checked' : ''}>Navn</label>
-          <label class="check small"><input type="checkbox" data-favshow="${esc(f.id)}" ${hidden.includes(f.id) ? '' : 'checked'}>Vis</label>${S.favKind(f) === 'podcast' ? `<input class="fopod" type="url" inputmode="url" data-favpod="${esc(f.id)}" value="${esc(((settings.sonos.favPod || {})[f.id]) || '')}" placeholder="Link til podcasten (DR LYD, Apple Podcasts eller RSS)" aria-label="Link til ${esc(f.name)}">` : ''}</div>`).join('')}</div>`}
+          <label class="check small"><input type="checkbox" data-favshow="${esc(f.id)}" ${hidden.includes(f.id) ? '' : 'checked'}>Vis</label></div>`).join('')}</div>`}
       </section>`;
     },
     somfy: () => { const l = settings.somfyPresets && settings.somfyPresets.length ? settings.somfyPresets : SF.DEFAULT_PRESETS; return `
@@ -2284,6 +2285,7 @@ const act = {
   elAppMove: (b) => { const ids = elApps().map((a) => a.id); const i = ids.indexOf(b.dataset.id); const j = i + +b.dataset.d; if (i < 0 || j < 0 || j >= ids.length) return; [ids[i], ids[j]] = [ids[j], ids[i]]; settings.el = settings.el || {}; settings.el.order = ids; save(); renderMain(); },
   ipMenu: () => { ui.ipMode = ui.ipMode === 'menu' ? 'now' : 'menu'; if (ui.ipMode === 'menu') { const i = S.favorites().findIndex((f) => f.id === S.playingFavId()); ui.ipSel = i < 0 ? 0 : i; } renderMain(); },
   ipSelect: () => { if (ui.ipMode === 'menu') { const f = S.favorites()[ui.ipSel || 0]; ui.ipMode = 'now'; renderMain(); if (f) act.sFav({ dataset: { id: f.id } }); } else sonosDo(S.togglePlay); },
+  sonosSkin: (b) => { settings.sonos.skin = b.dataset.v; ui.ipMode = 'now'; save(); renderMain(); },
   sFav: (b) => { S.markFav(b.dataset.id); sonosDo(async () => { const pod = await S.playFav(b.dataset.id); if (pod && pod.count) toast(`${pod.count} afsnit af ${pod.name} er sat i kø`); }); },
   sGroup: (b) => { const cg = S.currentGroup(); if (cg) { const np = S.nowPlaying(); S.state.groupMeta[cg.id] = { title: np.title, image: np.image }; } S.controlGroup(b.dataset.id); S.state.playerVol = {}; S.state.meta = null; renderMain(false); loadSonos(); },
   sGroupPlay: (b) => { sonosDo(() => S.toggleGroupPlay(b.dataset.id)); renderMain(false); },
