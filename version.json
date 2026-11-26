@@ -1,5 +1,5 @@
 {
-  "version": "1.77.0",
+  "version": "1.77.1",
   "files": [
     "index.html",
     "app.js",
@@ -27,6 +27,14 @@
     "todo.js"
   ],
   "notes": [
+    {
+      "version": "1.77.1",
+      "date": "26. november 2026",
+      "title": "Mindre logoer",
+      "items": [
+        "Musik og Sonos-kortet: logoerne for radio og playlister er gjort lidt mindre, så der er plads til flere."
+      ]
+    },
     {
       "version": "1.77.0",
       "date": "26. november 2026",
