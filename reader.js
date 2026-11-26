@@ -25,20 +25,22 @@ function frameDoc(inner) {
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;800&display=swap">
 <style>
 html{background:${cssVar('card')}}
-body{margin:0 auto;max-width:720px;padding:28px 32px 60px;font:18px/1.65 Manrope,system-ui,sans-serif;color:${cssVar('text')};background:${cssVar('card')}}
-h1{font-size:30px;line-height:1.2;margin:4px 0 14px;font-weight:800}
+body{margin:0 auto;max-width:980px;padding:22px 28px 40px;font:17px/1.55 Manrope,system-ui,sans-serif;color:${cssVar('text')};background:${cssVar('card')}}
+h1{font-size:26px;line-height:1.2;margin:4px 0 10px;font-weight:800}
+p{margin:0 0 .8em}
 h2,h3{line-height:1.3}
 .meta{font-size:13px;font-weight:800;color:${cssVar('hot')};text-transform:none}
 .by{font-size:14px;color:${cssVar('muted')};margin:-6px 0 16px}
 .lead{font-size:20px;font-weight:600;color:${cssVar('text2')}}
-img,video{max-width:100%;height:auto;border-radius:12px;display:block}
+img,video{max-width:100%;max-height:260px;width:auto;height:auto;border-radius:12px;display:block;object-fit:cover}
 p:empty,div:empty,figure:empty{display:none}
 *{max-width:100%;box-sizing:border-box}
 body *{min-height:0!important}
-figure{margin:18px 0}figcaption{font-size:13px;color:${cssVar('muted')};margin-top:6px}
+figure{margin:12px 0;float:right;width:38%;margin-left:20px}figure img{width:100%}figcaption{font-size:13px;color:${cssVar('muted')};margin-top:6px}
 a{color:${cssVar('accent')}}
 blockquote{margin:16px 0;padding-left:16px;border-left:4px solid ${cssVar('line')};color:${cssVar('text2')}}
-.hero{display:block;width:calc(100% + 64px);margin:-28px -32px 20px;max-width:none;aspect-ratio:16/9;object-fit:cover;border-radius:0}
+.hero{float:right;width:40%;max-height:none;aspect-ratio:4/3;object-fit:cover;margin:0 0 12px 22px;border-radius:14px}
+.cut{clear:both}
 .cut{margin-top:28px;padding:16px;border-radius:12px;background:${cssVar('bg')};font-size:15px}
 </style></head><body>${inner}</body></html>`;
 }

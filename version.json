@@ -1,5 +1,5 @@
 {
-  "version": "1.100.3",
+  "version": "1.100.4",
   "files": [
     "index.html",
     "app.js",
@@ -27,6 +27,15 @@
     "todo.js"
   ],
   "notes": [
+    {
+      "version": "1.100.4",
+      "date": "26. november 2026",
+      "title": "Mere kompakte artikler",
+      "items": [
+        "Billedet står nu mindre ved siden af overskriften i stedet for over hele bredden",
+        "Teksten bruger mere af skærmens bredde, så der skal scrolles mindre"
+      ]
+    },
     {
       "version": "1.100.3",
       "date": "26. november 2026",
