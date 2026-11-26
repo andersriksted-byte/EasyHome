@@ -2102,3 +2102,4 @@ html,body{overscroll-behavior:none}
 .mwinforow>.mwinfo{flex:1;min-width:0}
 .mwinforow .mwring{width:56px;height:56px}
 .mwring.long span{font-size:10px}
+.dret-sub{display:-webkit-box!important}

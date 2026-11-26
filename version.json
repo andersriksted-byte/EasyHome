@@ -1,5 +1,5 @@
 {
-  "version": "1.85.0",
+  "version": "1.85.1",
   "files": [
     "index.html",
     "app.js",
@@ -27,6 +27,14 @@
     "todo.js"
   ],
   "notes": [
+    {
+      "version": "1.85.1",
+      "date": "26. november 2026",
+      "title": "Dagens ret",
+      "items": [
+        "Står der fx \"Spiser ude\" på madplanen, viser Dagens ret nu også teksten under (fx hvor I spiser)"
+      ]
+    },
     {
       "version": "1.85.0",
       "date": "26. november 2026",

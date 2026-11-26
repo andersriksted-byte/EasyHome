@@ -1365,7 +1365,7 @@ function wDagensRet(size, h = 1, wd = 1) {
   const kick = [m.theme, m.time, m.servings ? m.servings + ' pers.' : ''].filter(Boolean).join(' · ');
   return `<button class="dret" style="${bg}" ${m.id ? `data-act="mdRecipe" data-id="${esc(m.id)}"` : 'data-act="mdOpen" data-sub="madplan"'}>
     <span class="dret-in"><span class="dret-top"><span class="dret-lab">${label}</span><span class="dret-stw">${st}</span></span>
-    <span class="dret-txt">${kick ? `<span class="dret-kick">${esc(kick)}</span>` : ''}<b>${esc(m.title)}</b>${m.intro && shapeKind(wd, h) !== 'tiny' ? `<span class="dret-intro">${esc(m.intro)}</span>` : ''}${ms.length > 1 ? `<span class="dret-more">+ ${esc(ms.filter((x) => x !== m).map((x) => x.title).join(', '))}</span>` : ''}</span></span></button>`;
+    <span class="dret-txt">${kick ? `<span class="dret-kick">${esc(kick)}</span>` : ''}<b>${esc(m.title)}</b>${m.note && m.sub ? `<span class="dret-intro dret-sub">${esc(m.sub)}</span>` : ''}${m.intro && shapeKind(wd, h) !== 'tiny' ? `<span class="dret-intro">${esc(m.intro)}</span>` : ''}${ms.length > 1 ? `<span class="dret-more">+ ${esc(ms.filter((x) => x !== m).map((x) => x.title).join(', '))}</span>` : ''}</span></span></button>`;
 }
 function wIndkob(size, h = 1, wd = 1) {
   const wait = madroStatus('Indkøbsliste'); if (wait) return wait;
