@@ -1996,7 +1996,7 @@ button.w7r.sel{background:color-mix(in srgb,var(--accent) 16%,transparent);box-s
 .tm-l.win .tm-s,.tm-l.win b{color:var(--text);font-weight:900}
 .sp-row.pre .tm-l b{font-weight:700}
 .sp-row.post .tm-l:not(.win) b{color:var(--muted);font-weight:600}
-.tm-l.fav b::after{content:'★';margin-left:6px;color:var(--accent);font-size:12px}
+.tm-l.mine b::after{content:'★';margin-left:6px;color:var(--accent);font-size:12px}
 .sp-tn,.sp-f1{padding:10px 4px!important}
 .sp-when{font-size:13px}
 .sp-when.time{font-size:16px;font-weight:800}
@@ -2145,3 +2145,4 @@ html,body{overscroll-behavior:none}
 .sp-all>.sp-ent{border-top:1px solid var(--line)}
 .sp-all>.sp-ent:nth-child(-n+2){border-top:0}
 .sp-all{align-items:start}
+.tm-l.mine b{font-weight:900}

@@ -807,7 +807,7 @@ function spWhen(it) {
 function spTeamRow(it, favId = '') {
   const m = it.m || it;
   const pre = m.state === 'pre' || (it.kind === 'fb' && FB.pending(m));
-  const line = (t, o) => `<div class="tm-l${!pre && t.win ? ' win' : ''}${t.id && t.id === favId ? ' fav' : ''}">${spLogo(t)}<b data-abbr="${esc(t.abbr || '')}">${esc(t.name)}</b>${pre ? '' : `<span class="tm-s">${esc(t.score)}</span>`}</div>`;
+  const line = (t, o) => `<div class="tm-l${!pre && t.win ? ' win' : ''}${t.id && t.id === favId ? ' mine' : ''}">${spLogo(t)}<b data-abbr="${esc(t.abbr || '')}">${esc(t.name)}</b>${pre ? '' : `<span class="tm-s">${esc(t.score)}</span>`}</div>`;
   return `<div class="sp-row ${m.state}" ${spRef(it)}>${spWhen(it)}<div class="tm-ls">${line(m.home)}${line(m.away)}</div></div>`;
 }
 // Stor resultattavle til "Live nu"

@@ -1,5 +1,5 @@
 {
-  "version": "1.86.0",
+  "version": "1.86.1",
   "files": [
     "index.html",
     "app.js",
@@ -27,6 +27,14 @@
     "todo.js"
   ],
   "notes": [
+    {
+      "version": "1.86.1",
+      "date": "26. november 2026",
+      "title": "Rettelse på Sport",
+      "items": [
+        "Kampe med et hold, I følger (★), har nu samme størrelse som de andre kampe"
+      ]
+    },
     {
       "version": "1.86.0",
       "date": "26. november 2026",
