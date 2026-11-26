@@ -1,5 +1,5 @@
 {
-  "version": "1.76.1",
+  "version": "1.76.2",
   "files": [
     "index.html",
     "app.js",
@@ -27,6 +27,15 @@
     "todo.js"
   ],
   "notes": [
+    {
+      "version": "1.76.2",
+      "date": "26. november 2026",
+      "title": "Pænere rum på Musik",
+      "items": [
+        "Musik: hver gruppe er nu én flise med cover og det, der spiller – tryk på flisen for at styre den.",
+        "Den valgte gruppe viser lydstyrke pr. rum; tryk × for at tage et rum ud og \"+ rum\" for at lægge det til."
+      ]
+    },
     {
       "version": "1.76.1",
       "date": "26. november 2026",

@@ -1577,19 +1577,23 @@ function pageNyheder() {
 
 /* ---------- Musik ---------- */
 function sonosRooms() {
-  // Rummene vist i deres grupper. Den gruppe, der styres her, står øverst; tryk på en anden gruppe for at styre den.
+  // Grupperne som fliser: tryk på en flise for at styre den. Den valgte gruppe viser sine rum med lydstyrke, og ledige rum kan lægges til.
   const cg = S.currentGroup(); const members = cg ? cg.playerIds || [] : [];
-  const groups = [...S.state.groups].sort((a, b) => (b.id === (cg || {}).id) - (a.id === (cg || {}).id) || S.groupInfo(a).label.localeCompare(S.groupInfo(b).label, 'da'));
-  const room = (pid, on) => { const vol = S.state.playerVol[pid];
-    return `<div class="room ${on ? 'on' : ''}"><button class="rtoggle" data-act="sMember" data-pid="${esc(pid)}" aria-pressed="${on}" ${on && members.length < 2 ? 'disabled' : ''} aria-label="${on ? 'Tag ' + esc(S.playerName(pid)) + ' ud af gruppen' : 'Føj ' + esc(S.playerName(pid)) + ' til gruppen'}"><span class="rbox">${on ? '✓' : ''}</span><span class="rname"><b>${esc(S.playerName(pid))}</b></span></button>
-      ${on && vol !== undefined && vol !== null ? `<input class="rslider" type="range" min="0" max="100" value="${vol}" data-pvol="${esc(pid)}" aria-label="Lydstyrke i ${esc(S.playerName(pid))}">` : ''}</div>`; };
-  const block = (g) => { const mine = cg && g.id === cg.id; const gi = S.groupInfo(g);
-    const head = `<div class="sg-h">${mine ? `<span class="sg-pick"><b>${esc(gi.label)}</b><span>${gi.playing ? '▶ ' : ''}${esc(gi.title || 'Intet spiller')}</span></span><em class="sg-tag">Styres her</em>`
-      : `<button class="sg-pick" data-act="sGroup" data-id="${esc(g.id)}" aria-label="Styr ${esc(gi.label)}"><b>${esc(gi.label)}</b><span>${gi.playing ? '▶ ' : ''}${esc(gi.title || (gi.playing ? 'Spiller' : 'Intet spiller'))}</span></button>
-        ${gi.title || gi.playing ? `<button class="mwb" data-act="sGroupPlay" data-id="${esc(g.id)}" aria-label="${gi.playing ? 'Pause' : 'Afspil'} i ${esc(gi.label)}">${fillSvg(gi.playing ? 'pause' : 'play', 16)}</button>` : ''}
-        <button class="btn line sg-go" data-act="sGroup" data-id="${esc(g.id)}">Styr</button>`}</div>`;
-    return `<div class="sg${mine ? ' on' : ''}">${head}<div class="rooms">${(g.playerIds || []).slice().sort((a, b) => S.playerName(a).localeCompare(S.playerName(b), 'da')).map((pid) => room(pid, !!mine)).join('')}</div></div>`; };
-  return `<section class="card mcol"><div class="mhead"><span class="lab">Rum</span></div><div class="mscroll sgroups">${groups.map(block).join('')}</div></section>`;
+  const byName = (a, b) => S.playerName(a).localeCompare(S.playerName(b), 'da');
+  const groups = [...S.state.groups].sort((a, b) => (b === cg) - (a === cg) || S.groupInfo(a).label.localeCompare(S.groupInfo(b).label, 'da'));
+  const tile = (g) => { const gi = S.groupInfo(g); const mine = g === cg;
+    const head = `<button class="sgt-main" ${mine ? 'disabled' : `data-act="sGroup" data-id="${esc(g.id)}"`} aria-label="${mine ? esc(gi.label) : 'Styr ' + esc(gi.label)}">
+        <span class="sgt-art" style="${gi.image ? `background-image:url('${esc(gi.image)}')` : ''}">${gi.image ? '' : svg('musik', 20)}</span>
+        <span class="sgt-tx"><b>${esc(gi.label)}</b><span>${gi.playing ? '<i class="eq"><i></i><i></i><i></i></i>' : ''}${esc(gi.title || (gi.playing ? 'Spiller' : 'Intet spiller'))}</span></span></button>
+      ${!mine && (gi.title || gi.playing) ? `<button class="sgt-play" data-act="sGroupPlay" data-id="${esc(g.id)}" aria-label="${gi.playing ? 'Pause' : 'Afspil'} i ${esc(gi.label)}">${fillSvg(gi.playing ? 'pause' : 'play', 16)}</button>` : ''}`;
+    if (!mine) return `<div class="sgt">${head}</div>`;
+    const rows = members.slice().sort(byName).map((pid) => { const vol = S.state.playerVol[pid];
+      return `<div class="sgr"><b>${esc(S.playerName(pid))}</b>${vol !== undefined && vol !== null ? `<input class="rslider" type="range" min="0" max="100" value="${vol}" data-pvol="${esc(pid)}" aria-label="Lydstyrke i ${esc(S.playerName(pid))}">` : '<span></span>'}
+        ${members.length > 1 ? `<button class="sgr-x" data-act="sMember" data-pid="${esc(pid)}" aria-label="Tag ${esc(S.playerName(pid))} ud af gruppen">×</button>` : '<span></span>'}</div>`; }).join('');
+    const free = S.state.players.filter((pl) => !members.includes(pl.id)).sort((a, b) => byName(a.id, b.id));
+    const add = free.length ? `<div class="sgadd">${free.map((pl) => `<button class="sgadd-b" data-act="sMember" data-pid="${esc(pl.id)}" aria-label="Føj ${esc(pl.name)} til">+ ${esc(pl.name)}</button>`).join('')}</div>` : '';
+    return `<div class="sgt on">${head}<div class="sgt-rooms">${rows}</div>${add}</div>`; };
+  return `<section class="card mcol"><div class="mhead"><span class="lab">Rum</span></div><div class="mscroll sgts">${groups.map(tile).join('')}</div></section>`;
 }
 function pageMusik() {
   if (!hasProxy()) return `<div class="ptitle"><h1>Musik</h1></div>${needProxyMsg('Sonos')}`;
@@ -2082,7 +2086,7 @@ const act = {
   newsRefresh: () => { N.clearNewsCache(); D.news = null; renderMain(); loadNews(); },
   sPlay: () => sonosDo(S.togglePlay), sNext: () => sonosDo(S.next), sPrev: () => sonosDo(S.prev),
   sFav: (b) => { S.markFav(b.dataset.id); sonosDo(() => S.playFavorite(b.dataset.id)); },
-  sGroup: (b) => { const cg = S.currentGroup(); if (cg) S.state.groupMeta[cg.id] = S.nowPlaying().title; S.controlGroup(b.dataset.id); S.state.playerVol = {}; S.state.meta = null; renderMain(false); loadSonos(); },
+  sGroup: (b) => { const cg = S.currentGroup(); if (cg) { const np = S.nowPlaying(); S.state.groupMeta[cg.id] = { title: np.title, image: np.image }; } S.controlGroup(b.dataset.id); S.state.playerVol = {}; S.state.meta = null; renderMain(false); loadSonos(); },
   sGroupPlay: (b) => { sonosDo(() => S.toggleGroupPlay(b.dataset.id)); renderMain(false); },
   sReload: () => loadSonos(true),
   sMember: (b) => {

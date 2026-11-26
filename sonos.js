@@ -149,12 +149,14 @@ export const setVolume = (v) => api(`/groups/${gid()}/groupVolume`, 'POST', { vo
 export const playFavorite = (id) => api(`/groups/${gid()}/favorites`, 'POST', { favoriteId: id, playOnCompletion: true });
 export const playerName = (pid) => (state.players.find((p) => p.id === pid) || {}).name || pid;
 
-const metaTitle = (m) => { m = m || {}; const it = m.currentItem && m.currentItem.track; return it ? [it.name, it.artist && it.artist.name].filter(Boolean).join(' · ') : (m.container && m.container.name) || m.streamInfo || ''; };
+const metaTitle = (m) => { m = m || {}; const it = m.currentItem && m.currentItem.track;
+  return { title: it ? [it.name, it.artist && it.artist.name].filter(Boolean).join(' · ') : (m.container && m.container.name) || m.streamInfo || '', image: art(it) || art(m.container) || art(m.currentItem) || '' }; };
 // Gruppens navn ud fra rummene ("Stue + Køkken") og hvad den spiller
 export function groupInfo(g) {
   const names = (g.playerIds || []).map(playerName).sort((a, b) => a.localeCompare(b, 'da'));
   const mine = (g.playerIds || []).includes(anchor());
-  return { label: names.join(' + '), title: mine ? nowPlaying().title : state.groupMeta[g.id] || '', playing: mine ? nowPlaying().playing : /PLAYING|BUFFERING/.test(g.playbackState || '') };
+  const np = mine ? nowPlaying() : null; const gm = state.groupMeta[g.id] || {};
+  return { label: names.join(' + '), mine, title: np ? np.title : gm.title || '', image: np ? np.image : gm.image || '', playing: np ? np.playing : /PLAYING|BUFFERING/.test(g.playbackState || '') };
 }
 export const toggleGroupPlay = (id) => { const g = state.groups.find((x) => x.id === id); if (g) g.playbackState = /PLAYING/.test(g.playbackState || '') ? 'PLAYBACK_STATE_PAUSED' : 'PLAYBACK_STATE_PLAYING'; return api(`/groups/${id}/playback/togglePlayPause`, 'POST', {}); };
 export const currentGroup = () => groupOfPlayer(anchor());
