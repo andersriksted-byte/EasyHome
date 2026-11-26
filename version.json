@@ -1,5 +1,5 @@
 {
-  "version": "1.97.2",
+  "version": "1.98.0",
   "files": [
     "index.html",
     "app.js",
@@ -27,6 +27,15 @@
     "todo.js"
   ],
   "notes": [
+    {
+      "version": "1.98.0",
+      "date": "26. november 2026",
+      "title": "Vælg ligaer på Sport",
+      "items": [
+        "Tryk på \"✎ Ligaer\" øverst på Sport for at vælge ligaer og sportsgrene til og fra direkte på skærmen",
+        "Valgene vises med det samme som knapper øverst og i Live"
+      ]
+    },
     {
       "version": "1.97.2",
       "date": "26. november 2026",

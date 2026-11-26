@@ -1012,6 +1012,11 @@ function spBox(x) {
 function spFitRound() {
   document.querySelectorAll('.sp-cgw:not(.sp-allw)').forEach((w) => { w.classList.remove('tight'); const l = w.querySelector('.sp-list'); if (l && l.scrollHeight > l.clientHeight + 1) w.classList.add('tight'); });
 }
+function spPicker() {
+  const fb = settings.football || {};
+  const fbL = (fb.leagues || []); const spOn = (settings.sport && settings.sport.on) || [];
+  return ui.spPick ? `<div class="sp-pick"><div class="sp-pick-h"><b>Ligaer og sportsgrene</b><button class="btn primary" data-act="spPick">Færdig</button></div><div class="choices">${[{ id: 'nat', name: 'Landsholdet' }].concat(FB.LEAGUES).map((L) => `<button class="pill" data-act="fbLeague" data-id="${L.id}" aria-pressed="${fbL.includes(L.id)}">${fbL.includes(L.id) ? '✓' : '+'} ⚽ ${esc(L.name)}</button>`).join('')}${SP.SPORTS.map((x) => `<button class="pill" data-act="spToggle" data-id="${x.id}" aria-pressed="${spOn.includes(x.id)}">${spOn.includes(x.id) ? '✓' : '+'} ${x.ico} ${esc(x.name)}</button>`).join('')}</div></div>` : '';
+}
 function pageSport() {
   const day = spDay(); const off = ui.spOff || 0; const today = startOfDay(new Date());
   // Dagsliste: syv dage omkring den valgte
@@ -1022,7 +1027,7 @@ function pageSport() {
   const fb = settings.football || {}; const hasFb = (fb.teams || []).length || (fb.leagues || []).filter((x) => x !== 'nat').length;
   const sps = SP.followed();
   const head = (chips = '', alt = null) => `<div class="sp-top"><div class="sp-title"><h1>Sport</h1><span class="muted">${alt ? esc(alt.label) : `${cap(DAYS_LONG[day.getDay()])} ${day.getDate()}. ${MONTHS[day.getMonth()]}`}</span><button class="btn line sp-ref" data-act="spRefresh" aria-label="Opdater">${svg('refresh', 18)}</button></div>${alt ? alt.nav : nav}${chips}</div>`;
-  if (!hasFb && !sps.length) return head() + `<section class="card"><div class="empty">Vælg sportsgrene under Indstillinger → Sport.</div></section>`;
+  if (!hasFb && !sps.length) { ui.spPick = true; return `<div class="sp-page">${head()}${spPicker()}</div>`; }
   if (!hasProxy()) return head() + `<section class="card">${needProxyMsg('Sport')}</section>`;
   const cards = []; const live = []; let waiting = false; const errs = [];
   const add = (key, ico, title, sub, body, isLive) => cards.push({ key, html: spCard(ico, title, sub, body, isLive, key), live: isLive });
@@ -1074,7 +1079,9 @@ function pageSport() {
   const comps = spComps();
   if (ui.spFilter && !comps.some((c) => c.key === ui.spFilter)) ui.spFilter = '';
   const f = ui.spFilter || '';
-  const chips = comps.length ? `<div class="sp-filter"><button class="sp-fchip${f ? '' : ' on'}" data-act="spFilter" data-k=""><i class="lv-dot"></i> Live</button>${comps.map((c) => `<button class="sp-fchip${f === c.key ? ' on' : ''}" data-act="spFilter" data-k="${c.key}" style="--sc:${SP_COL[c.col] || 'var(--accent)'}">${c.ico} ${esc(c.name)}${cards.some((x) => x.key === c.key && x.live) ? '<i class="lv-dot"></i>' : ''}</button>`).join('')}</div>` : '';
+  // Vælg ligaer og sportsgrene direkte her (samme valg som under Indstillinger → Sport)
+  const picker = spPicker();
+  const chips = (comps.length ? `<div class="sp-filter"><button class="sp-fchip${f ? '' : ' on'}" data-act="spFilter" data-k=""><i class="lv-dot"></i> Live</button>${comps.map((c) => `<button class="sp-fchip${f === c.key ? ' on' : ''}" data-act="spFilter" data-k="${c.key}" style="--sc:${SP_COL[c.col] || 'var(--accent)'}">${c.ico} ${esc(c.name)}${cards.some((x) => x.key === c.key && x.live) ? '<i class="lv-dot"></i>' : ''}</button>`).join('')}<button class="sp-fchip sp-edit${ui.spPick ? ' on' : ''}" data-act="spPick" aria-label="Vælg ligaer">✎ Ligaer</button></div>` : `<div class="sp-filter"><button class="sp-fchip sp-edit" data-act="spPick">✎ Vælg ligaer</button></div>`) + picker;
   const dnav = `<div class="sp-rnav"><button class="arr" data-act="spDay" data-dir="-1" ${off <= -7 ? 'disabled' : ''} aria-label="Dagen før">‹</button><div class="sp-rlab${off ? '' : ' cur'}"><span>${off === 0 ? 'I dag' : off === 1 ? 'I morgen' : off === -1 ? 'I går' : cap(DAYS[day.getDay()])}</span><b>${cap(DAYS_LONG[day.getDay()])} ${day.getDate()}. ${MONTHS[day.getMonth()]}</b></div><button class="arr" data-act="spDay" data-dir="1" ${off >= 14 ? 'disabled' : ''} aria-label="Dagen efter">›</button><button class="sp-today${off ? '' : ' at'}" data-act="spDay" data-dir="0">I dag</button></div>`;
   live.sort((a, b) => (b.fav ? 1 : 0) - (a.fav ? 1 : 0));
   if (f) { const c = comps.find((x) => x.key === f);
@@ -2622,6 +2629,7 @@ const act = {
     if (!d || !rs.length) ui.spRd[lg] = null;
     else { const key = ui.spRd[lg]; let i = key ? rs.findIndex((rd) => +rd[0].date >= key) : FB.currentRound(rs); if (i < 0) i = rs.length - 1; const j = Math.max(0, Math.min(rs.length - 1, i + d)); ui.spRd[lg] = +rs[j][0].date; }
     ui.spTouched = Date.now(); renderMain(false); },
+  spPick: () => { ui.spPick = !ui.spPick; renderMain(false); },
   spFilter: (b) => { ui.spFilter = b.dataset.k; renderMain(false); },
   spDay: (b) => { const d = +b.dataset.dir; ui.spOff = d ? Math.max(-7, Math.min(14, (ui.spOff || 0) + d)) : 0; ui.spTouched = Date.now(); spLoad(); renderMain(false); },
   spRefresh: () => { loadFootball(true); spLoad(spDay(), true); },

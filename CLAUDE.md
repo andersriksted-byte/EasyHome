@@ -11,6 +11,7 @@ Familie-dashboard (web-app på GitHub Pages) til en touchskærm/iPad på væggen
 
 ## Designregler fra brugeren
 - Ændringer af indstillinger (steder, kilder, kalendere, forbindelser osv.) sker KUN under Indstillinger. Forsiden og de andre sider viser og styrer (fx afspil, skift sted med pile) – de har ingen "tilføj"- eller opsætningsknapper.
+- Undtagelse (brugerens ønske): på Sport kan ligaer og sportsgrene vælges til og fra direkte på siden ("✎ Ligaer") – det er valgmuligheder for visningen, samme valg som under Indstillinger → Sport.
 - Indstillinger er delt i faner efter emne (`SET_TABS` i app.js). Nye indstillinger lægges i den fane, de hører til.
 - Nye funktioner må ikke selv tilføje kort til forsiden. Kun brugeren vælger kort under "Tilpas forside".
 - Forsiden er et gitter (rækkehøjden tilpasses skærmen; Store/Mellem/Små = 4/5/6 i bredden og 2/3/4 rækker i højden uden scroll, skaleret med zoom); kort har w×h (1–4 i bredden, 1–4 i højden eller 2×2). Hvert kort SKAL udfylde sin form (brug `shapeKind`: tiny/wide/tall/big) – intet tomt hvidt rum, og intet indhold må skæres over (lister bruger `data-trim`, kalenderen `FIT` – kompakt visning og derefter scroll inde i kortet). Kortets størrelse er brugerens valg og må ALDRIG ændres automatisk.

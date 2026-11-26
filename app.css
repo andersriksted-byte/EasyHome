@@ -2330,3 +2330,9 @@ body.navpinned .nav.open{box-shadow:none}
 .sp-favrow .bx.goal,.sp-allw .bx.goal{background:color-mix(in srgb,#F5B301 22%,var(--card))}
 .sp-allw>.sp-rnav{padding:0 2px}
 .sp-allw>.sp-rnav .arr,.sp-allw>.sp-rnav .sp-rlab,.sp-allw>.sp-rnav .sp-today.at{background:var(--card)}
+/* Vælg ligaer direkte på Sport */
+.sp-edit{background:transparent;border:2px dashed var(--line)}
+.sp-edit.on{background:var(--text);color:var(--card);border-color:var(--text)}
+.sp-pick{flex:none;background:var(--card);border-radius:18px;padding:14px 16px;margin-top:10px;display:flex;flex-direction:column;gap:10px;box-shadow:0 8px 24px rgba(0,0,0,.12)}
+.sp-pick-h{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.sp-pick .pill{min-height:40px}
