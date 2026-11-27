@@ -138,7 +138,26 @@ async function auth(req, env, path) {
     }
     return json(env, { token: await makeToken(env, body.device), family: saved.family });
   }
+  // Ny skærm via QR-kode: en logget-ind skærm laver en engangskode (5 min), som den nye skærm bytter til sit eget login
+  if (path === '/auth/pair/claim' && req.method === 'POST') {
+    const ip = req.headers.get('CF-Connecting-IP') || 'x';
+    const fails = +(await env.DASH_KV.get('auth_fail_' + ip)) || 0;
+    if (fails >= 8) return json(env, { error: 'For mange forsøg. Vent 15 minutter, og prøv igen.' }, 429);
+    const body = await req.json().catch(() => ({}));
+    const code = String(body.code || '').replace(/[^A-Z0-9]/gi, '').toUpperCase().slice(0, 16);
+    const hit = code && (await env.DASH_KV.get('pair_' + code));
+    if (!hit) { await env.DASH_KV.put('auth_fail_' + ip, String(fails + 1), { expirationTtl: 900 }); return json(env, { error: 'QR-koden er udløbet eller allerede brugt. Lav en ny på den anden skærm.' }, 401); }
+    await env.DASH_KV.delete('pair_' + code);
+    const saved = JSON.parse((await env.DASH_KV.get('auth_family')) || 'null');
+    return json(env, { token: await makeToken(env, body.device || 'ny skærm'), family: saved && saved.family });
+  }
   if (!(await authOk(req, env))) return json(env, { error: 'Forkert nøgle' }, 401);
+  if (path === '/auth/pair' && req.method === 'POST') {
+    const A = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; const r = crypto.getRandomValues(new Uint8Array(12));
+    const code = [...r].map((b) => A[b % A.length]).join('');
+    await env.DASH_KV.put('pair_' + code, '1', { expirationTtl: 300 });
+    return json(env, { code, expires: Date.now() + 300000 });
+  }
   if (path === '/auth/setup' && req.method === 'POST') {
     const body = await req.json().catch(() => ({}));
     const family = String(body.family || '').trim().slice(0, 60);

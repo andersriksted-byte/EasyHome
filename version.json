@@ -1,5 +1,5 @@
 {
-  "version": "1.105.4",
+  "version": "1.106.0",
   "files": [
     "index.html",
     "app.js",
@@ -28,9 +28,20 @@
     "trafik.js",
     "trmap.js",
     "leaflet.js",
-    "leaflet.css"
+    "leaflet.css",
+    "qrcode.js"
   ],
   "notes": [
+    {
+      "version": "1.106.0",
+      "date": "27. november 2026",
+      "title": "Forbind ny skærm med QR-kode",
+      "items": [
+        "Under Indstillinger → Familie → \"Forbind ny skærm\" vises en QR-kode",
+        "Scan den med telefonens kamera – så er telefonen logget ind uden kode",
+        "QR-koden gælder i 5 minutter og kan kun bruges én gang"
+      ]
+    },
     {
       "version": "1.105.4",
       "date": "26. november 2026",

@@ -2330,7 +2330,7 @@ function pageIndstillinger() {
     <section class="card"><b>Familie-login</b>
       <div class="form"><label class="f">Ny familiekode<input type="password" id="famCode" autocomplete="new-password"></label>
       <label class="f">Gentag koden<input type="password" id="famCode2" autocomplete="new-password"></label></div>
-      <div class="row"><button class="btn primary" data-act="famCodeSave">Gem familiekode</button>${ui.famMsg ? `<span class="small ${ui.famMsg.err ? 'err' : 'muted'}">${esc(ui.famMsg.text)}</span>` : ''}</div>
+      <div class="row"><button class="btn primary" data-act="famCodeSave">Gem familiekode</button><button class="btn line" data-act="pairShow">📱 Forbind ny skærm</button>${ui.famMsg ? `<span class="small ${ui.famMsg.err ? 'err' : 'muted'}">${esc(ui.famMsg.text)}</span>` : ''}</div>
       <div class="row" style="border-top:1.5px solid var(--line);padding-top:12px"><button class="btn line" data-act="logoutHere">Log denne skærm ud</button><button class="btn line danger" data-act="logoutAll">Log alle skærme ud</button></div>
     </section>`,
     forbindelse: () => `
@@ -2639,6 +2639,21 @@ const act = {
   pickMe: (b) => { settings.me = settings.me === b.dataset.id ? '' : b.dataset.id; save(); applyTheme(); L.applyLook(); renderHeader(); renderMain(); },
   memAdd: () => { const colors = ['#D0563C', '#4C78D0', '#D9A400', '#2E9D5B', '#7A5AC8', '#C2407E']; const m = settings.family.members; m.push({ id: uid(), name: '', color: colors[m.length % colors.length] }); save(); renderMain(); setTimeout(() => { const el = document.querySelectorAll('[data-mem][data-field=name]'); if (el.length) el[el.length - 1].focus(); }, 50); },
   memRm: (b) => { const [m] = settings.family.members.splice(+b.dataset.i, 1); if (m) { settings.calendars.forEach((c) => { if (c.owner === m.id) c.owner = ''; }); if (settings.me === m.id) settings.me = ''; } save(); renderHeader(); renderMain(); },
+  // QR-kode til en ny skærm/telefon: gælder i 5 minutter og kan kun bruges én gang
+  pairShow: async () => {
+    let m = document.getElementById('pairModal');
+    if (!m) { m = document.createElement('div'); m.id = 'pairModal'; m.className = 'reader pair'; m.setAttribute('role', 'dialog'); m.setAttribute('aria-modal', 'true'); m.setAttribute('aria-label', 'Forbind ny skærm'); document.body.appendChild(m); m.addEventListener('click', (e) => { if (e.target === m || e.target.closest('[data-pclose]')) { clearInterval(m._t); m.remove(); } }); }
+    m.innerHTML = '<div class="pairbox"><div class="empty">Laver QR-kode …</div></div>';
+    try {
+      if (!window.qrcode) await new Promise((res, rej) => { const sc = document.createElement('script'); sc.src = 'qrcode.js?v=' + (window.__appVersion || ''); sc.onload = res; sc.onerror = () => rej(new Error('QR')); document.head.appendChild(sc); });
+      const r = await A.authCall('/auth/pair');
+      const url = location.origin + location.pathname + '#pair=' + r.code;
+      const q = window.qrcode(0, 'M'); q.addData(url); q.make();
+      m.innerHTML = `<div class="pairbox"><b>Scan med telefonens kamera</b><div class="pairqr">${q.createSvgTag({ cellSize: 6, margin: 2, scalable: true })}</div><div class="small muted" id="pairLeft"></div><button class="btn dark" data-pclose>Luk</button></div>`;
+      const tick = () => { const left = Math.max(0, Math.round((r.expires - Date.now()) / 1000)); const el = document.getElementById('pairLeft'); if (el) el.textContent = left ? `Gælder ${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')} · kan bruges én gang` : 'Udløbet – luk og prøv igen'; if (!left) clearInterval(m._t); };
+      tick(); clearInterval(m._t); m._t = setInterval(tick, 1000);
+    } catch (e) { m.innerHTML = `<div class="pairbox"><b>Kunne ikke lave QR-kode</b><div class="small err">${esc(e.message === 'QR' ? 'QR-modulet kunne ikke hentes.' : e.message)}</div><button class="btn dark" data-pclose>Luk</button></div>`; }
+  },
   famCodeSave: async () => {
     const a = $('#famCode').value; const b2 = $('#famCode2').value;
     if (a.length < 6) { ui.famMsg = { err: true, text: 'Koden skal være mindst 6 tegn.' }; renderMain(); return; }
@@ -3014,6 +3029,13 @@ document.addEventListener('pointercancel', endDrag);
 
 /* ---------- Start ---------- */
 function boot() {
+  // Åbnet fra en QR-kode: forbind skærmen og fjern koden fra adressen
+  const pm = /^#pair=([A-Z0-9]+)/i.exec(location.hash);
+  if (pm) {
+    history.replaceState(null, '', location.pathname);
+    A.claimPair(pm[1]).then(() => location.reload()).catch((e) => { applyTheme(); A.showLogin(e.message); });
+    return;
+  }
   if (A.needsLogin()) { applyTheme(); A.showLogin(); return; }
   onAuthLost(() => A.logout('Skærmen er logget ud. Log ind igen.'));
   if (!Array.isArray(settings.countdowns)) { const c = settings.countdown || {}; settings.countdowns = c.name || c.date ? [{ id: uid(), name: c.name || '', date: c.date || '', imageId: '' }] : []; save(); }

@@ -16,6 +16,7 @@ export function showLogin(msg = '') {
     <label class="f">Familienavn<input name="family" type="text" autocomplete="username" placeholder="Fx Familien Riksted" value="${esc(settings.family && settings.family.name || '')}" required></label>
     <label class="f">Familiekode<input name="code" type="password" autocomplete="current-password" required></label>
     <button class="btn primary big" type="submit">Log ind</button>
+    <p class="small muted">Eller scan QR-koden fra en skærm, der er logget ind: Indstillinger → Familie → Forbind ny skærm.</p>
     <div class="small ${msg ? 'err' : ''}" id="loginMsg" role="status">${esc(msg)}</div>
     <details class="small"><summary>Avanceret</summary>
       <label class="f">Worker-adresse<input name="url" type="url" value="${esc(settings.proxy.url)}"></label>
@@ -42,6 +43,15 @@ export function showLogin(msg = '') {
       m.textContent = err.message === 'Failed to fetch' ? 'Kan ikke nå jeres server. Tjek internettet.' : err.message;
     }
   });
+}
+
+// Ny skærm via QR-kode: adressen indeholder #pair=KODE, som byttes til et login hos workeren
+export async function claimPair(code) {
+  const r = await fetch(base() + '/auth/pair/claim', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code, device: navigator.platform || 'ny skærm' }) });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok || !j.token) throw new Error(j.error || 'Kunne ikke forbinde (' + r.status + ')');
+  settings.proxy.key = j.token; if (j.family && settings.family && !settings.family.name) settings.family.name = j.family;
+  save();
 }
 
 export function logout(msg) {
