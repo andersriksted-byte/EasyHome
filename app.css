@@ -2483,3 +2483,20 @@ body.navpinned .nav.open{box-shadow:none}
 .pairbox>b{font-size:20px}
 .pairqr{width:min(320px,70vw);aspect-ratio:1;background:#fff;border-radius:16px;padding:10px}
 .pairqr svg{width:100%;height:100%;display:block}
+/* Fodbold-kortet: næste kamp for et favorithold */
+.fbn{flex:1;min-height:0;display:flex;flex-direction:column;justify-content:center;gap:8px;cursor:pointer}
+.fbn-comp{font-size:12px;font-weight:800;color:var(--muted);text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fbn-row{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:10px}
+.fbn-side{display:flex;flex-direction:column;align-items:center;gap:6px;min-width:0}
+.fb-t.big img{width:52px;height:52px;object-fit:contain}.fb-t.big b{font-size:18px}
+.fbn-nm{font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.fbn-nm.fav{color:var(--favc,#D4A017);font-weight:800}
+.fbn-mid{display:flex;flex-direction:column;align-items:center;gap:2px}
+.fbn-mid b{font-size:24px;font-weight:800;font-variant-numeric:tabular-nums}
+.fbn-mid.score b{font-size:30px}.fbn-mid span{font-size:12px;font-weight:700;color:var(--muted)}
+.fbn-when{text-align:center;font-size:14px;font-weight:800}
+.fbn.in .fbn-when{color:#E5484D}
+.fbn-last{display:flex;align-items:center;justify-content:center;gap:8px;padding-top:8px;border-top:1px solid var(--line);font-size:13px}
+.fbn-last>span{font-weight:800;color:var(--muted)}.fbn-last small{color:var(--muted);font-weight:700}
+.fbn-last .fb-t img{width:22px;height:22px}
+.fbn.wide .fb-t.big img{width:64px;height:64px}.fbn.wide .fbn-nm{font-size:15px}

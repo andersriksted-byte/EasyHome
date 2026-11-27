@@ -1,5 +1,5 @@
 {
-  "version": "1.106.1",
+  "version": "1.107.0",
   "files": [
     "index.html",
     "app.js",
@@ -32,6 +32,16 @@
     "qrcode.js"
   ],
   "notes": [
+    {
+      "version": "1.107.0",
+      "date": "27. november 2026",
+      "title": "Fodbold-kortet kan mere",
+      "items": [
+        "Vælg på Fodbold-kortet (✎ Tilpas forside) hvad det skal vise: dagens kampe, næste kamp for et favorithold eller næste runde i en liga",
+        "Næste kamp viser holdene stort med tidspunkt – og live-stillingen, når kampen spilles",
+        "Næste runde viser alle rundens kampe fordelt på dage"
+      ]
+    },
     {
       "version": "1.106.1",
       "date": "27. november 2026",

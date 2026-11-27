@@ -670,8 +670,52 @@ function fbDays() {
   const order = [fb.pref, ...(fb.follow || [])].filter(Boolean).map(lgName);
   return { days, all, order, today };
 }
-function wFodbold(size, h = 1, wd = 1) {
+// Fodbold-kortet kan vise: dagens kampe (standard), næste kamp for et favorithold (x.show = 't:<id>') eller næste runde i en liga ('r:<liga>')
+function fbSeason(lg) {
+  const now = new Date();
+  if (!FB.monthLoaded(lg, now) || !FB.monthLoaded(lg, addDays(now, 31))) { FB.loadMonths(lg, [addDays(now, -20), now, addDays(now, 31), addDays(now, 62)]).then((n) => { if (n) setTimeout(softRender, 0); }); return false; }
+  const live = FB.roundsOf(lg).flat().some((m) => m.state === 'in' || (m.state === 'pre' && Math.abs(m.date - now) < 15 * 60000));
+  FB.loadMonths(lg, [now], live ? 60000 : 15 * 60000).then((n) => { if (n) setTimeout(softRender, 0); });
+  return true;
+}
+const fbLogo = (t, big) => `<span class="fb-t${big ? ' big' : ''}" title="${esc(t.name)}">${t.logo ? `<img src="${esc(t.logo)}" alt="${esc(t.name)}" loading="lazy">` : `<b>${esc(t.abbr || t.name.slice(0, 3).toUpperCase())}</b>`}</span>`;
+const fbWhen = (d) => { const t = startOfDay(new Date()); const k = Math.round((startOfDay(d) - t) / 86400000); return (k === 0 ? 'I dag' : k === 1 ? 'I morgen' : k < 7 ? cap(DAYS_LONG[d.getDay()]) : `${cap(DAYS[d.getDay()])} ${d.getDate()}. ${MONTHS[d.getMonth()].slice(0, 3)}`) + ' kl. ' + hhmm(d); };
+function wFodboldTeam(id, h, wd) {
+  const fb = settings.football || {}; const T = (fb.teams || []).find((t) => t.id === id);
+  if (!T) return cardHead('Fodbold') + '<div class="empty">Holdet er ikke længere favorit.</div>';
+  const lgs = T.lg && T.lg !== 'nat' ? [T.lg] : [];
+  const ready = lgs.every(fbSeason);
+  const ms = [...new Map(lgs.flatMap((lg) => FB.roundsOf(lg).flat()).concat(FB.state.matches || []).filter((m) => m.home.id === id || m.away.id === id).map((m) => [m.id, m])).values()].sort((a, b) => a.date - b.date);
+  const live = ms.find((m) => m.state === 'in');
+  const next = live || ms.find((m) => m.state === 'pre' && !FB.pending(m));
+  const last = [...ms].reverse().find((m) => m.state === 'post');
+  const head = cardHead(`Næste kamp · ${T.name}`);
+  if (!next && !last) return head + `<div class="empty">${ready ? 'Ingen kampe fundet.' : 'Henter kampe …'}</div>`;
+  const m = next || last;
+  const mid = m.state === 'pre' ? `<div class="fbn-mid"><b>${hhmm(m.date)}</b></div>` : `<div class="fbn-mid score"><b>${esc(m.home.score)}–${esc(m.away.score)}</b>${m.state === 'in' ? `<span class="fb-live">● ${esc(m.clock || 'Live')}</span>` : '<span>Slut</span>'}</div>`;
+  const nm = (t) => `<span class="fbn-nm${t.id === id ? ' fav' : ''}">${esc(t.short || t.name)}</span>`;
+  const sub = m.state === 'pre' ? fbWhen(m.date) : m.state === 'in' ? 'Spilles nu' : 'Seneste kamp · ' + fbWhen(m.date).replace(/ kl\..*/, '');
+  const prev = next && last && h >= 2 ? `<div class="fbn-last"><span>Sidst</span>${fbLogo(last.home)}<b>${esc(last.home.score)}–${esc(last.away.score)}</b>${fbLogo(last.away)}<small>${esc(fbWhen(last.date).replace(/ kl\..*/, ''))}</small></div>` : '';
+  return head + `<div class="fbn ${m.state} ${wd >= 2 ? 'wide' : ''}" ${spRef({ kind: 'fb', m })}><div class="fbn-comp">${esc(m.comp || '')}</div>
+    <div class="fbn-row"><div class="fbn-side">${fbLogo(m.home, true)}${nm(m.home)}</div>${mid}<div class="fbn-side">${fbLogo(m.away, true)}${nm(m.away)}</div></div>
+    <div class="fbn-when">${esc(sub)}</div>${prev}</div>`;
+}
+function wFodboldRound(lg, h, wd, row) {
+  const L = FB.LEAGUES.find((x) => x.id === lg) || { name: lg };
+  if (!fbSeason(lg)) return cardHead(L.name) + '<div class="empty">Henter kampe …</div>';
+  const rs = FB.roundsOf(lg); if (!rs.length) return cardHead(L.name) + '<div class="empty">Ingen kampe fundet.</div>';
+  const rd = rs[FB.currentRound(rs)];
+  const a = rd[0].date; const b = rd[rd.length - 1].date;
+  const span = sameDay(a, b) ? `${a.getDate()}. ${MONTHS[a.getMonth()].slice(0, 3)}` : `${a.getDate()}.${a.getMonth() !== b.getMonth() ? ' ' + MONTHS[a.getMonth()].slice(0, 3) : ''}–${b.getDate()}. ${MONTHS[b.getMonth()].slice(0, 3)}`;
+  // Kampene grupperet pr. dag
+  const days = new Map(); rd.forEach((m) => { const k = ymd(m.date); if (!days.has(k)) days.set(k, []); days.get(k).push(m); });
+  const body = [...days.values()].map((ms) => `<div class="fb-grp"><div class="fb-sub">${esc(cap(DAYS_LONG[ms[0].date.getDay()]))} ${ms[0].date.getDate()}. ${MONTHS[ms[0].date.getMonth()].slice(0, 3)}</div>${wd >= 2 ? `<div class="fb-tiles">${ms.map((m) => row(m).replace('class="fb-row ', 'class="fb-tile ')).join('')}</div>` : ms.map(row).join('')}</div>`).join('');
+  return cardHead(L.name, `<span class="small muted">${esc(span)}</span>`) + `<div class="fb-days" data-trim>${body}</div>`;
+}
+function wFodbold(size, h = 1, wd = 1, x = {}) {
   const fb = settings.football || {};
+  const show = String((x && x.show) || '');
+  if (show.startsWith('t:')) return wFodboldTeam(show.slice(2), h, wd);
   if (!(fb.teams || []).length && !(fb.follow || []).length) return cardHead('Fodbold') + '<div class="empty">Vælg hold eller ligaer under Indstillinger → Fodbold.</div>';
   if (!FB.state.at) return cardHead('Fodbold') + '<div class="empty">Henter kampe …</div>';
   const { days, all, order, today } = fbDays();
@@ -691,6 +735,7 @@ function wFodbold(size, h = 1, wd = 1) {
     const when = m.state === 'in' ? `<span class="fb-live">● ${esc(m.clock || m.detail || 'Live')}</span>` : pend ? 'Afventer' : m.state === 'post' ? 'Slut' : '';
     return `<div class="fb-row ${m.state}" ${spRef({ kind: 'fb', m })}><span class="fb-when">${when}</span>${side(m.home, fav)}${mid}${side(m.away, fav)}</div>`;
   };
+  if (show.startsWith('r:')) return wFodboldRound(show.slice(2), h, wd, row);
   const todays = all.filter((m) => sameDay(m.date, day)).sort((a, b) => a.date - b.date);
   if (!todays.length) return head + `<div class="empty">Ingen kampe ${sameDay(day, today) ? 'i dag' : 'denne dag'}.</div>`;
   const groups = new Map(); todays.forEach((m) => { const k = m.comp || 'Andre kampe'; if (!groups.has(k)) groups.set(k, []); groups.get(k).push(m); });
@@ -1690,6 +1735,7 @@ function pageForside() {
         ${x.id === 'uge' ? `<select class="wsel" data-wsel="uge" data-k="days" aria-label="Antal dage">${[['', 'Automatisk'], ...[1, 2, 3, 4, 5, 6, 7].map((v) => [String(v), v === 1 ? '1 dag' : v + ' dage'])].map(([v, l]) => `<option value="${v}"${String(x.days || '') === v ? ' selected' : ''}>${l}</option>`).join('')}</select>` : ''}
         ${x.id === 'sonos' ? `<select class="wsel" data-wsel="sonos" data-k="fav" aria-label="Favoritter">${[['', 'Alle favoritter'], ['radio', 'Kun radio'], ['playlist', 'Kun playlister'], ['podcast', 'Kun podcasts']].map(([v, l]) => `<option value="${v}"${(x.fav || '') === v ? ' selected' : ''}>${l}</option>`).join('')}</select>` : ''}
         ${x.id === 'todo' ? `<select class="wsel" data-wsel="todo" data-k="who" aria-label="Hvis opgaver">${[['', 'Hele familien'], ['me', 'Den valgte på skærmen'], ...members().map((m) => [m.id, m.name])].map(([v, l]) => `<option value="${esc(v)}"${(x.who || '') === v ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select>` : ''}
+        ${x.id === 'fodbold' ? `<select class="wsel" data-wsel="fodbold" data-k="show" aria-label="Vis">${[['', 'Dagens kampe'], ...((settings.football || {}).teams || []).map((t) => ['t:' + t.id, 'Næste kamp: ' + t.name]), ...((settings.football || {}).leagues || []).map((lg) => ['r:' + lg, 'Næste runde: ' + ((FB.LEAGUES.find((L) => L.id === lg) || {}).name || lg)])].map(([v, l]) => `<option value="${esc(v)}"${(x.show || '') === v ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select>` : ''}
         ${x.id === 'inspiration' ? `<select class="wsel" data-wsel="inspiration" data-k="meal" aria-label="Måltid">${['', ...MD.MEALS].map((m) => `<option value="${m}"${(x.meal || '') === m ? ' selected' : ''}>${m || 'Alle måltider'}</option>`).join('')}</select>` : ''}
         ${x.id === 'madplan' ? `<span class="wopt" role="group" aria-label="Antal dage">${[[1, '1 dag'], [5, '5 dage']].map(([v, l]) => `<button data-act="wOpt" data-id="madplan" data-k="days" data-v="${v}" aria-pressed="${(x.days || 5) === v}">${l}</button>`).join('')}</span>` : ''}
         <button class="sz" data-act="sizeFor" data-id="${x.id}" aria-expanded="${ui.sizeFor === x.id}" aria-label="Vælg størrelse (nu ${w} gange ${h})">${shapeIcon(w, h)}<span>${w}×${h}</span></button>
