@@ -72,7 +72,7 @@ export function near(place, opts = {}) {
   return state.items
     .filter((x) => !x.future && (!x.from || x.from.getTime() <= now + 3600000) && (!x.to || x.to.getTime() > now))
     .filter((x) => c.roadworks || x.kind !== 'vejarbejde')
-    .filter(isMajor) // omkring hjem: kun større veje – småveje tæller kun, når de ligger på jeres rute
+    .filter((x) => (x.kind === 'spaerring' ? isMotorway(x) : isMajor(x))) // omkring hjem: spærringer kun på motorveje, øvrige kun på større veje – resten tæller kun på jeres rute
     .map((x) => ({ ...x, km: km(place, x) }))
     .filter((x) => !c.radius || x.km <= c.radius)
     .sort((a, b) => (a.kind === 'vejarbejde') - (b.kind === 'vejarbejde') || a.km - b.km);
@@ -144,4 +144,10 @@ function ids(r) {
 export function isMajor(x) {
   const t = ' ' + (x.title + ' ' + (x.text || '')).toLowerCase() + ' ';
   return /\be\s?\d{1,3}\b|\brute\s?\d{1,3}\b|motorvej|motortrafikvej|motorring|primærrute|\bringvej|\bomfartsvej/.test(t) || (x.src === 'tt' && /^\s*(e?\d{1,3})(\/|\s·|$)/i.test(x.title));
+}
+
+// Motorveje (og motortrafikveje): E-veje, Motorring og veje med "motorvej" i navnet
+export function isMotorway(x) {
+  const t = ' ' + (x.title + ' ' + (x.text || '')).toLowerCase() + ' ';
+  return /\be\s?\d{1,3}\b|motorvej|motortrafikvej|motorring/.test(t);
 }

@@ -1,5 +1,5 @@
 {
-  "version": "1.106.0",
+  "version": "1.106.1",
   "files": [
     "index.html",
     "app.js",
@@ -32,6 +32,14 @@
     "qrcode.js"
   ],
   "notes": [
+    {
+      "version": "1.106.1",
+      "date": "27. november 2026",
+      "title": "Færre vejspærringer",
+      "items": [
+        "Vejspærringer vises kun, når de er på en motorvej – eller på den rute, du skal køre"
+      ]
+    },
     {
       "version": "1.106.0",
       "date": "27. november 2026",
